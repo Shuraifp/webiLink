@@ -117,7 +117,7 @@ export class AuthController implements IAuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge:  30 * 1000,
+      maxAge: 15 * 60 * 1000,
     });
   }
 

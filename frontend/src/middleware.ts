@@ -18,26 +18,17 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    const newAccessToken = await refreshAccessToken(req);
-    if (newAccessToken) {
-      const response = NextResponse.next();
-      response.cookies.set("accessToken", newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 1000, // 1 min
-      });
-      return response;
+    const refreshResponse = await refreshAccessToken(req);
+    if (refreshResponse) {
+      return refreshResponse;
     }
 
-    // ❌ If refresh fails, redirect to login
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
 }
 
-// ✅ Function to refresh token
 async function refreshAccessToken(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   if (!refreshToken) return null;
@@ -54,15 +45,21 @@ async function refreshAccessToken(req: NextRequest) {
 
     if (!res.ok) throw new Error("Failed to refresh token");
 
-    const data = await res.json();
-    return data.accessToken;
+    // const data = await res.json();
+    const response = NextResponse.next();
+
+    const setCookieHeader = res.headers.get("set-cookie");
+    if (setCookieHeader) {
+      response.headers.set("Set-Cookie", setCookieHeader);
+    }
+
+    return response;
   } catch (error) {
     console.error("Error refreshing token:", error);
     return null;
   }
 }
 
-// ✅ Define matcher for middleware
 export const config = {
   matcher: ["/", "/login", "/signup", "/dashboard/:path*"],
 };
