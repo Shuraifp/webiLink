@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+body {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+.playfair {
+  font-family: var(--font-playfair), serif;
+}
+
+.montserrat {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+.lora {
+  font-family: var(--font-lora), serif;
+}
+
+.dancing {
+  font-family: var(--font-dancing), cursive; 
+}
+
+.raleway {
+  font-family: var(--font-raleway), sans-serif;
+}
+
+.merriweather {
+  font-family: var(--font-merriweather), serif;
+}
+
+.roboto {
+  font-family: var(--font-roboto), sans-serif;
+}
+
+.poppins {
+  font-family: var(--font-poppins), sans-serif;
+}
+
+.lobster {
+  font-family: var(--font-lobster), cursive;
+}
+
+.oswald {
+  font-family: var(--font-oswald), sans-serif;
+}
+
+
+
+@layer utilities {
+  
+  .animate-pulseCustom {
+    animation: pulseCustom 2s infinite ease-in-out;
+  }
+
+  @keyframes pulseCustom {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+/* @layer utilities {
+
+  .animate-pulseCustom {
+    animation: pulseCustom 2s infinite ease-in-out;
+  }
+
+  @keyframes pulseCustom {
+    0% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+    }
+  }
+} */
