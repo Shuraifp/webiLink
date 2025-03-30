@@ -1,13 +1,17 @@
 "use client";
 import { useState } from "react";
+import { login } from "@/lib/api/admin/authApi";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function LogIn() {
+  const router = useRouter()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     if (!email || !password) {
       setError("Both fields are required.");
@@ -19,7 +23,18 @@ export default function LogIn() {
       return;
     }
 
-    setError(""); 
+    setError("");
+
+    try {
+      await login(email,password)
+      router.push('/admin')
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err?.response?.data.message);
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    }
   };
 
   return (

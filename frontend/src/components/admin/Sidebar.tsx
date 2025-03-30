@@ -24,8 +24,8 @@ const Sidebar: React.FC = () => {
         <ul className="space-y-2">
           <li>
             <Link
-              href="/admin/dashboard"
-              className={getLinkClassName("/admin/dashboard")}
+              href="/admin"
+              className={getLinkClassName("/admin")}
             >
               <LayoutDashboard className="w-5 h-5" />
               Dashboard
@@ -33,8 +33,8 @@ const Sidebar: React.FC = () => {
           </li>
           <li>
             <Link
-              href="/admin/dashboard/users"
-              className={getLinkClassName("/admin/dashboard/users")}
+              href="/admin/users"
+              className={getLinkClassName("/admin/users")}
             >
               <Users className="w-5 h-5" />
               Users
@@ -42,15 +42,15 @@ const Sidebar: React.FC = () => {
           </li>
           <li>
             <Link
-              href="/admin/dashboard/subscription"
-              className={getLinkClassName("/admin/dashboard/subscription")}
+              href="/admin/subscription"
+              className={getLinkClassName("/admin/subscription")}
             >
               <Layers className="w-5 h-5" />
               Subscription
             </Link>
           </li>
           <li key="plans">
-            <Link href="/admin/dashboard/plans" className={getLinkClassName("/admin/dashboard/plans")}>
+            <Link href="/admin/plans" className={getLinkClassName("/admin/plans")}>
               <Package className="w-5 h-5" />
               Plans
             </Link>

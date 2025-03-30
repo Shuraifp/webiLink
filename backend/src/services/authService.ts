@@ -12,6 +12,7 @@ import crypto from "crypto";
 import { Document } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
+
 @injectable()
 export class AuthService implements IAuthService {
   constructor(
@@ -86,8 +87,20 @@ export class AuthService implements IAuthService {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await this._userRepository.findByEmail(email);
-    if (!user) throw new Error("User not found");
+    if (!user || user.role !== UserRole.USER) throw new Error("User not found");
     if (user.isBlocked) throw new Error("User is blocked");
+    if (!user.password || !(await bcrypt.compare(password, user.password)))
+      throw new Error("Invalid credentials");
+
+    const accessToken = this._jwtService.generateAccessToken(user);
+    const refreshToken = this._jwtService.generateRefreshToken(user);
+    return { accessToken, refreshToken, user };
+  }
+  
+  async adminLogin(email: string, password: string): Promise<LoginResponse> {
+    const user = await this._userRepository.findByEmail(email);
+    if (!user || user.role !== UserRole.ADMIN ) throw new Error("Admin not found");
+    if (user.isBlocked) throw new Error("Admin is blocked");
     if (!user.password || !(await bcrypt.compare(password, user.password)))
       throw new Error("Invalid credentials");
 

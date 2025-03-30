@@ -7,7 +7,7 @@ import googleLogo from "../../public/logos/google.png";
 import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
 import Link from "next/link";
 import { AuthInput } from "../types/type";
-import { login, googleSignIn, forgotPassword } from "../lib/api/authApi";
+import { login, googleSignIn, forgotPassword } from "@/lib/api/user/authApi";
 import axios from "axios";
 
 const Login: React.FC = () => {
@@ -38,7 +38,7 @@ const Login: React.FC = () => {
         avatar: userData?.photoURL ?? "",
         googleId: userData?.uid ?? "",
       });
-      router.replace("/dashboard");
+      router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -53,7 +53,7 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
     try {
       await login(user.email, user.password);
-      router.replace("/dashboard");
+      router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
