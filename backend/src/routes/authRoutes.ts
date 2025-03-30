@@ -12,5 +12,7 @@ router.post('/verifyOtp', authController.verifyOtp.bind(authController));
 router.post('/verify-token', authController.verifyAccessToken.bind(authController))
 router.post('/refresh-token', authController.refreshToken.bind(authController))
 router.post('/logout', authController.logout.bind(authController))
+router.post('/forgot-password', authController.requestResetPassword.bind(authController))
+router.post('/reset-password', authController.resetPassword.bind(authController))
 
 export default router;

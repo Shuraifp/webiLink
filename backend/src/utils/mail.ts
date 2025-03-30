@@ -14,6 +14,7 @@ const transporter = nodemailer.createTransport({
 
 export interface IMailService {
   sendOtp(to: string, otp: string, subject?: string): Promise<void>;
+  sendOtpEmail(to: string, text: string, subject?: string): Promise<void>;
 }
 
 @injectable()
@@ -31,6 +32,20 @@ export class MailService implements IMailService {
       console.log(`OTP email sent to ${to} with subject: ${subject}`);
     } catch (error: any) {
       console.error(`Failed to send OTP email to ${to}:`, error);
+      throw new Error("Failed to send email");
+    }
+  }
+  
+  async sendOtpEmail(to: string, text: string, subject: string): Promise<void> {
+    try {
+      await transporter.sendMail({
+        from: process.env.NODEMAILER_EMAIL_USER,
+        to,
+        subject,
+        text
+      });
+    } catch (error: any) {
+      console.error(`Failed to send link email to ${to}:`, error);
       throw new Error("Failed to send email");
     }
   }

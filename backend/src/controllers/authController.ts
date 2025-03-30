@@ -3,7 +3,7 @@ import { inject, injectable } from "inversify";
 import TYPES from "../di/types";
 import { IAuthService } from "../interfaces/IAuthService";
 import { IAuthController } from "../interfaces/IAuthController";
-import { ResponseUser } from "../types/type";
+import { successResponse, errorResponse } from "../types/type";
 
 @injectable()
 export class AuthController implements IAuthController {
@@ -13,7 +13,7 @@ export class AuthController implements IAuthController {
     try {
       const { username, email, password } = req.body;
       const user = await this._authService.signUp(username, email, password); //as ResponseUser
-      res.status(201).json(user);
+      res.status(201).json(successResponse("User registered successfully", user));
     } catch (error) {
       this.handleError(res, error);
     }
@@ -146,6 +146,32 @@ export class AuthController implements IAuthController {
       res.status(200).json({ message: "Logout successful" });
     } catch (error) {
       this.handleError(res, error, 500);
+    }
+  }
+  
+  async requestResetPassword(req:Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      if (!email) throw new Error("Email is required");
+      await this._authService.requestPasswordReset(email)
+      res.status(200).json(successResponse("Link has been sent to your email address. check it out now and get a link to reset your password"))
+    } catch (err){
+      this.handleError(res,err)
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
+        throw new Error("Token and new password are required");
+      }
+      
+      await this._authService.resetPassword(token, newPassword);
+      res.status(200).json(successResponse("Password reset successfully"));
+    } catch (error) {
+      console.log(error)
+      this.handleError(res, error);
     }
   }
   

@@ -39,4 +39,20 @@ export class UserRepository implements IUserRepository {
     }
     return updatedUser;
   }
+
+  async saveResetToken(
+    userId: Types.ObjectId,
+    token: string,
+    expiresAt: Date
+  ): Promise<void> {
+    await UserModel.findByIdAndUpdate(userId, {
+      resetPasswordToken: token,
+      resetPasswordExpiry: expiresAt,
+    });
+  }
+
+  async findByResetToken(token: string): Promise<IUser | null> {
+    return await UserModel.findOne({ resetPasswordToken: token });
+  }
+  
 }

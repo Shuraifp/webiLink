@@ -7,4 +7,5 @@ export interface IAuthController {
   verifyOtp(req: Request, res: Response): Promise<void>;
   verifyAccessToken(req: Request, res: Response): Promise<void>;
   refreshToken(req: Request, res: Response): Promise<void>;
+  requestResetPassword(req: Request, res: Response): Promise<void>;
 }
