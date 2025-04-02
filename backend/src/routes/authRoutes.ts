@@ -1,10 +1,21 @@
 import { Router } from "express";
-import container from "../di/container";
+// import container from "../di/container";
 import { AuthController } from "../controllers/authController";
+import { AuthService } from "../services/authService";
+import { MailService } from "../utils/mail";
+import { JwtService } from "../utils/jwt";
+import { UserRepository } from "../repositories/userRepository";
+import userModel from "../models/userModel";
 
 const router = Router();
-const authController = container.get<AuthController>(AuthController);
+// const authController = container.get<AuthController>(AuthController);
 
+const mailService = new MailService()
+const jwtService = new JwtService()
+const UserModel = userModel
+const userRepository = new UserRepository(UserModel)
+const authService = new AuthService(userRepository,jwtService,mailService)
+const authController = new AuthController(authService)
 
 // user
 router.post("/signup", authController.signUp.bind(authController));

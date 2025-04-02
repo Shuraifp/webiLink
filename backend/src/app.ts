@@ -1,7 +1,10 @@
 import express from 'express';
-import authRoutes from './routes/authRoutes';
 import cors from 'cors';
 import cookieParser from 'cookie-parser'
+
+// Routes
+import authRoutes from './routes/authRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 
 export const app = express();
@@ -13,3 +16,4 @@ app.use(cors({
 app.use(cookieParser())
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes)

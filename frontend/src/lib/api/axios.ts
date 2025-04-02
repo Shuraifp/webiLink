@@ -8,7 +8,7 @@ export const apiWithoutAuth = axios.create({
     withCredentials: true,
 });
 
-const createAuthApi = () => {
+const createAuthApi = (refreshEndpoint:string) => {
     const instance = axios.create({
         baseURL: BASE_URL,
         headers: { "Content-Type": "application/json" },
@@ -24,7 +24,7 @@ const createAuthApi = () => {
                 originalRequest._retry = true;
 
                 try {
-                    await refreshToken();
+                    await refreshToken(refreshEndpoint);
                     return axios(originalRequest);
                 } catch (refreshError) {
                     return Promise.reject(refreshError);
@@ -38,12 +38,12 @@ const createAuthApi = () => {
     return instance;
 };
 
-export const adminApiWithAuth = createAuthApi();
-export const userApiWithAuth = createAuthApi();
+export const adminApiWithAuth = createAuthApi('/auth/refresh-adminToken');
+export const userApiWithAuth = createAuthApi('/auth/refresh-userToken');
 
-const refreshToken = async () => {
+const refreshToken = async (refreshEndpoint:string) => {
     try {
-        await axios.post(`${BASE_URL}/auth/refresh-token`, {}, { withCredentials: true });
+        await axios.post(`${BASE_URL}${refreshEndpoint}`, {}, { withCredentials: true });
         console.log("Token refreshed successfully");
     } catch (error) {
         console.error("Token refresh failed", error);

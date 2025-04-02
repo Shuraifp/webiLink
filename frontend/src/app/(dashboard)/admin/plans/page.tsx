@@ -1,55 +1,181 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Filter, Plus, Edit, Archive } from "lucide-react";
-import LogoutButton from "@/components/admin/LogoutButtom";
+import { useState, useEffect } from "react";
+import { Search, Filter, Plus, Edit, Archive, Trash, Undo } from "lucide-react";
+import LogoutButton from "@/components/admin/LogoutButton";
+import {
+  createPlan,
+  getPlans,
+  archivePlan,
+  getArchivedPlans,
+  restorePlan,
+  editPlan,
+} from "@/lib/api/admin/adminApi";
+
+export interface Plan {
+  _id?: string;
+  name: string;
+  description?: string;
+  price: number;
+  billingCycle: {
+    interval: "day" | "week" | "month" | "year" | "lifetime";
+    frequency: number;
+  };
+  features: string[];
+  isArchived: boolean;
+}
 
 export default function PlanManagementPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [currentFeature, setCurrentFeature] = useState<string>("");
+  const [isEditing, setIsEditing] = useState<Plan | null>(null);
+  const [newPlan, setNewPlan] = useState<Plan>({
+    name: "",
+    description: "",
+    price: 0,
+    billingCycle: {
+      interval: "lifetime",
+      frequency: 0,
+    },
+    features: [],
+    isArchived: false,
+  });
 
-  const mockPlans = [
-    {
-      id: "1",
-      name: "Basic",
-      price: 9.99,
-      duration: "monthly",
-      status: "active",
-      features: "Up to 10 participants",
-    },
-    {
-      id: "2",
-      name: "Pro",
-      price: 19.99,
-      duration: "monthly",
-      status: "active",
-      features: "Up to 50 participants, Recording",
-    },
-    {
-      id: "3",
-      name: "Enterprise",
-      price: 49.99,
-      duration: "yearly",
-      status: "archived",
-      features: "Unlimited participants, Analytics",
-    },
-    {
-      id: "4",
-      name: "Starter",
-      price: 5.99,
-      duration: "monthly",
-      status: "active",
-      features: "Up to 5 participants",
-    },
-  ];
+  useEffect(() => {
+    if (statusFilter === "active") {
+      fetchPlans();
+    } else {
+      fetchArchivedPlans();
+    }
+  }, [statusFilter]);
 
-  const filteredPlans = mockPlans.filter(
-    (plan) =>
-      (statusFilter === "all" || plan.status === statusFilter) &&
-      (plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        plan.features.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const fetchPlans = async () => {
+    try {
+      const response = await getPlans();
+      setPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const fetchArchivedPlans = async () => {
+    try {
+      const response = await getArchivedPlans();
+      setPlans(response.data);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await createPlan(newPlan);
+      setPlans([...plans, response.data]);
+      setIsCreateModalOpen(false);
+      setNewPlan({
+        name: "",
+        description: "",
+        price: 0,
+        billingCycle: {
+          interval: "lifetime",
+          frequency: 0,
+        },
+        features: [],
+        isArchived: false,
+      });
+    } catch (error) {
+      console.error("Error creating plan:", error);
+    }
+  };
+
+  const handleArchivePlan = async (id: string | undefined) => {
+    try {
+      if (!id) {
+        throw new Error("Id was not provided");
+      }
+      const res = await archivePlan(id);
+      setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+    } catch (error) {
+      console.error("Error archiving plan:", error);
+    }
+  };
+
+  const handleRestorePlan = async (id: string | undefined) => {
+    try {
+      if (!id) {
+        throw new Error("Id was not provided");
+      }
+      const res = await restorePlan(id);
+      setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+    } catch (error) {
+      console.error("Error archiving plan:", error);
+    }
+  };
+
+  const handleEditPlan = async (e:React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await editPlan(newPlan);
+      setPlans(plans.map((plan) => (plan._id === newPlan._id ? res : plan)));
+      setIsEditing(null)
+      setIsCreateModalOpen(false);
+      setNewPlan({
+        name: "",
+        description: "",
+        price: 0,
+        billingCycle: {
+          interval: "lifetime",
+          frequency: 0,
+        },
+        features: [],
+        isArchived: false,
+      });
+    } catch (error) {
+      console.error("Error archiving plan:", error);
+    }
+  };
+
+  const formatBillingCycle = (
+    billingCycle: Plan["billingCycle"],
+    price: number
+  ) => {
+    if (billingCycle.interval === "lifetime" && price > 0) {
+      return `Lifetime Access just by ${price}`;
+    } else if (price === 0) {
+      if (billingCycle.interval === "lifetime") {
+        return "free of cost. lifetime access";
+      } else {
+        return `explore freely for ${billingCycle.frequency} ${
+          billingCycle.interval
+        }${billingCycle.frequency > 1 ? "s" : ""}`;
+      }
+    }
+
+    return `Every ${billingCycle.frequency} ${billingCycle.interval}${
+      billingCycle.frequency > 1 ? "s" : ""
+    }`;
+  };
+
+  const handleRemoveFeature = (ind: number) => {
+    setNewPlan((prev) => ({
+      ...prev,
+      features: prev.features.filter((item, id) => id !== ind),
+    }));
+  };
+
+  const filtered = plans.filter((p) => {
+    return (statusFilter === "archived" && p.isArchived) || (statusFilter === "active" && !p.isArchived);
+  });
+  
   return (
     <>
       <header className="bg-white shadow p-4 flex items-center justify-between">
@@ -65,14 +191,11 @@ export default function PlanManagementPage() {
             />
             <Search className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
           </div>
-
           <LogoutButton />
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 p-8">
-        {/* Filters and create button */}
         <div className="flex justify-between">
           <div className="mb-6 flex items-center gap-4">
             <Filter className="w-5 h-5 text-gray-600" />
@@ -81,16 +204,180 @@ export default function PlanManagementPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="py-2 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Plans</option>
+              {/* <option value="all">All Plans</option> */}
               <option value="active">Active</option>
               <option value="archived">Archived</option>
             </select>
           </div>
-          <button className="flex items-center mb-6 gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center mb-6 gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Plus className="w-5 h-5" />
             Create Plan
           </button>
         </div>
+
+        {/* Create Plan Modal */}
+        {isCreateModalOpen && (
+          <div
+            className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center overflow-y-scroll justify-center z-50"
+            style={{ backgroundColor: "rgba(75, 85, 99, 0.5)" }}
+          >
+            <div className="bg-white rounded-lg p-6 w-full max-w-md my-10 mt-16">
+              <h3 className="text-lg font-semibold mb-4">Create New Plan</h3>
+              <form onSubmit={isEditing ? handleEditPlan : handleCreatePlan}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newPlan.name}
+                    onChange={(e) =>
+                      setNewPlan({ ...newPlan, name: e.target.value })
+                    }
+                    className="mt-1 p-2 w-full border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    value={newPlan.description}
+                    onChange={(e) =>
+                      setNewPlan({ ...newPlan, description: e.target.value })
+                    }
+                    className="mt-1 p-2 w-full border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newPlan.price}
+                    onChange={(e) =>
+                      setNewPlan({
+                        ...newPlan,
+                        price: parseFloat(e.target.value),
+                      })
+                    }
+                    className="mt-1 p-2 w-full border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Billing Cycle
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={newPlan.billingCycle.interval}
+                      onChange={(e) =>
+                        setNewPlan({
+                          ...newPlan,
+                          billingCycle: {
+                            ...newPlan.billingCycle,
+                            interval: e.target.value as
+                              | "day"
+                              | "week"
+                              | "month"
+                              | "year"
+                              | "lifetime",
+                          },
+                        })
+                      }
+                      className="mt-1 p-2 w-1/2 border rounded-md"
+                    >
+                      <option value="lifetime">Lifetime</option>
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
+                      <option value="month">Month</option>
+                      <option value="year">Year</option>
+                    </select>
+                    <input
+                      type="number"
+                      disabled={newPlan.billingCycle.interval === "lifetime"}
+                      value={newPlan.billingCycle.frequency}
+                      onChange={(e) =>
+                        setNewPlan({
+                          ...newPlan,
+                          billingCycle: {
+                            ...newPlan.billingCycle,
+                            frequency: parseInt(e.target.value),
+                          },
+                        })
+                      }
+                      className="mt-1 p-2 w-1/2 border rounded-md"
+                      placeholder="Frequency"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Features
+                  </label>
+                  <input
+                    placeholder="Add feature"
+                    value={currentFeature}
+                    onChange={(e) => setCurrentFeature(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        const trimmedInp = currentFeature.trim();
+                        if (trimmedInp) {
+                          setNewPlan((prev) => ({
+                            ...prev,
+                            features: [...prev.features, trimmedInp],
+                          }));
+                          setCurrentFeature("");
+                        }
+                      }
+                    }}
+                    className="mt-1 p-2 w-full border rounded-md"
+                  />
+                </div>
+                <ul className="border-2 mb-4 px-1 border-gray-200 rounded-2xl">
+                  {newPlan.features.map((feat, ind) => (
+                    <li
+                      key={ind}
+                      className="p-2 pl-4 bg-gray-200 flex justify-between my-1 rounded-xl"
+                    >
+                      <p>{feat}</p>
+                      <Trash
+                        onClick={() => handleRemoveFeature(ind)}
+                        className="w-5 h-5 text-gray-600 cursor-pointer"
+                      />
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if(isEditing) setIsEditing(null)
+                      setIsCreateModalOpen(false)
+                    }}
+                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {isEditing ? 'update' : 'create'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Plans Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -104,7 +391,7 @@ export default function PlanManagementPage() {
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duration
+                  Billing Cycle
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Features
@@ -118,70 +405,91 @@ export default function PlanManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredPlans.map((plan) => (
-                <tr key={plan.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {plan.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${plan.price.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {plan.duration.charAt(0).toUpperCase() +
-                      plan.duration.slice(1)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {plan.features}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        plan.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {plan.status.charAt(0).toUpperCase() +
-                        plan.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
-                      <button
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Edit plan"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        className={`${
-                          plan.status === "active"
-                            ? "text-orange-600 hover:text-orange-800"
-                            : "text-gray-400 cursor-not-allowed"
-                        }`}
-                        disabled={plan.status !== "active"}
-                        title={
-                          plan.status === "active"
-                            ? "Archive plan"
-                            : "Plan already archived"
-                        }
-                      >
-                        <Archive className="w-5 h-5" />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-4">
+                    Loading...
                   </td>
                 </tr>
-              ))}
+              ) : plans.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-4 text-gray-500">
+                    No plans found matching your criteria
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((plan) => (
+                  <tr key={plan._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {plan.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ₹{plan.price.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatBillingCycle(plan.billingCycle, plan.price)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {plan.features.join(", ")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          !plan.isArchived
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {!plan.isArchived ? "Active" : "Archived"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex gap-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                          onClick={() => {
+                            // const edititem = plans.find(
+                            //   (a) => a._id === plan._id
+                            // );
+                            // if (edititem) {
+                              setIsEditing(plan);
+                              setNewPlan(plan);
+                              setIsCreateModalOpen(true);
+                            // }
+                          }}
+                          title="Edit plan"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          className={`${
+                            !plan.isArchived
+                              ? "text-orange-600 hover:text-orange-800 cursor-pointer"
+                              : "text-green-400 cursor-pointer"
+                          }`}
+                          title={
+                            !plan.isArchived ? "Archive plan" : "Restore plan"
+                          }
+                          onClick={() =>
+                            plan.isArchived
+                              ? handleRestorePlan(plan._id)
+                              : handleArchivePlan(plan._id)
+                          }
+                        >
+                          {plan.isArchived ? (
+                            <Undo className="w-5 h-5" />
+                          ) : (
+                            <Archive className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-
-        {/* If no plans found */}
-        {filteredPlans.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No plans found matching your criteria
-          </div>
-        )}
       </main>
     </>
   );

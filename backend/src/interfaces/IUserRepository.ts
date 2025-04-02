@@ -8,4 +8,9 @@ export interface IUserRepository {
   findById(userId:Types.ObjectId): Promise<IUser | null>
   saveResetToken(userId:Types.ObjectId,hashedToken:string,expiresAt:Date): Promise<void>;
   findByResetToken(token:string):Promise<IUser | null>;
+  listUsers(): Promise<IUser[]>;
+  blockUser(userId:string): Promise<boolean>;
+  unblockUser(userId:string): Promise<boolean>;
+  softDeleteUser(userId:string): Promise<boolean>;
+  restoreUser(userId:string): Promise<boolean>;
 }

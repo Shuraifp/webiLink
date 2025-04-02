@@ -5,9 +5,9 @@ import { IAuthService } from "../interfaces/IAuthService";
 import { IAuthController } from "../interfaces/IAuthController";
 import { successResponse, errorResponse } from "../types/type";
 
-@injectable()
+// @injectable()
 export class AuthController implements IAuthController {
-  constructor(@inject(TYPES.IAuthService) private _authService: IAuthService) {}
+  constructor(private _authService: IAuthService) {}
 
   async signUp(req: Request, res: Response) {
     try {

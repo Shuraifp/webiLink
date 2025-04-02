@@ -13,12 +13,12 @@ import { Document } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
 
-@injectable()
+// @injectable()
 export class AuthService implements IAuthService {
   constructor(
-    @inject(TYPES.IUserRepository) private _userRepository: IUserRepository,
-    @inject(TYPES.IJwtService) private _jwtService: IJwtService,
-    @inject(TYPES.IMailService) private _mailService: IMailService
+    private _userRepository: IUserRepository,
+    private _jwtService: IJwtService,
+    private _mailService: IMailService
   ) {}
 
   async signUp(
