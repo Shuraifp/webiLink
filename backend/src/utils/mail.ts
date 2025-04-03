@@ -17,7 +17,7 @@ export interface IMailService {
   sendOtpEmail(to: string, text: string, subject?: string): Promise<void>;
 }
 
-@injectable()
+// @injectable()
 export class MailService implements IMailService {
 
   async sendOtp(to: string, otp: string, subject: string = "Your OTP Code"): Promise<void> {

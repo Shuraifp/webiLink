@@ -4,11 +4,9 @@ import { IUserRepository } from "../interfaces/IUserRepository";
 import { Document, Types } from "mongoose";
 import TYPES from "../di/types";
 
-@injectable()
+// @injectable()
 export class UserRepository implements IUserRepository {
-  // constructor(
-  //   @inject(TYPES.IUser) private _userModel:IUser
-  // ) {}
+  constructor(private _userModel: typeof UserModel) {}
 
   async createUser(user: UserInput): Promise<IUser & Document> {
     try {
@@ -54,5 +52,32 @@ export class UserRepository implements IUserRepository {
   async findByResetToken(token: string): Promise<IUser | null> {
     return await UserModel.findOne({ resetPasswordToken: token });
   }
-  
+
+  async listUsers(): Promise<IUser[]> {
+    return await UserModel.find({role:"user"}).select("username email isBlocked _id");
+  }
+
+  async blockUser(userId: string): Promise<boolean> {
+    const updatedUser = await UserModel
+      .findByIdAndUpdate(userId, { isBlocked: true }, { new: true })
+    return updatedUser !== null;
+  }
+
+  async unblockUser(userId: string): Promise<boolean> {
+    const updatedUser = await UserModel
+      .findByIdAndUpdate(userId, { isBlocked: false }, { new: true })
+    return updatedUser !== null;
+  }
+
+  async softDeleteUser(userId: string): Promise<boolean> {
+    const updatedUser = await UserModel
+      .findByIdAndUpdate(userId, { isArchived: true }, { new: true })
+    return updatedUser !== null;
+  }
+
+  async restoreUser(userId: string): Promise<boolean> {
+    const updatedUser = await UserModel
+      .findByIdAndUpdate(userId, { isArchived: false }, { new: true })
+    return updatedUser !== null;
+  }
 }

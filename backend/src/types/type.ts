@@ -1,6 +1,18 @@
 import { Types } from "mongoose";
 import { IUser } from "../models/userModel";
 
+
+
+export enum HttpStatus {
+  OK = 200,
+  CREATED = 201,
+  BAD_REQUEST = 400,
+  UNAUTHORIZED = 401,
+  FORBIDDEN = 403,
+  NOT_FOUND = 404,
+  INTERNAL_SERVER_ERROR = 500
+}
+
 export enum UserRole {
   ADMIN = "admin",
   USER = "user",
@@ -12,10 +24,6 @@ export interface LoginResponse {
   user: IUser;
 } 
 
-// export interface DecodedToken {
-//   userId:string;
-//   userRole:string;
-// }
 
 export interface ResponseUser {
   _id:Types.ObjectId;

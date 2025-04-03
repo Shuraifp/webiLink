@@ -1,5 +1,5 @@
 import { Users, UserCheck, Layers } from "lucide-react";
-import LogoutButton from "@/components/admin/LogoutButtom";
+import LogoutButton from "@/components/admin/LogoutButton";
 
 export default function AdminDashboardPage() {
   return (
