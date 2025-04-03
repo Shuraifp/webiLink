@@ -10,6 +10,8 @@ import { IJwtService } from "../utils/jwt";
 import { IMailService } from "../utils/mail";
 import crypto from "crypto";
 import { Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
+
 
 @injectable()
 export class AuthService implements IAuthService {
@@ -85,8 +87,20 @@ export class AuthService implements IAuthService {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await this._userRepository.findByEmail(email);
-    if (!user) throw new Error("User not found");
+    if (!user || user.role !== UserRole.USER) throw new Error("User not found");
     if (user.isBlocked) throw new Error("User is blocked");
+    if (!user.password || !(await bcrypt.compare(password, user.password)))
+      throw new Error("Invalid credentials");
+
+    const accessToken = this._jwtService.generateAccessToken(user);
+    const refreshToken = this._jwtService.generateRefreshToken(user);
+    return { accessToken, refreshToken, user };
+  }
+  
+  async adminLogin(email: string, password: string): Promise<LoginResponse> {
+    const user = await this._userRepository.findByEmail(email);
+    if (!user || user.role !== UserRole.ADMIN ) throw new Error("Admin not found");
+    if (user.isBlocked) throw new Error("Admin is blocked");
     if (!user.password || !(await bcrypt.compare(password, user.password)))
       throw new Error("Invalid credentials");
 
@@ -153,5 +167,53 @@ export class AuthService implements IAuthService {
     } catch (error) {
       throw new Error("Invalid refresh token");
     }
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this._userRepository.findByEmail(email);
+    if (!user) throw new Error("User not found");
+    if (user.googleId && !user.password)
+      throw new Error(
+        "Use Google authentication to log in; no password to reset"
+      );
+
+    const resetToken = uuidv4();
+
+    await this._userRepository.saveResetToken(
+      user._id,
+      resetToken,
+      new Date(Date.now() + 15 * 60 * 1000)
+    );
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const emailBody = `
+      To reset your password, click the link below:\n
+      ${resetUrl}\n
+      This link expires in 15 minutes. If you didn’t request this, ignore this email.
+    `;
+
+    await this._mailService.sendOtpEmail(
+      email,
+      emailBody,
+      "Password Reset Request"
+    );
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const user = await this._userRepository.findByResetToken(token);
+    if (!user || !user.resetPasswordToken)
+      throw new Error("Invalid token");
+    if (token !== user.resetPasswordToken) throw new Error("Invalid token");
+
+    if (user.resetPasswordExpiry && new Date() > user.resetPasswordExpiry)
+      throw new Error("Reset token has expired");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this._userRepository.updateUser(user._id, {
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpiry: null,
+    });
   }
 }

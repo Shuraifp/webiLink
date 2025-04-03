@@ -1,10 +1,14 @@
 import { Users, UserCheck, Layers } from "lucide-react";
+import LogoutButton from "@/components/admin/LogoutButtom";
 
 export default function AdminDashboardPage() {
   return (
     <div className="p-8">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
-
+      <div className="flex justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-800">Dashboard</h2>
+        <LogoutButton />
+      </div>
+      
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
           <div className="bg-purple-100 p-3 rounded-full">
@@ -29,7 +33,9 @@ export default function AdminDashboardPage() {
             <Layers className="w-6 h-6 text-yellow-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">Subscription</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              Subscription
+            </h3>
             <p className="text-2xl font-bold text-gray-900">67</p>
           </div>
         </div>

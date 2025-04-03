@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Settings, Megaphone, Building, CreditCard, Rocket, User, LogOut } from "lucide-react";
 import { useState,useRef,useEffect } from "react";
-import { logout } from "@/lib/api/authApi";
+import { logout } from "@/lib/api/user/authApi";
 import { useRouter } from "next/navigation";
 
 const Sidebar: React.FC = () => {

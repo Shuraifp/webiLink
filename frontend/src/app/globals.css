@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 body {
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: var(--font-poppins), sans-serif;
 }
 
 .playfair {

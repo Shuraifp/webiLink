@@ -7,7 +7,7 @@ import googleLogo from "../../public/logos/google.png";
 import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
 import Link from "next/link";
 import { AuthInput } from "../types/type";
-import { login, googleSignIn } from "../lib/api/authApi";
+import { login, googleSignIn, forgotPassword } from "@/lib/api/user/authApi";
 import axios from "axios";
 
 const Login: React.FC = () => {
@@ -20,11 +20,11 @@ const Login: React.FC = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState('')
   const [errors, setErrors] = useState({
     email: { message: "" },
     password: { message: "" },
   });
-  // const dispatch = useDispatch();
   const router = useRouter();
 
   const handleGoogleLogin = async () => {
@@ -38,7 +38,7 @@ const Login: React.FC = () => {
         avatar: userData?.photoURL ?? "",
         googleId: userData?.uid ?? "",
       });
-      router.replace("/dashboard");
+      router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -53,7 +53,7 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
     try {
       await login(user.email, user.password);
-      router.replace("/dashboard");
+      router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -65,20 +65,24 @@ const Login: React.FC = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(successMsg!==''){
+      setSuccessMsg('')
+      return
+    }
     setError("");
+
+    if (
+      !resetEmail.trim() ||
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(resetEmail)
+    ) {
+      setError("Please enter a valid email.");
+      return;
+    }
+
     try {
-      const response = await fetch("............/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resetEmail }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        alert("Password reset email sent! Check your inbox.");
-        setShowForgotPassword(false);
-      } else {
-        setError(data.message || "Failed to send reset email.");
-      }
+      const res = await forgotPassword(resetEmail);
+      setSuccessMsg(res.message)
+// v      setShowForgotPassword(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -201,8 +205,7 @@ const Login: React.FC = () => {
         <form onSubmit={handleForgotPassword}>
           <h3 className="text-lg font-semibold mb-4">Forgot Password</h3>
           <p className="text-sm text-gray-700 mb-4">
-            Enter your email address, and we’ll send you a link to reset your
-            password.
+            {successMsg !== '' ? successMsg : 'Enter your email address, and we’ll send you a link to reset your password.'}
           </p>
           <div className="mb-4">
             <label
@@ -212,7 +215,7 @@ const Login: React.FC = () => {
               Email
             </label>
             <input
-              type="email"
+              type="text"
               id="forgot-email"
               value={resetEmail}
               onChange={(e) => setResetEmail(e.target.value)}
@@ -224,7 +227,7 @@ const Login: React.FC = () => {
             type="submit"
             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            Send Reset Link
+            {successMsg !== '' ? 'Send again' : 'Send Reset Link'}
           </button>
           <button
             type="button"

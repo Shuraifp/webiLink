@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, Filter, Plus, Edit, Archive } from "lucide-react";
+import LogoutButton from "@/components/admin/LogoutButtom";
 
 export default function PlanManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,27 +65,31 @@ export default function PlanManagementPage() {
             />
             <Search className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Plus className="w-5 h-5" />
-            Create Plan
-          </button>
+
+          <LogoutButton />
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 p-8">
-        {/* Filters */}
-        <div className="mb-6 flex items-center gap-4">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="py-2 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Plans</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </select>
+        {/* Filters and create button */}
+        <div className="flex justify-between">
+          <div className="mb-6 flex items-center gap-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="py-2 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Plans</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <button className="flex items-center mb-6 gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-5 h-5" />
+            Create Plan
+          </button>
         </div>
 
         {/* Plans Table */}

@@ -8,8 +8,8 @@ import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
 import { AuthInput } from "../types/type";  
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { signup, resendOtp, verifyOtp } from "../lib/api/authApi";
-import { googleSignIn } from "../lib/api/authApi";
+import { signup, resendOtp, verifyOtp } from "@/lib/api/user/authApi";
+import { googleSignIn } from "@/lib/api/user/authApi";
 import axios from "axios";
 
 const Signup: React.FC = () => {
@@ -53,7 +53,7 @@ const Signup: React.FC = () => {
               avatar: userData?.photoURL ?? "",
               googleId: userData?.uid ?? "",
             });
-            router.replace("/dashboard");
+            router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -106,7 +106,6 @@ const Signup: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
     try {
-      console.log('signup')
       await signup(user.username, user.email, user.password);
       setShowOtpInput(true);
       setTimer(OTP_TIMEOUT);
@@ -139,7 +138,7 @@ const Signup: React.FC = () => {
     e.preventDefault()
     try {
       await verifyOtp(user.email,otp)
-      router.replace('/dashboard')
+      router.replace('/host')
     } catch (err){
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);

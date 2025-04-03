@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, Filter, Lock, Unlock, Trash2 } from "lucide-react";
+import LogoutButton from "@/components/admin/LogoutButtom";
 
 export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,6 +29,7 @@ export default function UserManagementPage() {
     
       <header className="bg-white shadow p-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
+        <div className="flex items-center gap-3">
         <div className="flex items-center gap-4">
           <div className="relative">
             <input
@@ -39,6 +41,9 @@ export default function UserManagementPage() {
             />
             <Search className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
           </div>
+        </div>
+
+        <LogoutButton />
         </div>
       </header>
 
