@@ -1,6 +1,7 @@
 import Image from "next/image";
 import React from "react";
 import bannerIMG from "../../public/images/bannerIMG.jpg";
+import Link from "next/link";
 
 const Banner: React.FC = () => {
   return (
@@ -15,12 +16,12 @@ const Banner: React.FC = () => {
             Simplified online meeting software with enterprise-grade security – perfect for a work-wherever world.
           </p>
           <div className="flex space-x-4">
-            <button className="bg-yellow-400 text-black font-semibold py-3 px-6 cursor-pointer rounded-lg hover:bg-yellow-500 transition">
+            <Link href="/pricing" className="bg-yellow-400 text-black font-semibold py-3 px-6 cursor-pointer rounded-lg hover:bg-yellow-500 transition">
               Buy Now
-            </button>
-            <button className="border border-gray-900 text-gray-900 font-semibold py-3 px-6 cursor-pointer rounded-lg hover:bg-gray-100 transition">
+            </Link>
+            <Link href="/login" className="border border-gray-900 text-gray-900 font-semibold py-3 px-6 cursor-pointer rounded-lg hover:bg-gray-100 transition">
               Try Free
-            </button>
+            </Link>
           </div>
         </div>
 

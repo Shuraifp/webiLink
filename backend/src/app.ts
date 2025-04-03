@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 // Routes
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
+import planRoutes from './routes/planRoutes';
 
 
 export const app = express();
@@ -17,3 +18,4 @@ app.use(cookieParser())
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes)
+app.use('/api/plans', planRoutes)

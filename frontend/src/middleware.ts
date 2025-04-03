@@ -8,7 +8,7 @@ export async function middleware(req: NextRequest) {
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
 
-  const isUserNonAuthPage = ["/login", "/signup", "/"].includes(pathname);
+  const isUserNonAuthPage = ["/login", "/signup", "/", "/pricing"].includes(pathname);
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
   const isUserProtectedPage = pathname.startsWith("/host");
   const isAdminProtectedPage = pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
@@ -112,5 +112,5 @@ async function refreshAdminAccessToken(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/signup", "/admin", "/host", "/admin/auth/login", "/reset-password"],
+  matcher: ["/", "/login", "/signup", "/admin", "/host", "/admin/auth/login", "/reset-password", "/pricing"],
 };
