@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser'
+import { errorHandler } from './middlewares/errorHandler';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -19,3 +20,5 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes)
 app.use('/api/plans', planRoutes)
+
+app.use(errorHandler);
