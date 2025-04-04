@@ -3,12 +3,12 @@
 import { useState } from "react";
 
 
-export default function DashboardPage() {
+export default function DashboardPage({user}:{user:{id:string,username:string,email:string}}) {
   // const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(null);
   const [copied, setCopied] = useState(false);
   // const router = useRouter();
 // console.log(user)
-
+console.log(user)
   const handleCopyLink = () => {
     navigator.clipboard.writeText("weblink.com/shuraif-room");
     setCopied(true);

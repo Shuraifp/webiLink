@@ -86,13 +86,15 @@ export class AuthController implements IAuthController {
   async verifyAccessToken(req: Request, res: Response) {
     try {
       const token = req.cookies.accessToken;
+      console.log(token)
 
       if (!token) {
         res.status(401).json({ message: "Access token is required" });
+        return
       }
 
       const user = await this._authService.verifyAccessToken(token);
-      res.status(200).json({ username: user.username, email: user.email });
+      res.status(200).json({ id: user._id, username: user.username, email: user.email });
     } catch (error) {
       this.handleError(res, error, 401);
     }
