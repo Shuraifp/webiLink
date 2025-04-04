@@ -1,5 +1,5 @@
-import { IPlanRepository } from "../interfaces/IPlanRepository";
-import { IPlanService } from "../interfaces/IPlanService";
+import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
+import { IPlanService } from "../interfaces/services/IPlanService";
 import { IPlan } from "../models/PlanModel";
 import { NotFoundError } from "../utils/errors";
 

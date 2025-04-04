@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { inject, injectable } from "inversify";
 import TYPES from "../di/types";
-import { IAuthService } from "../interfaces/IAuthService";
-import { IAuthController } from "../interfaces/IAuthController";
+import { IAuthService } from "../interfaces/services/IAuthService";
+import { IAuthController } from "../interfaces/controllers/IAuthController";
 import { successResponse, errorResponse } from "../types/type";
 
 // @injectable()

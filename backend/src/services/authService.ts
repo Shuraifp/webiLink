@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { inject, injectable } from "inversify";
-import { IUserRepository } from "../interfaces/IUserRepository";
-import { IAuthService } from "../interfaces/IAuthService";
+import { IUserRepository } from "../interfaces/repositories/IUserRepository";
+import { IAuthService } from "../interfaces/services/IAuthService";
 import { IUser } from "../models/userModel";
 import TYPES from "../di/types";
 import { Types } from "mongoose";

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { IPlanController } from "../interfaces/IPlanController";
-import { IPlanService } from "../interfaces/IPlanService";
+import { IPlanController } from "../interfaces/controllers/IPlanController";
+import { IPlanService } from "../interfaces/services/IPlanService";
 import { NotFoundError, InternalServerError, ForbiddenError } from "../utils/errors";
 import { HttpStatus, successResponse, errorResponse } from "../types/type";
 

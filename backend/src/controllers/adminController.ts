@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { inject, injectable } from "inversify";
 import { successResponse, errorResponse } from "../types/type";
-import { IAdminController } from "../interfaces/IAdminController";
-import { IAdminService } from "../interfaces/IAdminService";
+import { IAdminController } from "../interfaces/controllers/IAdminController";
+import { IAdminService } from "../interfaces/services/IAdminService";
 import { HttpStatus } from "../types/type";
 import { InternalServerError, ForbiddenError, NotFoundError } from "../utils/errors";
 

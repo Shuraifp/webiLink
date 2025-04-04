@@ -1,8 +1,8 @@
 // import { injectable, inject } from "inversify";
 // import TYPES from "../di/types";
-import { IAdminService } from "../interfaces/IAdminService";
+import { IAdminService } from "../interfaces/services/IAdminService";
 import { IUser } from "../models/userModel";
-import { IUserRepository } from "../interfaces/IUserRepository";
+import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { Types } from "mongoose";
 import { UserRole } from "../types/type";
 import {
@@ -10,7 +10,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../utils/errors";
-import { IPlanRepository } from "../interfaces/IPlanRepository";
+import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
 import { PlanInput, IPlan } from "../models/PlanModel";
 
 
