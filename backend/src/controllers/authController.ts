@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { inject, injectable } from "inversify";
 import TYPES from "../di/types";
 import { IAuthService } from "../interfaces/IAuthService";
@@ -9,7 +9,7 @@ import { successResponse, errorResponse } from "../types/type";
 export class AuthController implements IAuthController {
   constructor(private _authService: IAuthService) {}
 
-  async signUp(req: Request, res: Response) {
+  async signUp(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, email, password } = req.body;
       const user = await this._authService.signUp(username, email, password); //as ResponseUser
@@ -17,11 +17,11 @@ export class AuthController implements IAuthController {
         .status(201)
         .json(successResponse("User registered successfully", user));
     } catch (error) {
-      this.handleError(res, error);
+      next(error);
     }
   }
 
-  async googleSignIn(req: Request, res: Response) {
+  async googleSignIn(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, email, avatar, googleId } = req.body;
 
@@ -36,11 +36,11 @@ export class AuthController implements IAuthController {
       this.setAuthCookies(res, accessToken, refreshToken);
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
-      this.handleError(res, error);
+      next(error);
     }
   }
 
-  async login(req: Request, res: Response) {
+  async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
       const { accessToken, refreshToken, user } = await this._authService.login(
@@ -51,11 +51,11 @@ export class AuthController implements IAuthController {
       this.setAuthCookies(res, accessToken, refreshToken);
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
-      this.handleError(res, error);
+      next(error);
     }
   }
 
-  async adminLogin(req: Request, res: Response) {
+  async adminLogin(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
       const { accessToken, refreshToken, user } = await this._authService.adminLogin(
@@ -66,11 +66,11 @@ export class AuthController implements IAuthController {
       this.setAdminAuthCookies(res, accessToken, refreshToken);
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
-      this.handleError(res, error);
+      next(error);
     }
   }
 
-  async verifyOtp(req: Request, res: Response) {
+  async verifyOtp(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, otp } = req.body;
       const { accessToken, refreshToken, user } =
@@ -79,11 +79,11 @@ export class AuthController implements IAuthController {
       this.setAuthCookies(res, accessToken, refreshToken);
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
-      this.handleError(res, error);
+      next(error);
     }
   }
 
-  async verifyAccessToken(req: Request, res: Response) {
+  async verifyAccessToken(req: Request, res: Response, next: NextFunction) {
     try {
       const token = req.cookies.accessToken;
       console.log(token)
@@ -96,11 +96,11 @@ export class AuthController implements IAuthController {
       const user = await this._authService.verifyAccessToken(token);
       res.status(200).json({ id: user._id, username: user.username, email: user.email });
     } catch (error) {
-      this.handleError(res, error, 401);
+      next(error);
     }
   }
 
-  async refreshUserToken(req: Request, res: Response) {
+  async refreshUserToken(req: Request, res: Response, next: NextFunction) {
     try {
       const refreshToken = req.cookies.refreshToken;
 
@@ -115,11 +115,11 @@ export class AuthController implements IAuthController {
       this.setAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });
     } catch (error) {
-      this.handleError(res, error, 401);
+      next(error);
     }
   }
   
-  async refreshAdminToken(req: Request, res: Response) {
+  async refreshAdminToken(req: Request, res: Response, next: NextFunction) {
     try {
       const refreshToken = req.cookies.adminRefreshToken;
 
@@ -134,7 +134,7 @@ export class AuthController implements IAuthController {
       this.setAdminAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });
     } catch (error) {
-      this.handleError(res, error, 401);
+      next(error);
     }
   }
 
@@ -180,15 +180,7 @@ export class AuthController implements IAuthController {
     });
   }
 
-  private handleError(res: Response, error: unknown, statusCode: number = 400) {
-    if (error instanceof Error) {
-      res.status(statusCode).json(errorResponse(error.message, error));
-    } else {
-      res.status(500).json(errorResponse("Internal server error"));
-    }
-  }
-
-  async userLogout(req: Request, res: Response) {
+  async userLogout(req: Request, res: Response, next: NextFunction) {
     try {
       res.clearCookie("accessToken", {
         httpOnly: true,
@@ -204,11 +196,11 @@ export class AuthController implements IAuthController {
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {
-      this.handleError(res, error, 500);
+      next(error);
     }
   }
   
-  async adminLogout(req: Request, res: Response) {
+  async adminLogout(req: Request, res: Response, next: NextFunction) {
     try {
       res.clearCookie("adminAccessToken", {
         httpOnly: true,
@@ -224,11 +216,11 @@ export class AuthController implements IAuthController {
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {
-      this.handleError(res, error, 500);
+      next(error);
     }
   }
 
-  async requestResetPassword(req: Request, res: Response): Promise<void> {
+  async requestResetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email } = req.body;
       if (!email) throw new Error("Email is required");
@@ -241,11 +233,11 @@ export class AuthController implements IAuthController {
           )
         );
     } catch (err) {
-      this.handleError(res, err);
+      next(err);
     }
   }
 
-  async resetPassword(req: Request, res: Response): Promise<void> {
+  async resetPassword(req: Request, res: Response, next:NextFunction): Promise<void> {
     try {
       const { token, newPassword } = req.body;
       if (!token || !newPassword) {
@@ -255,8 +247,7 @@ export class AuthController implements IAuthController {
       await this._authService.resetPassword(token, newPassword);
       res.status(200).json(successResponse("Password reset successfully"));
     } catch (error) {
-      console.log(error);
-      this.handleError(res, error);
+      next(error);
     }
   }
 }
