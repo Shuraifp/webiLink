@@ -16,11 +16,11 @@ export class JwtService implements IJwtService {
   constructor() {}
 
   generateAccessToken(user:IUser):string {
-    return Jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET!, { expiresIn: "15m" });
+    return Jwt.sign({ _id:user._id,username:user.username,email:user.email }, process.env.ACCESS_TOKEN_SECRET!, { expiresIn: "15m" });
   }
 
   generateRefreshToken(user:IUser):string {
-    return Jwt.sign({ user }, process.env.REFRESH_TOKEN_SECRET!, { expiresIn: "7d" });
+    return Jwt.sign({ _id:user._id,username:user.username,email:user.email }, process.env.REFRESH_TOKEN_SECRET!, { expiresIn: "7d" });
   }
 
   verifyAccessToken(token: string): { decoded: IUser | null; error?: string } {

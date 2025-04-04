@@ -4,11 +4,9 @@ import { useState } from "react";
 
 
 export default function DashboardPage({user}:{user:{id:string,username:string,email:string}}) {
-  // const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(null);
   const [copied, setCopied] = useState(false);
   // const router = useRouter();
-// console.log(user)
-console.log(user)
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText("weblink.com/shuraif-room");
     setCopied(true);
@@ -26,10 +24,10 @@ console.log(user)
   return (
     <>
         <h2 className="text-3xl font-bold text-gray-800 mb-6">
-          Hello, shuraif!
+          Hello, {user.username}!
         </h2>
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">My personal rooms</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">My rooms</h3>
           <div className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
