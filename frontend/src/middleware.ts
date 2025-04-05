@@ -187,7 +187,7 @@ async function refreshAdminAccessToken(req: NextRequest) {
 
     const nextResponse = NextResponse.next();
     nextResponse.headers.set("Set-Cookie", setCookie);
-console.log('last')
+
     return { response: nextResponse, adminAccessToken: newAccessToken };
   } catch (error) {
     console.error("Error refreshing admin token:", error);
