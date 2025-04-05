@@ -34,8 +34,8 @@ router.post('/verify-token', isValidUser, authController.verifyAccessToken.bind(
 
 // admin
 router.post('/admin-login', authController.adminLogin.bind(authController))
+router.post('/refresh-adminToken', authController.refreshAdminToken.bind(authController))
 
-router.post('/refresh-adminToken', isValidAdmin, authController.refreshAdminToken.bind(authController))
 router.post('/admin-logout', isValidAdmin, authController.adminLogout.bind(authController))
 
 export default router;

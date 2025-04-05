@@ -184,10 +184,10 @@ async function refreshAdminAccessToken(req: NextRequest) {
     if (!setCookie) return null;
     const cookie = parse(setCookie);
     const newAccessToken = cookie.adminAccessToken;
-    console.log("adm side ;", newAccessToken);
+
     const nextResponse = NextResponse.next();
     nextResponse.headers.set("Set-Cookie", setCookie);
-    console.log("last");
+console.log('last')
     return { response: nextResponse, adminAccessToken: newAccessToken };
   } catch (error) {
     console.error("Error refreshing admin token:", error);
