@@ -28,14 +28,14 @@ router.post('/verifyOtp', authController.verifyOtp.bind(authController));
 router.post('/forgot-password', authController.requestResetPassword.bind(authController))
 router.post('/reset-password', authController.resetPassword.bind(authController))
 router.post('/user-logout', authController.userLogout.bind(authController))
+router.post('/refresh-userToken', authController.refreshUserToken.bind(authController))
 
 router.post('/verify-token', isValidUser, authController.verifyAccessToken.bind(authController))
-router.post('/refresh-userToken', isValidUser, authController.refreshUserToken.bind(authController))
 
 // admin
 router.post('/admin-login', authController.adminLogin.bind(authController))
+router.post('/refresh-adminToken', authController.refreshAdminToken.bind(authController))
 
-router.post('/refresh-adminToken', isValidAdmin, authController.refreshAdminToken.bind(authController))
 router.post('/admin-logout', isValidAdmin, authController.adminLogout.bind(authController))
 
 export default router;

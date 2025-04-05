@@ -28,8 +28,9 @@ export interface UserData {
     id: string | null;
     username: string | null;
     email: string | null;
-    avatar?: string | null;
-    googleId?: string | null;
+    avatar?: string;
+    role: string | null;
+    // googleId?: string | null;
 }
 
 
