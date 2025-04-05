@@ -1,9 +1,10 @@
 "use client";
 
+import { UserData } from "@/types/type";
 import { useState } from "react";
 
 
-export default function DashboardPage({user}:{user:{id:string,username:string,email:string}}) {
+export default function DashboardPage({user}: UserData) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {

@@ -74,19 +74,19 @@ export default function RootLayout({
 }>) {
   return (
     <Provider store={store}>
-    <html lang="en">
-      <body
-        className={`
+      <html lang="en">
+        <body
+          className={`
               ${playfair.variable} ${montserrat.variable} ${lora.variable} ${dancing.variable} 
               ${raleway.variable} ${merriweather.variable} ${roboto.variable} ${poppins.variable} 
               ${lobster.variable} ${oswald.variable}
               `}
-      >
+        >
           {/* <PersistGate loading={null} persistor={persistor}> */}
-            {children}
+          {children}
           {/* </PersistGate> */}
-      </body>
-    </html>
-        </Provider>
+        </body>
+      </html>
+    </Provider>
   );
 }

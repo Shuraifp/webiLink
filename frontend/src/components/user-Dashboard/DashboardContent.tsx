@@ -8,13 +8,10 @@ import Settings from "@/components/user-Dashboard/Settings";
 import Subscription from "@/components/user-Dashboard/Subscription";
 import WhatsNew from "@/components/user-Dashboard/What'sNew";
 import Upgrade from "@/components/user-Dashboard/Upgrade";
+import { UserData } from "@/types/type";
 
 interface DashboardContentProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-  };
+  user: UserData
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {

@@ -35,9 +35,9 @@ const Sidebar: React.FC<{ onSectionChange: Dispatch<SetStateAction<string>> }> =
     <aside className=" bg-white shadow-md">
       <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-md">
     
-      <div className="text-4xl font-bold lobster cursor-pointer">
+      <Link href={'/'} className="text-4xl font-bold lobster cursor-pointer">
         <span className="text-yellow-500">w</span>ebiLink
-      </div>
+      </Link>
 
       
       <div className="relative" ref={dropdownRef}>

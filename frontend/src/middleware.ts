@@ -12,13 +12,38 @@ export async function middleware(req: NextRequest) {
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
 
-  const isUserNonAuthPage = ["/login", "/signup", "/", "/pricing"].includes(
+  const isHomePage = pathname === "/";
+  const isPlansPage = pathname === "/pricing";
+  const isUserNonAuthPage = ["/login", "/signup"].includes(
     pathname
   );
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
   const isUserProtectedPage = pathname.startsWith("/host");
   const isAdminProtectedPage =
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
+
+  if (isHomePage || isPlansPage) {
+    let user;
+    let response;
+    // User
+    if (!accessToken) {
+      if (!refreshToken) {
+        return NextResponse.next();
+      }
+      const refreshResult = await refreshUserAccessToken(req);
+      if (refreshResult && refreshResult.accessToken) {
+        response = refreshResult.response;
+        user = await decodeAndVerifyToken(refreshResult.accessToken);
+      }
+    } else {
+      user = await decodeAndVerifyToken(accessToken);
+      response = NextResponse.next();
+    }
+    if (user && response) {
+      response.headers.set("x-user", JSON.stringify(user));
+    }
+    return response;
+  }
 
   if (accessToken && isUserNonAuthPage) {
     return NextResponse.redirect(new URL("/host", req.url));
@@ -50,7 +75,7 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    
+
     response.headers.set("x-user", JSON.stringify(user));
     return response;
   }
@@ -159,10 +184,10 @@ async function refreshAdminAccessToken(req: NextRequest) {
     if (!setCookie) return null;
     const cookie = parse(setCookie);
     const newAccessToken = cookie.adminAccessToken;
-console.log('adm side ;',newAccessToken)
+    console.log("adm side ;", newAccessToken);
     const nextResponse = NextResponse.next();
     nextResponse.headers.set("Set-Cookie", setCookie);
-console.log('last')
+    console.log("last");
     return { response: nextResponse, adminAccessToken: newAccessToken };
   } catch (error) {
     console.error("Error refreshing admin token:", error);
