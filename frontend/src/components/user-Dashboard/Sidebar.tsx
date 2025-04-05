@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { Settings, Megaphone, Building, CreditCard, Rocket, User, LogOut } from "lucide-react";
-import { useState,useRef,useEffect } from "react";
+import { useState,useRef,useEffect, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
 import { useRouter } from "next/navigation";
 
-const Sidebar: React.FC = () => {
+const Sidebar: React.FC<{ onSectionChange: Dispatch<SetStateAction<string>> }> = ({onSectionChange}) => {
   const router = useRouter()
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,12 +34,12 @@ const Sidebar: React.FC = () => {
   return (
     <aside className=" bg-white shadow-md">
       <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-md">
-      {/* Brand Name */}
+    
       <div className="text-4xl font-bold lobster cursor-pointer">
         <span className="text-yellow-500">w</span>ebiLink
       </div>
 
-      {/* Profile Button */}
+      
       <div className="relative" ref={dropdownRef}>
         <div
           onClick={() => setShowDropdown(!showDropdown)}
@@ -48,7 +48,7 @@ const Sidebar: React.FC = () => {
           SP
         </div>
 
-        {/* Dropdown Modal */}
+  
         {showDropdown && (
           <div className="absolute right-0 mt-3 w-48 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200 animate-fade-in">
             <ul className="text-gray-700">
@@ -70,48 +70,58 @@ const Sidebar: React.FC = () => {
       <nav className="mt-4">
         <ul className="space-y-2">
           <li>
-            <Link
-              href="/dashboard/create-meeting"
+            <button
+              onClick={() => {
+                onSectionChange("create-meeting");
+              }}
               className="flex items-center justify-center gap-2 px-4 py-1 text-gray-700 bg-gray-200 hover:bg-gray-300 transition mx-2"
             >
               <span className="text-blue-500 text-2xl">+</span> Create Meeting
-            </Link>
+            </button>
           </li>
           <li>
-            <Link
-              href="/dashboard"
+            <button
+              onClick={() => {
+                onSectionChange("rooms");
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg"
             >
              <Building size={24} />
               Rooms
-            </Link>
+            </button>
           </li>
           <li>
-            <Link
-              href="/dashboard/settings"
+            <button
+              onClick={() => {
+                onSectionChange("settings");
+              }}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
             >
               <Settings size={24} />
               Settings
-            </Link>
+            </button>
           </li>
           <li>
-            <Link
-              href="/dashboard/subscription"
+            <button
+              onClick={() => {
+                onSectionChange("subscription");
+              }}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
             >
               <CreditCard size={24} />
               Subscription
-            </Link>
+            </button>
           </li>
           <li>
-            <Link
-              href="/dashboard/whats-new"
+            <button
+              onClick={() => {
+                onSectionChange("whats-new");
+              }}
               className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
             >
               <Megaphone size={24} />
               {`What's new`}
-            </Link>
+            </button>
           </li>
           <li>
             <Link

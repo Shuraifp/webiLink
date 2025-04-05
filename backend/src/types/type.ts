@@ -51,8 +51,9 @@ export const errorResponse = (message: string, error?: string | object): ApiResp
   error,
 });
 
-// export interface JWTPayload {
-//   id: string;
-//   username: string;
-//   email: string;
-//   role: string;
+export interface JWTPayload {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+}

@@ -25,8 +25,8 @@ export class JwtService implements IJwtService {
 
   verifyAccessToken(token: string): { decoded: IUser | null; error?: string } {
     try {
-      const decoded = Jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as { user: IUser };
-      return { decoded:decoded.user };
+      const decoded = Jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as IUser;
+      return { decoded:decoded };
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         return { decoded: null, error: "Token expired" };
@@ -40,8 +40,8 @@ export class JwtService implements IJwtService {
 
   verifyRefreshToken(token: string): { decoded: IUser | null; error?: string } {
     try {
-      const decoded = Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET!) as { user: IUser };
-      return { decoded:decoded.user };
+      const decoded = Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET!) as IUser;
+      return { decoded:decoded};
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         return { decoded: null, error: "Refresh token expired" };

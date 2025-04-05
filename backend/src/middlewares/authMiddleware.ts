@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { VerifyErrors } from "jsonwebtoken";
-import { HttpStatus } from "../types/type";
-import { IUser } from "../models/userModel";
+import { HttpStatus, JWTPayload } from "../types/type";
+import userModel, { IUser } from "../models/userModel";
 
 declare module "express" {
   export interface Request {

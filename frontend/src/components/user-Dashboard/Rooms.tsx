@@ -5,7 +5,6 @@ import { useState } from "react";
 
 export default function DashboardPage({user}:{user:{id:string,username:string,email:string}}) {
   const [copied, setCopied] = useState(false);
-  // const router = useRouter();
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText("weblink.com/shuraif-room");
@@ -23,9 +22,7 @@ export default function DashboardPage({user}:{user:{id:string,username:string,em
 
   return (
     <>
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">
-          Hello, {user.username}!
-        </h2>
+        
         <div>
           <h3 className="text-lg font-semibold text-gray-800 mb-4">My rooms</h3>
           <div className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between">

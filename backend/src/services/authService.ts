@@ -11,6 +11,7 @@ import { IMailService } from "../utils/mail";
 import crypto from "crypto";
 import { Document } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+import e from "express";
 
 
 // @injectable()
@@ -160,12 +161,13 @@ export class AuthService implements IAuthService {
       const { decoded, error }: { decoded: IUser | null; error?: string } =
         this._jwtService.verifyRefreshToken(refreshToken);
       if (error) throw new Error(error);
-      if (!decoded || !decoded._id) throw new Error("Invalid token");
+      console.log("decoded", decoded);
+      if (!decoded || !decoded._id) throw new Error("Invalid token in service");
       const newAccessToken = this._jwtService.generateAccessToken(decoded);
       const validUser = this.verifyAccessToken(newAccessToken);
       return { accessToken: newAccessToken, user: validUser };
     } catch (error) {
-      throw new Error("Invalid refresh token");
+      throw new Error(error as string);
     }
   }
 

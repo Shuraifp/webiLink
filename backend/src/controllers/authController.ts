@@ -58,10 +58,8 @@ export class AuthController implements IAuthController {
   async adminLogin(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
-      const { accessToken, refreshToken, user } = await this._authService.adminLogin(
-        email,
-        password
-      );
+      const { accessToken, refreshToken, user } =
+        await this._authService.adminLogin(email, password);
 
       this.setAdminAuthCookies(res, accessToken, refreshToken);
       res.status(200).json({ username: user.username, email: user.email });
@@ -86,15 +84,17 @@ export class AuthController implements IAuthController {
   async verifyAccessToken(req: Request, res: Response, next: NextFunction) {
     try {
       const token = req.cookies.accessToken;
-      console.log(token)
+      console.log(token);
 
       if (!token) {
         res.status(401).json({ message: "Access token is required" });
-        return
+        return;
       }
 
       const user = await this._authService.verifyAccessToken(token);
-      res.status(200).json({ id: user._id, username: user.username, email: user.email });
+      res
+        .status(200)
+        .json({ id: user._id, username: user.username, email: user.email });
     } catch (error) {
       next(error);
     }
@@ -118,7 +118,7 @@ export class AuthController implements IAuthController {
       next(error);
     }
   }
-  
+
   async refreshAdminToken(req: Request, res: Response, next: NextFunction) {
     try {
       const refreshToken = req.cookies.adminRefreshToken;
@@ -158,7 +158,7 @@ export class AuthController implements IAuthController {
       maxAge: 15 * 60 * 1000,
     });
   }
-  
+
   private setAdminAuthCookies(
     res: Response,
     accessToken: string,
@@ -178,6 +178,7 @@ export class AuthController implements IAuthController {
       sameSite: "lax",
       maxAge: 15 * 60 * 1000,
     });
+    console.log("donee");
   }
 
   async userLogout(req: Request, res: Response, next: NextFunction) {
@@ -199,7 +200,7 @@ export class AuthController implements IAuthController {
       next(error);
     }
   }
-  
+
   async adminLogout(req: Request, res: Response, next: NextFunction) {
     try {
       res.clearCookie("adminAccessToken", {
@@ -220,7 +221,11 @@ export class AuthController implements IAuthController {
     }
   }
 
-  async requestResetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async requestResetPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { email } = req.body;
       if (!email) throw new Error("Email is required");
@@ -237,7 +242,11 @@ export class AuthController implements IAuthController {
     }
   }
 
-  async resetPassword(req: Request, res: Response, next:NextFunction): Promise<void> {
+  async resetPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { token, newPassword } = req.body;
       if (!token || !newPassword) {

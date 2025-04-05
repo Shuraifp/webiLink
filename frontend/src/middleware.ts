@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { parse } from "cookie";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -11,87 +12,89 @@ export async function middleware(req: NextRequest) {
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
 
-  const isUserNonAuthPage = ["/login", "/signup", "/", "/pricing"].includes(pathname);
+  const isUserNonAuthPage = ["/login", "/signup", "/", "/pricing"].includes(
+    pathname
+  );
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
   const isUserProtectedPage = pathname.startsWith("/host");
-  const isAdminProtectedPage = pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
+  const isAdminProtectedPage =
+    pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
   if (accessToken && isUserNonAuthPage) {
     return NextResponse.redirect(new URL("/host", req.url));
   }
-  
+
   if (adminAccessToken && isAdminNonAuthPage) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
   if (isUserProtectedPage) {
     let user;
+    let response;
     if (!accessToken) {
       if (!refreshToken) {
         return NextResponse.redirect(new URL("/login", req.url));
       }
 
-      const refreshResponse = await refreshUserAccessToken(req);
-      if (!refreshResponse) {
+      const refreshResult = await refreshUserAccessToken(req);
+      if (!refreshResult || !refreshResult.accessToken) {
         return NextResponse.redirect(new URL("/login", req.url));
       }
-      // Use the refreshed token
-      const newAccessToken = refreshResponse.cookies.get("accessToken")?.value;
-      user = await decodeAndVerifyToken(newAccessToken!);
+      response = refreshResult.response;
+      user = await decodeAndVerifyToken(refreshResult.accessToken);
     } else {
       user = await decodeAndVerifyToken(accessToken);
+      response = NextResponse.next();
     }
 
     if (!user) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-user", JSON.stringify(user));
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    
+    response.headers.set("x-user", JSON.stringify(user));
+    return response;
   }
-  
   if (isAdminProtectedPage) {
-    let adminUser;
+    let admin;
+    let response;
     if (!adminAccessToken) {
       if (!adminRefreshToken) {
         return NextResponse.redirect(new URL("/admin/auth/login", req.url));
       }
-
       const refreshResponse = await refreshAdminAccessToken(req);
-      if (!refreshResponse) {
+      if (!refreshResponse || !refreshResponse.adminAccessToken) {
         return NextResponse.redirect(new URL("/admin/auth/login", req.url));
       }
-      const newAdminAccessToken = refreshResponse.cookies.get("adminAccessToken")?.value;
-      adminUser = decodeAndVerifyToken(newAdminAccessToken!);
+      const newAdminAccessToken = refreshResponse.adminAccessToken;
+      response = refreshResponse.response;
+      admin = await decodeAndVerifyToken(newAdminAccessToken!);
     } else {
-      adminUser = decodeAndVerifyToken(adminAccessToken);
+      admin = await decodeAndVerifyToken(adminAccessToken);
+      response = NextResponse.next();
     }
 
-    if (!adminUser) {
+    if (!admin) {
       return NextResponse.redirect(new URL("/admin/auth/login", req.url));
     }
 
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-admin", JSON.stringify(adminUser));
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    response.headers.set("x-admin", JSON.stringify(admin));
+    return response;
   }
 
   return NextResponse.next();
 }
 
-
-// Utils 
+// Utils
 
 async function decodeAndVerifyToken(token: string) {
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET)
+    const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return { id: payload._id, username: payload.username, email: payload.email };
+    return {
+      id: payload._id,
+      username: payload.username,
+      email: payload.email,
+    };
   } catch (error) {
     console.error("Token verification failed:", error);
     return null;
@@ -103,26 +106,30 @@ async function refreshUserAccessToken(req: NextRequest) {
   if (!refreshToken) return null;
 
   try {
-    const res = await fetch("http://localhost:5000/api/auth/refresh-userToken", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: `refreshToken=${refreshToken}`,
-      },
-    });
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh-userToken`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `refreshToken=${refreshToken}`,
+        },
+      }
+    );
 
-    if (!res.ok) throw new Error("Failed to refresh token");
+    if (!res.ok) throw new Error("Failed to refresh token server");
 
-    // const data = await res.json();
-    const response = NextResponse.next();
+    const setCookie = res.headers.get("set-cookie");
+    if (!setCookie) return null;
 
-    const setCookieHeader = res.headers.get("set-cookie");
-    if (setCookieHeader) {
-      response.headers.set("Set-Cookie", setCookieHeader);
-    }
+    const cookie = parse(setCookie);
+    const newAccessToken = cookie.accessToken;
 
-    return response;
+    const nextResponse = NextResponse.next();
+    nextResponse.headers.set("Set-Cookie", setCookie);
+
+    return { response: nextResponse, accessToken: newAccessToken };
   } catch (error) {
     console.error("Error refreshing token:", error);
     return null;
@@ -134,25 +141,29 @@ async function refreshAdminAccessToken(req: NextRequest) {
   if (!refreshToken) return null;
 
   try {
-    const res = await fetch("http://localhost:5000/api/auth/refresh-adminToken", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: `adminRefreshToken=${refreshToken}`,
-      },
-    });
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh-adminToken`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `adminRefreshToken=${refreshToken}`,
+        },
+      }
+    );
 
     if (!res.ok) throw new Error("Failed to refresh token");
 
-    const response = NextResponse.next();
-
-    const setCookieHeader = res.headers.get("set-cookie");
-    if (setCookieHeader) {
-      response.headers.set("Set-Cookie", setCookieHeader);
-    }
-
-    return response;
+    const setCookie = res.headers.get("set-cookie");
+    if (!setCookie) return null;
+    const cookie = parse(setCookie);
+    const newAccessToken = cookie.adminAccessToken;
+console.log('adm side ;',newAccessToken)
+    const nextResponse = NextResponse.next();
+    nextResponse.headers.set("Set-Cookie", setCookie);
+console.log('last')
+    return { response: nextResponse, adminAccessToken: newAccessToken };
   } catch (error) {
     console.error("Error refreshing admin token:", error);
     return null;
@@ -160,5 +171,14 @@ async function refreshAdminAccessToken(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/signup", "/admin", "/host", "/admin/auth/login", "/reset-password", "/pricing"],
+  matcher: [
+    "/",
+    "/login",
+    "/signup",
+    "/admin",
+    "/host",
+    "/admin/auth/login",
+    "/reset-password",
+    "/pricing",
+  ],
 };

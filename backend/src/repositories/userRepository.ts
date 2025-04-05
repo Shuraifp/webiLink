@@ -1,6 +1,6 @@
 import { injectable, inject } from "inversify";
 import UserModel, { IUser, UserInput } from "../models/userModel";
-import { IUserRepository } from "../interfaces/IUserRepository";
+import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { Document, Types } from "mongoose";
 import TYPES from "../di/types";
 

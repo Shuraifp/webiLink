@@ -53,6 +53,7 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
     try {
       await login(user.email, user.password);
+      console.log('success')
       router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
