@@ -110,7 +110,7 @@ export class AuthController implements IAuthController {
       }
 
       const { accessToken, user } =
-        this._authService.refreshToken(refreshToken);
+        await this._authService.refreshToken(refreshToken);
 
       this.setAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });
@@ -129,7 +129,7 @@ export class AuthController implements IAuthController {
       }
 
       const { accessToken, user } =
-        this._authService.refreshToken(refreshToken);
+        await this._authService.refreshToken(refreshToken);
 
       this.setAdminAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });

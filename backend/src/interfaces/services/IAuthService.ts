@@ -1,5 +1,5 @@
-import { IUser } from "../models/userModel";
-import { LoginResponse } from "../types/type";
+import { IUser } from "../../models/userModel";
+import { LoginResponse } from "../../types/type";
 
 export interface IAuthService {
   signUp(username: string, email: string, password: string): Promise<IUser>;

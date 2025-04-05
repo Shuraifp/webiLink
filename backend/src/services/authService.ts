@@ -5,7 +5,7 @@ import { IAuthService } from "../interfaces/services/IAuthService";
 import { IUser } from "../models/userModel";
 import TYPES from "../di/types";
 import { Types } from "mongoose";
-import { LoginResponse, UserRole } from "../types/type";
+import { JWTPayload, LoginResponse, UserRole } from "../types/type";
 import { IJwtService } from "../utils/jwt";
 import { IMailService } from "../utils/mail";
 import crypto from "crypto";
@@ -138,7 +138,7 @@ export class AuthService implements IAuthService {
   }
 
   async verifyAccessToken(token: string): Promise<IUser> {
-    const { decoded, error }: { decoded: IUser | null; error?: string } =
+    const { decoded, error }: { decoded: JWTPayload | null; error?: string } =
       this._jwtService.verifyAccessToken(token);
 
     if (error) throw new Error(error);
@@ -158,10 +158,9 @@ export class AuthService implements IAuthService {
     user: Promise<IUser>;
   } {
     try {
-      const { decoded, error }: { decoded: IUser | null; error?: string } =
+      const { decoded, error }: { decoded: JWTPayload | null; error?: string } =
         this._jwtService.verifyRefreshToken(refreshToken);
       if (error) throw new Error(error);
-      console.log("decoded", decoded);
       if (!decoded || !decoded._id) throw new Error("Invalid token in service");
       const newAccessToken = this._jwtService.generateAccessToken(decoded);
       const validUser = this.verifyAccessToken(newAccessToken);
