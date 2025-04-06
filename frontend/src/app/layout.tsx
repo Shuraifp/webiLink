@@ -3,6 +3,7 @@
 // import { PersistGate } from "redux-persist/integration/react";
 import { Provider } from "react-redux";
 import { store } from "../redux/store";
+import { SocketProvider } from "@/hooks/useSocket";
 import {
   Playfair_Display,
   Montserrat,
@@ -83,7 +84,7 @@ export default function RootLayout({
               `}
         >
           {/* <PersistGate loading={null} persistor={persistor}> */}
-          {children}
+          <SocketProvider>{children}</SocketProvider>
           {/* </PersistGate> */}
         </body>
       </html>

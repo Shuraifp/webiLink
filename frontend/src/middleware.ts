@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
     pathname
   );
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
-  const isUserProtectedPage = pathname.startsWith("/host");
+  const isUserProtectedPage = ["/host", "/landing"].includes(pathname);
   const isAdminProtectedPage =
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
@@ -202,6 +202,7 @@ export const config = {
     "/signup",
     "/admin",
     "/host",
+    "/landing",
     "/admin/auth/login",
     "/reset-password",
     "/pricing",
