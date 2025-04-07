@@ -1,19 +1,38 @@
 "use client";
 
 import { UserData } from "@/types/type";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { fetchRooms } from "@/lib/api/user/roomApi";
 
 interface RoomsProps {
-  user?: UserData;
+  user: UserData;
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
 }
 
+interface Room {
+  name: string;
+  slug: string;
+}
+
 export default function DashboardPage({ user, onSectionChange, selectedSection, setPrevSection }: RoomsProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([])
+
+  useEffect(() => {
+    const getRooms = async () => {
+      try {
+        const res = await fetchRooms()
+        setRooms(res)
+      } catch (err) {
+        console.log('error Fetching rooms: ',err)
+      }
+    }
+    getRooms()
+  },[])
 
   const handleCopyLink = (slug:string) => {
     navigator.clipboard.writeText("weblink.com/"+slug);
@@ -37,26 +56,13 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
     setPrevSection(curSec)
   }
 
-  const rooms = [
-    {
-      slug: "shuraif-room",
-      name: "shuraif-room",
-      username: user?.username || "shuraif",
-    },
-    {
-      slug: "shuraif-room",
-      name: "shuraif-room",
-      username: user?.username || "shuraif",
-    }
-  ];
-
   return (
     <>
       <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-500">
         My rooms
       </p>
       <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto pr-4">
-        {rooms.map((room,ind) => (
+        {rooms?.map((room,ind) => (
           <div
             key={ind}
             className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between"
@@ -68,7 +74,7 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
               <div>
                 <p className="text-gray-500 text-sm">weblink.com/{room.slug}</p>
                 <p className="text-gray-800 font-medium">{room.name}</p>
-                <p className="text-gray-500 text-sm">{room.username}</p>
+                <p className="text-gray-500 text-sm">{user.username}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

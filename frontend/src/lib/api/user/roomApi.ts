@@ -8,3 +8,12 @@ export const createRoom = async (data:{name:string, }) => {
     throw err
   }
 }
+
+export const fetchRooms = async () => {
+  try {
+    const res = await userApiWithAuth.get('/rooms')
+    return res.data.data
+  } catch (err) {
+    throw err
+  }
+}

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { IRoomController } from '../interfaces/controllers/IRoomController';
 import { HttpStatus, successResponse } from '../types/type';
 import { IRoomService } from '../interfaces/services/IRoomService';
-import { BadRequestError } from '../utils/errors';
+import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import { Types } from 'mongoose';
 
 
@@ -13,8 +13,12 @@ export class RoomController implements IRoomController {
 
   async getAllRooms(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Logic to fetch all rooms
-      res.status(HttpStatus.OK).json(successResponse('Rooms fetched successfully', []));
+      const userId = req.user?._id;
+      if (!userId || !Types.ObjectId.isValid(userId)) {
+        throw new UnauthorizedError("Invalid or missing user ID.");
+      }
+      const rooms = await this._roomService.getAllRooms(userId)
+      res.status(HttpStatus.OK).json(successResponse('Rooms fetched successfully', rooms));
     } catch (error) {
       next(error);
     }

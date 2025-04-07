@@ -3,7 +3,7 @@ import slugify from "slugify";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { IRoom } from "../models/mainRoomModel";
 import { IRoomService } from "../interfaces/services/IRoomService";
-import { BadRequestError, InternalServerError } from "../utils/errors";
+import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors";
 
 export class RoomService implements IRoomService {
   constructor(private _roomRepository: IRoomRepository) {}
@@ -57,5 +57,16 @@ export class RoomService implements IRoomService {
     throw new InternalServerError(
       "Unable to generate a unique slug after maximum retries"
     );
+  }
+
+  async getAllRooms(userId:string): Promise<IRoom[]> {
+      try {
+        const rooms = await this._roomRepository.findAll(userId);
+        return rooms;
+      } catch (err:any) {
+        throw new InternalServerError(
+          err.message || "Unexpected error while fetching rooms"
+        );
+      }
   }
 }

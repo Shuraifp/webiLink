@@ -14,6 +14,7 @@ const roomController = new RoomController(roomService)
 
 const router = Router()
 
+router.get('/', isValidUser, roomController.getAllRooms.bind(roomController))
 router.post('/create', isValidUser, roomController.createRoom.bind(roomController))
 
 
