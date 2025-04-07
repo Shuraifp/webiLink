@@ -24,11 +24,11 @@ class RoomService {
         const room = await RoomRepository.create(roomData);
         return room;
       } catch (error: any) {
-        if (error.code === 11000) { // MongoDB duplicate key error (slug conflict)
-          slug = `${baseSlug}-${nanoid(6)}`; // e.g., "team-meeting-xyz123"
+        if (error.code === 11000) {
+          slug = `${baseSlug}-${nanoid(6)}`;
           attempts++;
         } else {
-          throw error; // Other errors (e.g., validation)
+          throw error;
         }
       }
     }
