@@ -17,7 +17,8 @@ import { useRouter } from "next/navigation";
 const Sidebar: React.FC<{
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
-}> = ({ onSectionChange, selectedSection }) => {
+  setPrevSection: Dispatch<SetStateAction<string>>;
+}> = ({ onSectionChange, selectedSection, setPrevSection }) => {
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,6 +51,13 @@ const Sidebar: React.FC<{
       return "flex items-center mx-2 hover:bg-gray-100 text-gray-700 rounded-lg transition cursor-pointer";
     }
   };
+
+  const handleSectionChange = (sec:string) => {
+    if(selectedSection === sec) return
+    const curSec = selectedSection
+    onSectionChange(sec)
+    setPrevSection(curSec)
+  }
 
   return (
     <aside className=" bg-white shadow-md">
@@ -89,7 +97,7 @@ const Sidebar: React.FC<{
         <ul className="space-y-2">
           <li
             onClick={() => {
-              onSectionChange("create-meeting");
+              handleSectionChange("create-meeting");
             }}
             className="text-gray-700 bg-gray-300 hover:bg-gray-300 transition mx-2 flex justify-center cursor-pointer"
           >
@@ -99,7 +107,7 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
-              onSectionChange("rooms");
+              handleSectionChange("rooms");
             }}
             className={getStyle("rooms")}
           >
@@ -110,7 +118,7 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
-              onSectionChange("settings");
+              handleSectionChange("settings");
             }}
             className={getStyle("settings")}
           >
@@ -121,7 +129,7 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
-              onSectionChange("subscription");
+              handleSectionChange("subscription");
             }}
             className={getStyle("subscription")}
           >
@@ -132,7 +140,7 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
-              onSectionChange("whats-new");
+              handleSectionChange("whats-new");
             }}
             className={getStyle("whats-new")}
           >
@@ -143,7 +151,7 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
-              onSectionChange("upgrade");
+              handleSectionChange("upgrade");
             }}
             className={getStyle("upgrade")}
           >

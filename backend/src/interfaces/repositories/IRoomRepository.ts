@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import IRoom from "../../models/mainRoomModel"; 
+import { IRoom } from "../../models/mainRoomModel"; 
 
 interface IRoomRepository {
   create(roomData: Partial<IRoom>): Promise<IRoom>;

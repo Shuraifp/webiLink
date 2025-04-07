@@ -11,18 +11,32 @@ import Upgrade from "@/components/user-Dashboard/Upgrade";
 import { UserData } from "@/types/type";
 
 interface DashboardContentProps {
-  user: UserData
+  user: UserData;
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const [selectedSection, setSelectedSection] = useState("rooms");
+  const [prevSection, setPrevSection] = useState("");
 
+  console.log(selectedSection, " ", prevSection);
   const renderContent = () => {
     switch (selectedSection) {
       case "create-meeting":
-        return <CreateMeeting />;
+        return (
+          <CreateMeeting
+            onSectionChange={setSelectedSection}
+            prevSection={prevSection}
+          />
+        );
       case "rooms":
-        return <Rooms user={user} />;
+        return (
+          <Rooms
+            user={user}
+            onSectionChange={setSelectedSection}
+            selectedSection={selectedSection}
+            setPrevSection={setPrevSection}
+          />
+        );
       case "settings":
         return <Settings />;
       case "subscription":
@@ -32,17 +46,29 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
       case "upgrade":
         return <Upgrade />;
       default:
-        return <Rooms user={user} />;
+        return (
+          <Rooms
+            user={user}
+            onSectionChange={setSelectedSection}
+            selectedSection={selectedSection}
+            setPrevSection={setPrevSection}
+          />
+        );
     }
   };
 
   return (
     <div className="flex min-h-screen bg-gray-200">
-      <Sidebar onSectionChange={setSelectedSection} selectedSection={selectedSection} />
+      <Sidebar
+        onSectionChange={setSelectedSection}
+        selectedSection={selectedSection}
+        setPrevSection={setPrevSection}
+      />
       <main className="flex-1 p-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">
-          Hello, {user.username}!
+        <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
+          Wellcome, {user.username}
         </h2>
+        <p className="border-b-1 border-gray-400 border-dashed"></p>
         {renderContent()}
       </main>
     </div>

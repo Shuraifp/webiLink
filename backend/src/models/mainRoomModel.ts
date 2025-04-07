@@ -1,10 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IRoom extends Document {
+export interface IRoom extends Document {
   userId: mongoose.Types.ObjectId; 
   name: string;
   slug: string;
-  type: "public" | "business";
+  isPremiumUser: boolean;
   isActive: boolean; 
   settings?: {
     background?: string;
@@ -33,10 +33,9 @@ const roomSchema = new Schema<IRoom>(
       unique: true,
       trim: true,
     },
-    type: {
-      type: String,
-      enum: ["public", "business"],
-      required: true,
+    isPremiumUser: {
+      type: Boolean,
+      default: false,
     },
     isActive: {
       type: Boolean,
