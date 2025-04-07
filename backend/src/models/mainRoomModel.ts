@@ -1,18 +1,36 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IMainRoom extends Document {
+interface IRoom extends Document {
+  userId: mongoose.Types.ObjectId; 
   name: string;
+  slug: string;
   type: "public" | "business";
-  isActive: boolean;
-  currentSession?: mongoose.Types.ObjectId;
+  isActive: boolean; 
+  settings?: {
+    background?: string;
+    logo?: string; 
+    theme?: string; 
+  };
   createdAt: Date;
+  deletedAt?: Date; 
 }
 
-const mainRoomSchema = new Schema<IMainRoom>(
+const roomSchema = new Schema<IRoom>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
       trim: true,
     },
     type: {
@@ -24,10 +42,18 @@ const mainRoomSchema = new Schema<IMainRoom>(
       type: Boolean,
       default: true,
     },
-    currentSession: {
-      type: Schema.Types.ObjectId,
-      ref: "Session",
-      default: null, 
+    settings: {
+      background: { type: String, default: null },
+      logo: { type: String, default: null },
+      theme: { type: String, enum: ["light", "dark"], default: "light" },
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -35,4 +61,6 @@ const mainRoomSchema = new Schema<IMainRoom>(
   }
 );
 
-export default mongoose.model<IMainRoom>("MainRoom", mainRoomSchema);
+roomSchema.index({ slug: 1 }, { unique: true });
+
+export default mongoose.model<IRoom>("Room", roomSchema);
