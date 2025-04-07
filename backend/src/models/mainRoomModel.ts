@@ -60,6 +60,4 @@ const roomSchema = new Schema<IRoom>(
   }
 );
 
-roomSchema.index({ slug: 1 }, { unique: true });
-
 export default mongoose.model<IRoom>("Room", roomSchema);

@@ -1,14 +1,29 @@
-import { Request, Response } from "express";
 import { Types } from "mongoose";
 import slugify from "slugify";
-import { nanoid } from "nanoid";
-import RoomRepository from "../repositories/RoomRepository";
+import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { IRoom } from "../models/mainRoomModel";
+import { IRoomService } from "../interfaces/services/IRoomService";
+import { BadRequestError, InternalServerError } from "../utils/errors";
 
-class RoomService {
-  async createRoom(userId: Types.ObjectId, name: string, isPremiumUser: boolean): Promise<IRoom> {
+export class RoomService implements IRoomService {
+  constructor(private _roomRepository: IRoomRepository) {}
+
+  async generateId() : Promise<string> {
+    const { nanoid } = await import('nanoid');
+    return nanoid(6)
+  }
+
+  async createRoom(
+    userId: Types.ObjectId,
+    name: string,
+    isPremiumUser: boolean = false
+  ): Promise<IRoom> {
     let baseSlug = slugify(name, { lower: true, strict: true });
+    if (!baseSlug) {
+      throw new BadRequestError("Unable to generate slug from room name");
+    }
     let slug = baseSlug;
+    console.log(slug);
     let attempts = 0;
     const maxAttempts = 5;
 
@@ -19,22 +34,28 @@ class RoomService {
           name,
           slug,
           isPremiumUser,
-          isActive: true,
         };
-        const room = await RoomRepository.create(roomData);
+        const room = await this._roomRepository.create(roomData);
+        if (!room) {
+          throw new InternalServerError("Failed to create a room");
+        }
         return room;
       } catch (error: any) {
         if (error.code === 11000) {
-          slug = `${baseSlug}-${nanoid(6)}`;
+          slug = `${baseSlug}-${this.generateId()}`;
           attempts++;
-        } else {
+        } else if (error instanceof BadRequestError) {
           throw error;
+        } else {
+          throw new InternalServerError(
+            error.message || "Unexpected error while creating room"
+          );
         }
       }
     }
 
-    throw new Error("Unable to generate a unique slug after maximum retries");
+    throw new InternalServerError(
+      "Unable to generate a unique slug after maximum retries"
+    );
   }
 }
-
-export default new RoomService();

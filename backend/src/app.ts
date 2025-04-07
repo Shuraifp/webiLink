@@ -12,6 +12,7 @@ dotenv.config();
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import planRoutes from './routes/planRoutes';
+import roomRoutes from './routes/roomRoutes';
 
 
 const app = express();
@@ -32,8 +33,9 @@ app.use(cors({
 app.use(cookieParser())
 
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes)
-app.use('/api/plans', planRoutes)
+app.use('/api/admin', adminRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/rooms', roomRoutes);
 
 app.use(errorHandler);
 

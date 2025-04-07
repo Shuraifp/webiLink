@@ -20,6 +20,7 @@ export interface IUser extends Document {
   otpExpires?: Date;
   isBlocked: boolean;
   isArchived:boolean;
+  isPremium:boolean;
   isVerified: boolean;
   resetPasswordToken?: string | null;
   resetPasswordExpiry?: Date | null;
@@ -65,6 +66,7 @@ const userSchema = new Schema<IUser>({
   otpExpires: { type: Date },
   resetPasswordToken: { type: String },
   resetPasswordExpiry: { type:Date},
+  isPremium: {type: Boolean, default: false},
   isBlocked: { type: Boolean, default: false },
   isArchived: { type: Boolean, default:false},
   isVerified: { type: Boolean, default: false },

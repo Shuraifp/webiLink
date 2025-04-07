@@ -1,8 +1,13 @@
+import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import Room, { IRoom } from "../models/mainRoomModel";
 
-class RoomRepository {
+export class RoomRepository implements IRoomRepository {
+  constructor(
+    private _roomModal: typeof Room
+  ) {}
+
   async create(roomData: Partial<IRoom>): Promise<IRoom> {
-    const room = new Room(roomData);
+    const room = new this._roomModal(roomData);
     return await room.save();
   }
 
@@ -10,5 +15,3 @@ class RoomRepository {
     return await Room.findOne({ slug });
   }
 }
-
-export default new RoomRepository();

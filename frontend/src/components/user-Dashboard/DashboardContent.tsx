@@ -18,7 +18,6 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const [selectedSection, setSelectedSection] = useState("rooms");
   const [prevSection, setPrevSection] = useState("");
 
-  console.log(selectedSection, " ", prevSection);
   const renderContent = () => {
     switch (selectedSection) {
       case "create-meeting":

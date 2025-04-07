@@ -56,9 +56,9 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
         My rooms
       </p>
       <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto pr-4">
-        {rooms.map((room) => (
+        {rooms.map((room,ind) => (
           <div
-            key={room.slug}
+            key={ind}
             className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between"
           >
             <div className="flex items-center gap-3">

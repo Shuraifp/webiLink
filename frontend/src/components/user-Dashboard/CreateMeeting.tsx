@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Dispatch, SetStateAction } from "react";
+import { createRoom } from "@/lib/api/user/roomApi";
 
 interface CreateMeetingProps {
   onSectionChange: Dispatch<SetStateAction<string>>;
@@ -19,18 +20,24 @@ export default function CreateMeeting({
   const [startTime, setStartTime] = useState("");
   const [duration, setDuration] = useState("30");
   const [timeZone, setTimeZone] = useState("GMT");
-
-  const handleSave = () => {
-    console.log({
-      meetingTitle,
-      meetingType,
-      date,
-      startTime,
-      duration,
-      timeZone,
-    });
-  
-    onSectionChange('rooms')
+  const [errors, setErrors] = useState({meetingTitle:'',date:'',startTime:''})
+ 
+  const handleSave = async () => {
+    const newErrors = { meetingTitle: "", date: "", startTime: "" };
+    setErrors(newErrors)
+    if(meetingType==='reusable'){
+      if(meetingTitle==='') {
+        newErrors.meetingTitle = "Title is required for reusable meetings";
+        setErrors(newErrors)
+        return
+      }
+      try {
+        await createRoom({name: meetingTitle})
+        onSectionChange('rooms')
+      } catch (err) {
+        console.log(err)
+      }
+    }
   }
 
   const handleCancel = () => {
@@ -51,7 +58,7 @@ export default function CreateMeeting({
         </button>
       </div>
 
-      <form className="space-y-6">
+      <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Meeting title
@@ -64,6 +71,8 @@ export default function CreateMeeting({
             className="w-full p-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Max 100 characters"
           />
+          {errors.meetingTitle && 
+          <p className="text-sm text-red-400">{errors.meetingTitle}</p>}
         </div>
 
         <div>
@@ -172,7 +181,7 @@ export default function CreateMeeting({
             Save
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
