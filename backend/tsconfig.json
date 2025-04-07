@@ -9,6 +9,8 @@
     "strict": true,        
     "strictPropertyInitialization": true,                     
     "skipLibCheck": true,
+
+    "forceConsistentCasingInFileNames": true,
     
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

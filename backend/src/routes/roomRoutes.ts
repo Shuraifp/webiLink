@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { RoomController } from "../controllers/roomController";
 import { RoomService } from "../services/roomService";
-import { RoomRepository } from "../repositories/roomRepository";
+import { RoomRepository } from "../repositories/RoomRepository";
 import MainRoomModel from "../models/mainRoomModel";
 import { authenticateJWT } from "../middlewares/authMiddleware";
 
