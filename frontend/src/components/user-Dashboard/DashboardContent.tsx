@@ -59,6 +59,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   return (
     <div className="flex min-h-screen bg-gray-200">
       <Sidebar
+        user={user}
         onSectionChange={setSelectedSection}
         selectedSection={selectedSection}
         setPrevSection={setPrevSection}

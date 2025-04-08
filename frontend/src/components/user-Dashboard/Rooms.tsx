@@ -69,10 +69,10 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
           >
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
-                SP
+                {user.username?.split(' ').map((a) => a[0].toUpperCase()).join('')}
               </div>
               <div>
-                <p className="text-gray-500 text-sm">weblink.com/{room.slug}</p>
+                <p className="text-gray-500 text-sm">{process.env.NEXT_PUBLIC_DOMAIN}/{room.slug}</p>
                 <p className="text-gray-800 font-medium">{room.name}</p>
                 <p className="text-gray-500 text-sm">{user.username}</p>
               </div>

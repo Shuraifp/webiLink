@@ -13,12 +13,14 @@ import {
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
 import { useRouter } from "next/navigation";
+import { UserData } from "@/types/type";
 
 const Sidebar: React.FC<{
+  user: UserData;
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
-}> = ({ onSectionChange, selectedSection, setPrevSection }) => {
+}> = ({ user, onSectionChange, selectedSection, setPrevSection }) => {
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ const Sidebar: React.FC<{
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-14 h-14 cursor-pointer rounded-full bg-gray-500 flex items-center justify-center text-2xl font-bold text-white border-2 border-gray-400 hover:scale-105 transition-all"
           >
-            SP
+            {user.username?.split(' ').map((a) => a[0].toUpperCase()).join('')}
           </div>
 
           {showDropdown && (
