@@ -1,8 +1,6 @@
 "use client";
 
-// import { PersistGate } from "redux-persist/integration/react";
-import { Provider } from "react-redux";
-import { store } from "../redux/store";
+import { MeetingProvider } from "@/lib/MeetingContext";
 import { SocketProvider } from "@/hooks/useSocket";
 import {
   Playfair_Display,
@@ -74,20 +72,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <Provider store={store}>
-      <html lang="en">
-        <body
-          className={`
+    <html lang="en">
+      <body
+        className={`
               ${playfair.variable} ${montserrat.variable} ${lora.variable} ${dancing.variable} 
               ${raleway.variable} ${merriweather.variable} ${roboto.variable} ${poppins.variable} 
               ${lobster.variable} ${oswald.variable}
               `}
-        >
-          {/* <PersistGate loading={null} persistor={persistor}> */}
+      >
+        <MeetingProvider>
           <SocketProvider>{children}</SocketProvider>
-          {/* </PersistGate> */}
-        </body>
-      </html>
-    </Provider>
+        </MeetingProvider>
+      </body>
+    </html>
   );
 }

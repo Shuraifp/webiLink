@@ -3,45 +3,55 @@
 import { useEffect } from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { UserData } from "@/types/type";
-import { useRouter } from "next/navigation";
+import { useRouter,useParams } from "next/navigation";
 import Preview from "./Preview";
 
 const Lobby = ({ user }: { user: UserData }) => {
+  const {roomId} = useParams()
   const router = useRouter();
   const socket = useSocket();
 
-  useEffect(() => {
-    const handleJoinedRoom = (data: { message: string; roomId: number }) => {
-      router.push("/room/" + data.roomId);
-      console.log("CLIENT: Received 'joined-room' event!");
-      if (data && data.message && data.roomId !== undefined) {
-        console.log("CLIENT: Message:", data.message, "Room ID:", data.roomId);
-      } else {
-        console.log(
-          "CLIENT: Received 'joined-room' but data format unexpected:",
-          data
-        );
-      }
-    };
+  // useEffect(() => {
+  //   const handleJoinedRoom = (data: { message: string; roomId: number }) => {
+  //     router.push("/room/" + data.roomId);
+  //     console.log("CLIENT: Received 'joined-room' event!");
+  //     if (data && data.message && data.roomId !== undefined) {
+  //       console.log("CLIENT: Message:", data.message, "Room ID:", data.roomId);
+  //     } else {
+  //       console.log(
+  //         "CLIENT: Received 'joined-room' but data format unexpected:",
+  //         data
+  //       );
+  //     }
+  //   };
 
-    socket.on("joined-room", handleJoinedRoom);
+  //   socket.on("joined-room", handleJoinedRoom);
 
-    return () => {
-      socket.off("joined-room", handleJoinedRoom);
-    };
-  }, [socket, router]);
+  //   return () => {
+  //     socket.off("joined-room", handleJoinedRoom);
+  //   };
+  // }, [socket, router]);
+
+  // useEffect(() => {
+  //   if (socket?.connected) {
+  //     console.log("Socket is connected!");
+  //   } else {
+  //     console.log("Socket not connected!");
+  //   }
+  // }, [socket]);
+  
 
 
-  const handleStartSession = () => {
-    if (!socket) {
-      console.error("Socket is not initialized");
-      return;
-    }
+  // const handleStartSession = () => {
+  //   if (!socket) {
+  //     console.error("Socket is not initialized");
+  //     return;
+  //   }
 
-    const roomData = { email: user.email, roomId: 1 };
-    console.log("CLIENT: Emitting 'join-room' with data:", roomData);
-    socket.emit("join-room", roomData);
-  };
+  //   const roomData = { email: user.email, roomId: 1 };
+  //   console.log("CLIENT: Emitting 'join-room' with data:", roomData);
+  //   socket.emit("join-room", roomData);
+  // };
 
   return (
     <>

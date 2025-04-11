@@ -19,10 +19,10 @@ const createAuthApi = (refreshEndpoint:string) => {
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
-            console.log('refreshing...')
-
+            
             if (error.response?.status === 401 && !originalRequest._retry) {
                 originalRequest._retry = true;
+                console.log('refreshing...')
 
                 try {
                     await refreshToken(refreshEndpoint);

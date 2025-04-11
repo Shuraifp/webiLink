@@ -69,4 +69,10 @@ export class RoomService implements IRoomService {
         );
       }
   }
+
+  async getRoom(roomId: string): Promise<any> {
+    const room = await this._roomRepository.findBySlug(roomId);
+    if (!room) throw new NotFoundError('Room not found');
+    return room;
+  }
 }

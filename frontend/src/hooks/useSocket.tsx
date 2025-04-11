@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useContext, createContext, useMemo } from "react";
 import { io, Socket } from "socket.io-client";
@@ -13,17 +13,14 @@ export const useSocket = () => {
   return socket;
 };
 
-
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const socket = useMemo(() => {
-    return io(process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:5000", {
-      // autoConnect: false,
-    }); 
-  }, []);
+  const socket = 'hi' //useMemo(() => {
+    // return io(process.env.NEXT_PUBLIC_SERVER_URL, {
+    //   autoConnect: false,
+    // });
+  // }, []);
 
   return (
-    <SocketContext.Provider value={socket}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
   );
 };

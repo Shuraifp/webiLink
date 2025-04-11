@@ -14,11 +14,12 @@ export async function middleware(req: NextRequest) {
 
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
-  const isUserNonAuthPage = ["/login", "/signup"].includes(
-    pathname
-  );
+  const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
-  const isUserProtectedPage = ["/host", "/landing"].includes(pathname);
+  const isUserProtectedPage =
+    pathname.startsWith("/host") ||
+    pathname.startsWith("/landing/") ||
+    pathname.startsWith("/room/");
   const isAdminProtectedPage =
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
@@ -202,7 +203,8 @@ export const config = {
     "/signup",
     "/admin",
     "/host",
-    "/landing",
+    "/landing/:path*",
+    "/room/:path*",
     "/admin/auth/login",
     "/reset-password",
     "/pricing",

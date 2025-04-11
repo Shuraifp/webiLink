@@ -5,6 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'
 import { errorHandler } from './middlewares/errorHandler';
 import dotenv from 'dotenv';
+import setupSocket from './socket/index'
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ const app = express();
 export const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000'],
+    origin: [process.env.FRONTEND_URL!],
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -27,7 +28,7 @@ const io = new Server(server, {
 
 app.use(express.json());
 app.use(cors({
-  origin:['http://localhost:3000'],
+  origin:[process.env.FRONTEND_URL!],
   credentials:true
 }));
 app.use(cookieParser())
@@ -42,19 +43,4 @@ app.use(errorHandler);
 
 // Socket.io setup
 
-const emailToSocketIdMap = new Map<string, string>();
-const socketIdToEmailMap = new Map<string, string>();
-
-io.on('connection', (socket) => {
-  console.log('Socket connected', socket.id);
-  socket.on('join-room', (data) => {
-    console.log('User joined room', data);
-    const { email, roomId } = data;
-    emailToSocketIdMap.set(email, socket.id);
-    socketIdToEmailMap.set(socket.id, email);
-    io.to(socket.id).emit('joined-room', { message: 'You have joined the room', roomId });
-  });
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected');
-  });
-});
+setupSocket(io);

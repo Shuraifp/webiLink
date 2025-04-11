@@ -2,6 +2,7 @@
 
 import { UserData } from "@/types/type";
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchRooms } from "@/lib/api/user/roomApi";
 
@@ -17,62 +18,112 @@ interface Room {
   slug: string;
 }
 
-export default function DashboardPage({ user, onSectionChange, selectedSection, setPrevSection }: RoomsProps) {
+export default function DashboardPage({
+  user,
+  onSectionChange,
+  selectedSection,
+  setPrevSection,
+}: RoomsProps) {
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
-  const [rooms, setRooms] = useState<Room[]>([])
+  const [copied, setCopied] = useState<{ [slug: string]: boolean }>({});
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [roomId, setRoomId] = useState<string>("");
 
   useEffect(() => {
     const getRooms = async () => {
       try {
-        const res = await fetchRooms()
-        setRooms(res)
+        const res = await fetchRooms();
+        setRooms(res);
       } catch (err) {
-        console.log('error Fetching rooms: ',err)
+        console.log("error Fetching rooms: ", err);
       }
-    }
-    getRooms()
-  },[])
+    };
+    getRooms();
+  }, []);
 
-  const handleCopyLink = (slug:string) => {
-    navigator.clipboard.writeText("weblink.com/"+slug);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyLink = (slug: string) => {
+    navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_DOMAIN}/${slug}`);
+    setCopied((prev) => ({ ...prev, [slug]: true }));
+
+    setTimeout(() => {
+      setCopied((prev) => ({ ...prev, [slug]: false }));
+    }, 2000);
   };
 
-  const handleStartMeeting = (slug:string) => {
-    console.log("Starting meeting..."+slug);
-    router.push("/landing");
+  const handleStartMeeting = (slug: string) => {
+    router.push("/room/" + slug);
   };
 
   const handleJoinRoom = () => {
-    console.log("Joining a different room...");
+    setIsModalOpen(true);
   };
 
-  const handleSectionChange = (sec:string) => {
-    if(selectedSection === sec) return
-    const curSec = selectedSection
-    onSectionChange(sec)
-    setPrevSection(curSec)
-  }
+  const handleSectionChange = (sec: string) => {
+    if (selectedSection === sec) return;
+    const curSec = selectedSection;
+    onSectionChange(sec);
+    setPrevSection(curSec);
+  };
 
   return (
     <>
       <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-500">
         My rooms
       </p>
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-20 min-h-screen flex justify-center items-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div className="bg-white w-96 py-8 px-4 rounded-lg shadow-lg max-w-sm">
+            <div className="flex justify-end">
+              <button
+                className="text-gray-600 hover:text-gray-900 focus:outline-none cursor-pointer"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
+              Join Video Room
+            </h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter Room URL"
+              />
+              <button
+                className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onClick={() => handleStartMeeting(roomId)}
+              >
+                Join
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto pr-4">
-        {rooms?.map((room,ind) => (
+        {rooms?.map((room, ind) => (
           <div
             key={ind}
             className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
-                {user.username?.split(' ').map((a) => a[0].toUpperCase()).join('')}
+                {user.username
+                  ?.split(" ")
+                  .map((a) => a[0].toUpperCase())
+                  .join("")}
               </div>
               <div>
-                <p className="text-gray-500 text-sm">{process.env.NEXT_PUBLIC_DOMAIN}/{room.slug}</p>
+                <p className="text-gray-500 text-sm">
+                  {process.env.NEXT_PUBLIC_DOMAIN}/{room.slug}
+                </p>
                 <p className="text-gray-800 font-medium">{room.name}</p>
                 <p className="text-gray-500 text-sm">{user.username}</p>
               </div>
@@ -80,13 +131,15 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleCopyLink(room.slug)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition"
+                className={`px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition ${
+                  copied[room.slug] ? "" : "cursor-pointer"
+                }`}
               >
-                {copied ? "Copied!" : "Copy link"}
+                {copied[room.slug] ? "Copied!" : "Copy link"}
               </button>
               <button
                 onClick={() => handleStartMeeting(room.slug)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="px-4 py-2 bg-yellow-500 cursor-pointer text-white rounded-lg hover:bg-yellow-600 transition"
               >
                 Start meeting
               </button>
@@ -114,15 +167,15 @@ export default function DashboardPage({ user, onSectionChange, selectedSection, 
       <div className="mt-6">
         <button
           onClick={handleJoinRoom}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition w-full"
+          className="px-4 py-2 text-amber-50 hover:text-white rounded-lg bg-gray-500 hover:bg-gray-600 cursor-pointer transition w-full"
         >
           Join a different room
         </button>
       </div>
 
       <button
-        onClick={() => handleSectionChange('create-meeting')}
-        className="fixed bottom-6 right-6 px-6 py-3 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
+        onClick={() => handleSectionChange("create-meeting")}
+        className="fixed bottom-6 z-10 right-6 px-6 py-3 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
       >
         + Create Room
       </button>
