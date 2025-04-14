@@ -1,7 +1,8 @@
 // import Link from "next/link";
 import { headers } from "next/headers";
 import { UserData } from "@/types/type";
-import ChatRoom from '@/components/video/ChatRoom'
+import ChatRoom from "@/components/video/ChatRoom";
+import { MeetingProvider } from "@/lib/MeetingContext";
 
 export default async function HostingPage() {
   const headersList = await headers();
@@ -12,8 +13,9 @@ export default async function HostingPage() {
   const user: UserData = JSON.parse(userData);
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* <div className="absolute top-4 right-4">
+    <MeetingProvider>
+      <div className="flex h-screen bg-gray-100">
+        {/* <div className="absolute top-4 right-4">
         <Link
           href={"/host"}
           className="text-4xl cursor-pointer font-bold lobster"
@@ -22,7 +24,8 @@ export default async function HostingPage() {
         </Link>
       </div> */}
 
-      <ChatRoom user={user} />
-    </div>
+        <ChatRoom user={user} />
+      </div>
+    </MeetingProvider>
   );
 }

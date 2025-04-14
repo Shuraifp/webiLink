@@ -1,7 +1,5 @@
 "use client";
 
-import { MeetingProvider } from "@/lib/MeetingContext";
-import { SocketProvider } from "@/hooks/useSocket";
 import {
   Playfair_Display,
   Montserrat,
@@ -80,9 +78,7 @@ export default function RootLayout({
               ${lobster.variable} ${oswald.variable}
               `}
       >
-        <MeetingProvider>
-          <SocketProvider>{children}</SocketProvider>
-        </MeetingProvider>
+        {children}
       </body>
     </html>
   );

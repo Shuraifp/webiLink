@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSocket } from "@/hooks/useSocket";
+import { useSocket } from "@/hooks/useReducedState";
 import { UserData } from "@/types/type";
 import { useRouter,useParams } from "next/navigation";
 import Preview from "./Preview";

@@ -1,26 +1,24 @@
 import { Socket } from "socket.io-client";
-
-interface VideoStream {
-  userId: string;
-  stream: MediaStream;
-}
+import { SignalingData, VideoStream } from "@/types/chatRoom";
 
 export const createPeerConnection = ({
-  userSocketId,
+  userData,
   localStream,
   socketRef,
   roomId,
   peerConnections,
+  getCurrentStreams,
   setVideoStreams,
 }: {
-  userSocketId: string;
+  userData: SignalingData;
   localStream: MediaStream;
   socketRef: React.MutableRefObject<Socket | null>;
   roomId: string;
   peerConnections: React.MutableRefObject<{
     [userId: string]: RTCPeerConnection;
   }>;
-  setVideoStreams: React.Dispatch<React.SetStateAction<VideoStream[]>>;
+  getCurrentStreams: () => VideoStream[];
+  setVideoStreams: (streams: VideoStream[]) => void;
 }): RTCPeerConnection => {
   const pc = new RTCPeerConnection({
     iceServers: [
@@ -32,40 +30,55 @@ export const createPeerConnection = ({
       },
     ],
   });
-  peerConnections.current[userSocketId] = pc;
+  peerConnections.current[userData.userId] = pc;
 
-  console.log("Adding tracks for", userSocketId, localStream.getTracks());
+  console.log("Adding tracks for", userData.userId, localStream.getTracks());
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
-      console.log("ICE candidate generated for", userSocketId, event.candidate);
+      console.log("ICE candidate generated for", userData.userId, event.candidate);
       socketRef.current?.emit("ice-candidate", {
-        target: userSocketId,
+        target: userData.socketId,
         candidate: event.candidate,
         roomId,
       });
     } else {
-      console.log("ICE gathering complete for", userSocketId);
+      console.log("ICE gathering complete for", userData.userId);
     }
   };
 
   pc.onicegatheringstatechange = () => {
-    console.log("ICE gathering state for", userSocketId, pc.iceGatheringState);
+    console.log("ICE gathering state for", userData.userId, pc.iceGatheringState);
   };
 
   pc.onsignalingstatechange = () => {
-    console.log("Signaling state for", userSocketId, pc.signalingState);
+    console.log("Signaling state for", userData.userId, pc.signalingState);
   };
 
   pc.ontrack = (event) => {
-    console.log("Received remote stream from", userSocketId);
-    setVideoStreams((prev) => {
-      if (!prev.some((vs) => vs.userId === userSocketId)) {
-        return [...prev, { userId: userSocketId, stream: event.streams[0] }];
-      }
-      return prev;
-    });
+    console.log("Received remote stream from", userData.userId);
+    const remoteStream = event.streams[0];
+    console.log('remote stream ',remoteStream)
+    const currentStreams = getCurrentStreams();
+    console.log("ontrack - currentStreams:", currentStreams);
+    const alreadyExists = currentStreams.find(
+      (stream) => stream.userId === userData.userId
+    );
+    if (!alreadyExists) {
+      const newStream: VideoStream = {
+        socketId:userData.socketId,
+        userId: userData.userId,
+        username: userData.username,
+        avatar: userData.avatar,
+        role: userData.role,
+        stream: remoteStream,
+        isMuted: true,
+      };
+      const updatedStreams = [...currentStreams, newStream];
+      console.log("Dispatched SET_VIDEO_STREAMS for userId:", userData.username);
+      setVideoStreams(updatedStreams);
+    }
   };
 
   return pc;

@@ -1,73 +1,131 @@
-import { Server, Socket } from 'socket.io';
-import { RoomService } from '../services/roomService.js';
+import { Server, Socket } from "socket.io";
+import { RoomService } from "../services/roomService";
+import { SignalingData, UserConnectingData, Role } from "../types/chatRoom";
 
-interface JoinData {
+interface ToggleMuteData {
   roomId: string;
   userId: string;
-}
-
-interface SignalingData {
-  roomId: string;
-  target: string;
-  [key: string]: any;
+  isMuted: boolean;
 }
 
 export class RoomManager {
   private io: Server;
   private roomService: RoomService;
   private hostSockets: Map<string, string>;
+  private userMetadata: Map<
+    string,
+    { userId: string; avatar: string; username: string }
+  >;
+  private signalingState: Map<string, Set<unknown>>;
 
   constructor(io: Server, roomService: RoomService) {
-    this.io = io; 
+    this.io = io;
     this.roomService = roomService;
     this.hostSockets = new Map();
+    this.userMetadata = new Map();
+    this.signalingState = new Map();
   }
 
-  async handleJoin(socket: Socket, { roomId, userId }: JoinData) {
+  async handleJoin(
+    socket: Socket,
+    { roomId, userId, username, avatar }: UserConnectingData
+  ) {
     try {
-      console.log('started in socket')
-      const room = await this.roomService.getRoom(roomId);
+      console.log(`handleJoin: userId=${userId}, roomId=${roomId}`);
       socket.join(roomId);
-      console.log(`User ${socket.id} joined room ${roomId}`);
+      const room = await this.roomService.getRoom(roomId);
+      if (!room) {
+        socket.emit("error", { message: "Room not found" });
+        return;
+      }
 
+      this.userMetadata.set(socket.id, { userId, username, avatar });
       const isHost = room.userId == userId;
       if (isHost) {
-        console.log('host joined')
         this.hostSockets.set(roomId, socket.id);
-        socket.to(roomId).emit('host-joined');
-        socket.emit('host-status', true);
-      } else if (!this.isHostPresent(roomId)) {
-        socket.emit('waiting-for-host');
+        socket.to(roomId).emit("host-joined");
+        socket.emit("host-status", socket.id);
       } else {
-        socket.to(roomId).emit('user-connected', socket.id);
+        const hostSocketId = this.isHostPresent(roomId);
+        if (hostSocketId) {
+          socket.emit("room-status", { hostPresent: true });
+          socket.to(roomId).emit("user-connected", {
+            userId,
+            socketId: socket.id,
+            username,
+            avatar,
+            role: Role.JOINEE,
+          });
+        } else {
+          socket.emit("waiting-for-host");
+        }
       }
     } catch (err: any) {
-      console.log(err)
-      socket.emit('error', { message: err.message || 'Failed to join room' });
+      console.error("Join error:", err);
+      socket.emit("error", { message: err.message || "Failed to join room" });
     }
   }
 
   handleSignaling(socket: Socket, event: string, data: SignalingData) {
-    console.log('event : ',event)
-    const { roomId, target } = data;
+    console.log(event);
+    const { roomId, target, userId } = data;
     if (!this.isHostPresent(roomId)) return;
-    console.log(event)
-    socket.to(target).emit(event, { ...data, userId: socket.id });
+    const metadata = this.userMetadata.get(socket.id);
+    const isHost = this.hostSockets.get(roomId) === socket.id;
+
+    socket.to(target!).emit(event, {
+      ...data,
+      socketId: socket.id,
+      userId: metadata?.userId,
+      avatar: metadata?.avatar,
+      username: metadata?.username,
+      role: isHost ? Role.HOST : Role.JOINEE,
+    });
+  }
+
+  handleToggleMute(
+    socket: Socket,
+    { roomId, userId, isMuted }: ToggleMuteData
+  ) {
+    if (!this.isHostPresent(roomId)) return;
+    socket.to(roomId).emit("mute-status", { userId, isMuted });
   }
 
   handleDisconnect(socket: Socket) {
+    const socketId = socket.id;
     for (const [roomId, hostSocketId] of this.hostSockets) {
-      if (hostSocketId === socket.id) {
+      if (hostSocketId === socketId) {
         this.hostSockets.delete(roomId);
-        this.io.to(roomId).emit('host-left');
+        this.io.to(roomId).emit("host-left");
       }
     }
-    console.log('user-disconnected')
-    this.io.emit('user-disconnected', socket.id);
+    const metadata = this.userMetadata.get(socketId);
+    if (metadata) {
+      socket.to([...socket.rooms]).emit("user-disconnected", metadata.userId);
+      this.userMetadata.delete(socketId);
+    }
   }
 
   isHostPresent(roomId: string): boolean {
     const hostSocketId = this.hostSockets.get(roomId);
     return !!hostSocketId && !!this.io.sockets.sockets.get(hostSocketId);
+  }
+
+  handleLeave(
+    socket: Socket,
+    { userId, roomId }: { userId: string; roomId: string }
+  ) {
+    console.log("user " + userId + " leaving room");
+    socket.leave(roomId);
+    socket.to(roomId).emit("user-disconnected", userId);
+  }
+
+  handleReadyForStream(socket: Socket, data: SignalingData) {
+    const { roomId } = data;
+    console.log(`${data.username} is ready to share their stream`);
+
+    socket.to(roomId).emit("ready-for-stream", {
+      ...data,
+    });
   }
 }

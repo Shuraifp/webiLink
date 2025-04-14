@@ -1,11 +1,8 @@
 import { VideoPlayer } from "./VideoPlayer";
 import MeetingFooter from "./MeetingFooter";
 import MeetingNavbar from "./MeetingNavbar";
+import { VideoStream } from "@/types/chatRoom"
 
-interface VideoStream {
-  userId: string;
-  stream: MediaStream;
-}
 
 interface Props {
   roomId: string;
@@ -20,6 +17,7 @@ export default function MeetingRoomUI({
   videoStreams,
   userId,
 }: Props) {
+  console.log(videoStreams)
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       <MeetingNavbar />
@@ -40,11 +38,11 @@ export default function MeetingRoomUI({
             className="border-2 border-gray-500 rounded-lg overflow-hidden bg-black"
           >
             <VideoPlayer
-              stream={videoStream.stream}
+              stream={videoStream.stream!}
               isLocal={videoStream.userId === userId}
             />
             <div className="p-2 text-center bg-gray-700">
-              {videoStream.userId}
+              {videoStream.username}
             </div>
           </div>
         ))}
