@@ -62,6 +62,7 @@ export interface MeetingState {
   status: Status.CONNECTING | Status.ACTIVE | Status.ERROR | Status.WAITING;
   statusMessage: string | null;
   videoStreams: VideoStream[];
+  isMuted: boolean;
   currentUserId: string;
   currentUsername: string;
   currentUserAvatar: string;
@@ -78,6 +79,7 @@ export const initialState: MeetingState = {
   status: Status.CONNECTING,
   statusMessage: null,
   videoStreams: [],
+  isMuted: true,
   currentUserId: "",
   currentUsername: "",
   currentUserAvatar: "",
@@ -101,16 +103,7 @@ const meetingReducer = (
     case MeetingActionType.SET_STATUS_MESSAGE:
       return { ...state, statusMessage: action.payload };
     case MeetingActionType.SET_VIDEO_STREAMS:
-      console.log(
-        "SET_VIDEO_STREAMS - Old state.videoStreams:",
-        state.videoStreams 
-      );
-      const newState = { ...state, videoStreams: [...action.payload] };
-      console.log(
-        "SET_VIDEO_STREAMS - New state.videoStreams:",
-        newState.videoStreams
-      );
-      return newState;
+      return { ...state, videoStreams: [...action.payload] };
     case MeetingActionType.SET_CURRENT_USER:
       return {
         ...state,
@@ -130,13 +123,29 @@ const meetingReducer = (
     case MeetingActionType.TOGGLE_MORE:
       return { ...state, isMoreActive: !state.isMoreActive };
     case MeetingActionType.TOGGLE_MUTE:
+      const updatedStreams = state.videoStreams.map((stream) => {
+        if (stream.userId === action.payload.userId) {
+          const audioTracks = stream.stream?.getAudioTracks?.();
+          if (audioTracks && audioTracks.length > 0) {
+            audioTracks.forEach((track) => {
+              track.enabled = !action.payload.isMuted;
+            });
+          }else {
+            console.warn("No audio tracks found for user:", action.payload.userId);
+          }
+
+          return {
+            ...stream,
+            isMuted: action.payload.isMuted,
+          };
+        }
+        return stream;
+      });
+
       return {
         ...state,
-        videoStreams: state.videoStreams.map((stream) =>
-          stream.userId === action.payload.userId
-            ? { ...stream, isMuted: action.payload.isMuted }
-            : stream
-        ),
+        isMuted: state.currentUserId === action.payload.userId ? action.payload.isMuted : state.isMuted,
+        videoStreams: updatedStreams,
       };
     default:
       return state;
@@ -181,6 +190,11 @@ export const MeetingProvider = ({
           dispatch({ type: MeetingActionType.TOGGLE_INFO });
         if (parsed.isUserActive)
           dispatch({ type: MeetingActionType.TOGGLE_USER });
+        if (parsed.isMuted || !parsed.isMuted)
+          dispatch({
+            type: MeetingActionType.TOGGLE_MUTE,
+            payload: { userId: state.currentUserId, isMuted: parsed.isMuted },
+          });
         if (parsed.isChatActive)
           dispatch({ type: MeetingActionType.TOGGLE_CHAT });
         if (parsed.isMoreActive)
@@ -202,6 +216,7 @@ export const MeetingProvider = ({
         currentUserAvatar: state.currentUserAvatar,
         currentUserRole: state.currentUserRole,
         isLocked: state.isLocked,
+        isMuted: state.isMuted,
         isInfoActive: state.isInfoActive,
         isUserActive: state.isUserActive,
         isChatActive: state.isChatActive,

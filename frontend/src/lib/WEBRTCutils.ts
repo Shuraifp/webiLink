@@ -61,7 +61,6 @@ export const createPeerConnection = ({
     const remoteStream = event.streams[0];
     console.log('remote stream ',remoteStream)
     const currentStreams = getCurrentStreams();
-    console.log("ontrack - currentStreams:", currentStreams);
     const alreadyExists = currentStreams.find(
       (stream) => stream.userId === userData.userId
     );
@@ -73,10 +72,9 @@ export const createPeerConnection = ({
         avatar: userData.avatar,
         role: userData.role,
         stream: remoteStream,
-        isMuted: true,
+        isMuted: userData.isMuted || true,
       };
       const updatedStreams = [...currentStreams, newStream];
-      console.log("Dispatched SET_VIDEO_STREAMS for userId:", userData.username);
       setVideoStreams(updatedStreams);
     }
   };

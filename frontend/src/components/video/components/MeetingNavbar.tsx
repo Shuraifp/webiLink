@@ -1,8 +1,21 @@
 "use client";
-import { useState } from "react";
-import { Info, Lock, Unlock, User, MessageCircle, MoreVertical } from "lucide-react";
 
-const MeetingNavbar = () => {
+import { useState } from "react";
+import {
+  Info,
+  Lock,
+  Unlock,
+  User,
+  MessageCircle,
+  MoreVertical,
+} from "lucide-react";
+
+interface Props {
+  handleLayoutChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  layout: string
+}
+
+const MeetingNavbar = ({handleLayoutChange, layout}: Props) => {
   const [isInfoActive, setIsInfoActive] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isUserActive, setIsUserActive] = useState(false);
@@ -10,7 +23,7 @@ const MeetingNavbar = () => {
   const [isMoreActive, setIsMoreActive] = useState(false);
 
   return (
-    <div className="flex justify-between items-center p-2 bg-gray-800 mb-5">
+    <div className="flex justify-between items-center p-2 bg-gray-800 mb-2">
       <div className="flex items-center space-x-4">
         <button
           className={`hover:text-white cursor-pointer ${
@@ -19,7 +32,6 @@ const MeetingNavbar = () => {
           onClick={() => setIsInfoActive(!isInfoActive)}
         >
           <Info size={20} />
-          skjkl
         </button>
         <button
           className={`text-gray-300 hover:text-white ${
@@ -37,11 +49,15 @@ const MeetingNavbar = () => {
         >
           <Unlock size={20} />
         </button>
-        <select className="bg-gray-700 text-white focus:outline-0 p-1 rounded">
-          <option>Everyone</option>
-          <option>{`Who's talking`}</option>
-          <option>Active cameras</option>
-          <option>Hide everyone</option>
+        <select
+          className="bg-gray-700 text-white focus:outline-0 p-1 rounded"
+          value={layout}
+          onChange={handleLayoutChange}
+        >
+          <option value={"everyone"}>Everyone</option>
+          <option value={"speaker"}>{`Who's talking`}</option>
+          {/* <option>Active cameras</option> */}
+          <option value={"hide"}>Hide everyone</option>
         </select>
       </div>
       <div className="flex items-center space-x-2">

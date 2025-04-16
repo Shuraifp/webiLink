@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { RoomService } from "../services/roomService";
-import { SignalingData, UserConnectingData, Role } from "../types/chatRoom";
+import { SignalingData, UserConnectingData, Role, ChatMessage } from "../types/chatRoom";
 
 interface ToggleMuteData {
   roomId: string;
@@ -14,21 +14,20 @@ export class RoomManager {
   private hostSockets: Map<string, string>;
   private userMetadata: Map<
     string,
-    { userId: string; avatar: string; username: string }
+    { userId: string; avatar: string; username: string, isMuted: boolean }
   >;
-  private signalingState: Map<string, Set<unknown>>;
+
 
   constructor(io: Server, roomService: RoomService) {
     this.io = io;
     this.roomService = roomService;
     this.hostSockets = new Map();
     this.userMetadata = new Map();
-    this.signalingState = new Map();
   }
 
   async handleJoin(
     socket: Socket,
-    { roomId, userId, username, avatar }: UserConnectingData
+    { roomId, userId, username, avatar, isMuted }: UserConnectingData
   ) {
     try {
       console.log(`handleJoin: userId=${userId}, roomId=${roomId}`);
@@ -39,7 +38,7 @@ export class RoomManager {
         return;
       }
 
-      this.userMetadata.set(socket.id, { userId, username, avatar });
+      this.userMetadata.set(socket.id, { userId, username, avatar, isMuted });
       const isHost = room.userId == userId;
       if (isHost) {
         this.hostSockets.set(roomId, socket.id);
@@ -55,6 +54,7 @@ export class RoomManager {
             username,
             avatar,
             role: Role.JOINEE,
+            isMuted
           });
         } else {
           socket.emit("waiting-for-host");
@@ -87,8 +87,16 @@ export class RoomManager {
     socket: Socket,
     { roomId, userId, isMuted }: ToggleMuteData
   ) {
-    if (!this.isHostPresent(roomId)) return;
-    socket.to(roomId).emit("mute-status", { userId, isMuted });
+    console.log(`handleToggleMute: userId=${userId}, isMuted=${isMuted}, roomId=${roomId}`);
+    const meta = this.userMetadata.get(socket.id);
+    if (meta && meta.userId === userId) {
+      this.userMetadata.set(socket.id, { ...meta, isMuted });
+    } else {
+      console.warn(`Invalid toggle-mute request: userId=${userId}, socketId=${socket.id}`);
+      return;
+    }
+
+    this.io.to(roomId).emit("mute-status", { userId, isMuted });
   }
 
   handleDisconnect(socket: Socket) {

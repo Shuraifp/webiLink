@@ -21,6 +21,7 @@ export interface UserConnectingData {
   username: string;
   avatar: string;
   roomId: string;
+  isMuted: boolean;
 }
 
 export interface VideoStream {
@@ -36,3 +37,15 @@ export enum Role {
   HOST = 'host',
   JOINEE = 'joinee'
 }
+
+
+// Chat
+
+export interface ChatMessage {
+  messageId: string;
+  userId: string;
+  username: string;
+  avatar: string;
+  content: string;
+  timestamp: number;
+  }

@@ -14,7 +14,7 @@ export default async function HostingPage() {
 
   return (
     <MeetingProvider>
-      <div className="flex h-screen bg-gray-100">
+      <div className="flex min-h-screen">
         {/* <div className="absolute top-4 right-4">
         <Link
           href={"/host"}

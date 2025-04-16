@@ -21,6 +21,7 @@ export interface SignalingData {
   candidate?: RTCIceCandidateInit;
   roomId: string;
   target: string;
+  isMuted?: boolean;
 }
 
 export interface UserConnectedData {
@@ -28,6 +29,7 @@ export interface UserConnectedData {
   username: string;
   avatar: string;
   role: Role.HOST | Role.JOINEE;
+  isMuted: boolean;
 }
 
 export interface UserConnectingData {
@@ -35,6 +37,7 @@ export interface UserConnectingData {
   username: string;
   avatar: string;
   roomId: string;
+  isMuted: boolean;
 }
 
 export interface VideoStream {

@@ -28,6 +28,9 @@ export default function MeetingRoom({ user }: { user: UserData }) {
   useEffect(() => {
     videoStreamsRef.current = state.videoStreams;
   }, [state.videoStreams]);
+  useEffect(() => {
+    dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
+  }, [roomId]);
 
   const connectToNewUser = useCallback(
     async (userData: SignalingData) => {
@@ -77,7 +80,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         role: Role.JOINEE,
       },
     });
-    dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
+    
     if (state.status !== Status.ACTIVE) {
       dispatch({
         type: MeetingActionType.SET_STATUS,
@@ -93,6 +96,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       roomId,
       username: user.username || "Anonymous",
       avatar: user.avatar || "",
+      isMuted: state.isMuted
     };
 
     socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL!);
@@ -440,30 +444,12 @@ export default function MeetingRoom({ user }: { user: UserData }) {
     };
   }, []);
 
-  const handleToggleMute = (userId: string) => {
-    const stream = state.videoStreams.find((s) => s.userId === userId);
-    if (stream && userId === state.currentUserId) {
-      const isMuted = !stream.isMuted;
-      dispatch({
-        type: MeetingActionType.TOGGLE_MUTE,
-        payload: { userId, isMuted },
-      });
-      socketRef.current?.emit("toggle-mute", { roomId, userId, isMuted });
-      if (localStreamRef.current) {
-        localStreamRef.current
-          .getAudioTracks()
-          .forEach((track) => (track.enabled = !isMuted));
-      }
-    }
-  };
 
   return (
     <MeetingRoomUI
-      roomId={state.roomId}
-      statusMessage={state.statusMessage}
+      socketRef={socketRef.current || null}
       videoStreams={state.videoStreams}
       userId={state.currentUserId}
-      // onToggleMute={handleToggleMute}
     />
   );
 }
