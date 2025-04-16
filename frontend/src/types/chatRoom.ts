@@ -49,3 +49,14 @@ export interface VideoStream {
   role: Role.HOST | Role.JOINEE;
   isMuted: boolean;
 }
+
+// Chat
+
+export interface ChatMessage {
+  messageId: string;
+  userId: string;
+  username: string;
+  avatar: string;
+  content: string;
+  timestamp: number;
+  }

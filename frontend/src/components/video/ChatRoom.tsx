@@ -29,8 +29,12 @@ export default function MeetingRoom({ user }: { user: UserData }) {
     videoStreamsRef.current = state.videoStreams;
   }, [state.videoStreams]);
   useEffect(() => {
-    dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
-  }, [roomId]);
+    console.log("Component mounted with roomId:", roomId);
+    if (roomId) {
+      console.log("Dispatching immediate roomId update");
+      dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
+    }
+  }, [])
 
   const connectToNewUser = useCallback(
     async (userData: SignalingData) => {
@@ -80,6 +84,8 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         role: Role.JOINEE,
       },
     });
+
+    dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
     
     if (state.status !== Status.ACTIVE) {
       dispatch({
@@ -135,7 +141,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         payload: 'Host Joined back!',
       });
       // if (state.status === Status.WAITING) {
-      console.log('re joining')
         socketRef.current?.emit("join-room", userData);
       // }
     });
@@ -193,6 +198,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
               role: Role.HOST,
             },
           });
+          dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
           dispatch({
             type: MeetingActionType.SET_STATUS,
             payload: Status.ACTIVE,
@@ -270,9 +276,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
             }
             delete peerConnections.current[signalData.userId];
           }
-          // pc = null;
           if (!pc) {
-            console.log("new pc");
             pc = createPeerConnection({
               userData: signalData,
               localStream: localStreamRef.current!,

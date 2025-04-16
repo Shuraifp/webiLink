@@ -190,10 +190,10 @@ export const MeetingProvider = ({
           dispatch({ type: MeetingActionType.TOGGLE_INFO });
         if (parsed.isUserActive)
           dispatch({ type: MeetingActionType.TOGGLE_USER });
-        if (parsed.isMuted || !parsed.isMuted)
+        if (parsed.isMuted)
           dispatch({
             type: MeetingActionType.TOGGLE_MUTE,
-            payload: { userId: state.currentUserId, isMuted: parsed.isMuted },
+            payload: { userId: parsed.currentUserId, isMuted: parsed.isMuted },
           });
         if (parsed.isChatActive)
           dispatch({ type: MeetingActionType.TOGGLE_CHAT });

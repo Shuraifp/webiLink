@@ -6,6 +6,8 @@ import MeetingFooter from "./MeetingFooter";
 import MeetingNavbar from "./MeetingNavbar";
 import { VideoStream } from "@/types/chatRoom";
 import { Socket } from "socket.io-client";
+import ChatPanel from "./ChatPanel";
+import { useReducedState } from "@/hooks/useReducedState";
 
 interface Props {
   videoStreams: VideoStream[];
@@ -18,6 +20,7 @@ export default function MeetingRoomUI({
   userId,
   socketRef,
 }: Props) {
+  const { state, dispatch } = useReducedState()
   const [layout, setLayout] = useState("everyone");
   const [highlighted, setHighlighted] =
     useState<SetStateAction<number | null>>(null);
@@ -93,6 +96,8 @@ export default function MeetingRoomUI({
       />
 
       <div className="flex-1">{renderVideos()}</div>
+
+      <ChatPanel socketRef={socketRef} isOpen={state.isChatActive} />
 
       <div className="bg-white .......">
         <MeetingFooter socketRef={socketRef} />

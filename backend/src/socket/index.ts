@@ -15,8 +15,10 @@ export default (io: Server) => {
     socket.on("offer", (data) => roomManager.handleSignaling(socket, "offer", data));
     socket.on("answer", (data) => roomManager.handleSignaling(socket, "answer", data));
     socket.on("ice-candidate", (data) => roomManager.handleSignaling(socket, "ice-candidate", data));
-    socket.on("toggle-mute", (data) => roomManager.handleToggleMute(socket, data));
     socket.on("ready-for-stream", (data) => roomManager.handleReadyForStream(socket, data));
     socket.on("disconnect", () => roomManager.handleDisconnect(socket));
+    
+    socket.on("toggle-mute", (data) => roomManager.handleToggleMute(socket, data));
+    socket.on("chat-message", (data) => roomManager.handleChatMessage(socket, data));
   });
 };
