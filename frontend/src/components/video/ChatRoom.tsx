@@ -132,17 +132,13 @@ export default function MeetingRoom({ user }: { user: UserData }) {
 
     socketRef.current?.on("host-joined", () => {
       console.log("Received host-joined, setting status to ACTIVE");
-      // dispatch({
-      //   type: MeetingActionType.SET_STATUS,
-      //   payload: Status.ACTIVE,
-      // });
+  
       dispatch({
         type: MeetingActionType.SET_STATUS_MESSAGE,
         payload: 'Host Joined back!',
       });
-      // if (state.status === Status.WAITING) {
         socketRef.current?.emit("join-room", userData);
-      // }
+      
     });
 
     socketRef.current?.on("waiting-for-host", () => {
