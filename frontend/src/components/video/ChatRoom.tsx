@@ -2,458 +2,346 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import io, { Socket } from "socket.io-client";
 import { UserData } from "@/types/type";
 import MeetingRoomUI from "./components/MeetingRoomUi";
-import { createPeerConnection } from "@/lib/WEBRTCutils";
-import { MeetingActionType } from "@/lib/MeetingContext";
 import { useReducedState } from "@/hooks/useReducedState";
+import { Socket } from "socket.io-client";
+import { Device } from "mediasoup-client";
+import { Transport } from "mediasoup-client/types";
 import {
-  SignalingData,
+  ConsumerDetails,
   Status,
-  Role,
+  StreamMap,
+  TransportDetails,
   VideoStream,
-  UserConnectingData,
 } from "@/types/chatRoom";
+import { MeetingActionType } from "@/lib/MeetingContext";
+import { disconnectSocket, getSocket } from "@/lib/socket";
 
 export default function MeetingRoom({ user }: { user: UserData }) {
   const { state, dispatch } = useReducedState();
   const { roomId } = useParams() as { roomId: string };
-  const socketRef = useRef<Socket | null>(null);
-  const peerConnections = useRef<{ [userId: string]: RTCPeerConnection }>({});
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const processedOffers = useRef<Set<string>>(new Set());
-  const videoStreamsRef = useRef<VideoStream[]>(state.videoStreams);
-
-  useEffect(() => {
-    videoStreamsRef.current = state.videoStreams;
-  }, [state.videoStreams]);
-  useEffect(() => {
-    console.log("Component mounted with roomId:", roomId);
-    if (roomId) {
-      console.log("Dispatching immediate roomId update");
-      dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
-    }
-  }, [])
-
-  const connectToNewUser = useCallback(
-    async (userData: SignalingData) => {
-      if (!localStreamRef.current) return;
-      if (peerConnections.current[userData.userId]) {
-        console.log("Closing existing peer connection for", userData.userId);
-        try {
-          peerConnections.current[userData.userId].close();
-        } catch (err) {
-          console.error("Error closing existing peer connection:", err);
-        }
-        delete peerConnections.current[userData.userId];
-      }
-      const pc = createPeerConnection({
-        userData,
-        localStream: localStreamRef.current,
-        socketRef,
-        roomId,
-        peerConnections,
-        getCurrentStreams: () => videoStreamsRef.current,
-        setVideoStreams: (streams: VideoStream[]) =>
-          dispatch({
-            type: MeetingActionType.SET_VIDEO_STREAMS,
-            payload: streams,
-          }),
-      });
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socketRef.current?.emit("offer", {
-        target: userData.socketId,
-        offer,
-        roomId,
-      });
+  const socket = useRef<Socket>(getSocket());
+  const device = useRef<Device | null>(null);
+  const sendTransport = useRef<Transport | null>(null);
+  const recvTransport = useRef<Transport | null>(null);
+  const streams = useRef<StreamMap>({
+    [String(user.id)]: {
+      userId: String(user.id),
+      username: String(user.username),
+      stream: null,
+      isMuted: false,
     },
-    [roomId,dispatch]
-  );
+  });
+  const hasJoined = useRef(false);
+  const isProcessingTransports = useRef(false);
 
-  useEffect(() => {
-    if (!roomId || !user.id) return;
-    
+  const updateStreams = useCallback(() => {
+    const validStreams = Object.values(streams.current).filter(
+      (streamInfo): streamInfo is VideoStream => streamInfo?.stream !== null
+    );
     dispatch({
-      type: MeetingActionType.SET_CURRENT_USER,
-      payload: {
-        userId: user.id,
-        username: user.username || "Anonymous",
-        avatar: user.avatar || "",
-        role: Role.JOINEE,
-      },
+      type: MeetingActionType.SET_VIDEO_STREAMS,
+      payload: validStreams,
     });
+  }, [dispatch]);
 
-    dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
-    
-    if (state.status !== Status.ACTIVE) {
-      dispatch({
-        type: MeetingActionType.SET_STATUS,
-        payload: Status.CONNECTING,
-      });
-      console.log("Status set to CONNECTING");
-    } else {
-      console.log("Status already ACTIVE, skipping CONNECTING");
-    }
-
-    const userData: UserConnectingData = {
-      userId: user.id!,
-      roomId,
-      username: user.username || "Anonymous",
-      avatar: user.avatar || "",
-      isMuted: state.isMuted
-    };
-
-    socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL!);
-    socketRef.current.on("connect", () => {
-      console.log("Socket connected:", socketRef.current?.id);
-    });
-    socketRef.current.on("connect_error", (err) => {
-      console.error("Socket connect error:", err);
-      dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
-      dispatch({
-        type: MeetingActionType.SET_STATUS_MESSAGE,
-        payload: "Connection error",
-      });
-    });
-
-    socketRef.current?.on("room-status", ({ hostPresent }) => {
-      console.log("Received room-status, hostPresent:", hostPresent);
-      dispatch({
-        type: MeetingActionType.SET_STATUS,
-        payload: hostPresent ? Status.ACTIVE : Status.WAITING,
-      });
-      dispatch({
-        type: MeetingActionType.SET_STATUS_MESSAGE,
-        payload: hostPresent ? null : "Waiting for host to join...",
-      });
-    });
-
-    socketRef.current?.on("host-joined", () => {
-      console.log("Received host-joined, setting status to ACTIVE");
-      // dispatch({
-      //   type: MeetingActionType.SET_STATUS,
-      //   payload: Status.ACTIVE,
-      // });
-      dispatch({
-        type: MeetingActionType.SET_STATUS_MESSAGE,
-        payload: 'Host Joined back!',
-      });
-      // if (state.status === Status.WAITING) {
-        socketRef.current?.emit("join-room", userData);
-      // }
-    });
-
-    socketRef.current?.on("waiting-for-host", () => {
-      console.log("Received waiting-for-host, setting status to WAITING");
-      dispatch({
-        type: MeetingActionType.SET_STATUS,
-        payload: Status.WAITING,
-      });
-      dispatch({
-        type: MeetingActionType.SET_STATUS_MESSAGE,
-        payload: "Waiting for host to join...",
-      });
-    });
-
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        localStreamRef.current = stream;
-        console.log("Local stream tracks:", stream.getTracks());
-        const userStream: VideoStream = {
-          socketId: "",
-          userId: user.id!,
-          username: user.username || "Anonymous",
-          avatar: user.avatar || "",
-          stream,
-          role: Role.JOINEE,
-          isMuted: true,
-        };
-        dispatch({
-          type: MeetingActionType.SET_VIDEO_STREAMS,
-          payload: videoStreamsRef.current.some((s) => s.userId === user.id)
-            ? videoStreamsRef.current.map((s) =>
-                s.userId === user.id ? userStream : s
-              )
-            : [...videoStreamsRef.current, userStream],
+  useEffect(
+    () => {
+      const joinRoom = () => {
+        // if (hasJoined.current) {
+        //   console.log("Already joined, skipping join-room");
+        //   return;
+        // }
+        console.log("Emitting join-room", { roomId, userId: user.id });
+        socket.current.emit("join-room", {
+          roomId,
+          userId: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          isMuted: false,
         });
-        dispatch({
-          type: MeetingActionType.SET_STATUS,
-          payload: Status.ACTIVE,
-        });
-        console.log("Status set to ACTIVE after getUserMedia");
+        hasJoined.current = true;
+      };
 
-        socketRef.current?.emit("join-room", userData);
+      if (socket.current.connected) {
+        joinRoom();
+      } else {
+        socket.current.on("connect", joinRoom);
+      }
 
-        socketRef.current?.on("host-status", (socketId) => {
-          console.log('host joined ',socketId)
-          dispatch({
-            type: MeetingActionType.SET_CURRENT_USER,
-            payload: {
-              userId: user.id!,
-              avatar: user.avatar || "",
-              username: user.username || "Anonymous",
-              role: Role.HOST,
-            },
-          });
-          dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
-          dispatch({
-            type: MeetingActionType.SET_STATUS,
-            payload: Status.ACTIVE,
-          });
-          dispatch({
-            type: MeetingActionType.SET_STATUS_MESSAGE,
-            payload: "You are the host!",
-          });
-        });
-
-        socketRef.current?.on("host-left", () => {
-          console.log("Received host-left, setting status to WAITING");
-          dispatch({
-            type: MeetingActionType.SET_STATUS,
-            payload: Status.WAITING,
-          });
-          dispatch({
-            type: MeetingActionType.SET_STATUS_MESSAGE,
-            payload: "Host has left the meeting",
-          });
-          Object.values(peerConnections.current).forEach((pc) => pc.close());
-          peerConnections.current = {};
-          dispatch({
-            type: MeetingActionType.SET_VIDEO_STREAMS,
-            payload: videoStreamsRef.current.filter((s) => s.userId === user.id),
-          });
-        });
-
-        socketRef.current?.on("user-connected", (data: SignalingData) => {
-          console.log("Processing user-connected, status:", state.status);
-          if (state.status === Status.ERROR) {
-            console.log("User-connected skipped: status is ERROR");
+      socket.current.on(
+        "sfu-transports",
+        async ({
+          sendTransportDetails,
+          recvTransportDetails,
+        }: {
+          sendTransportDetails: TransportDetails;
+          recvTransportDetails: TransportDetails;
+        }) => {
+          if (isProcessingTransports.current) {
+            console.log("Already processing sfu-transports, skipping");
             return;
           }
-          dispatch({
-            type: MeetingActionType.SET_STATUS_MESSAGE,
-            payload: `${data.username} joined`,
-          });
-          dispatch({
-            type: MeetingActionType.SET_STATUS,
-            payload: Status.ACTIVE,
-          });
-          console.log("user-connected", data.username);
-          connectToNewUser(data);
-
-          // socketRef.current?.emit("ready-for-stream", {
-          //   userId: user.id,
-          //   roomId,
-          //   username: user.username || "Anonymous",
-          //   avatar: user.avatar || "",
-          //   socketId: socketRef.current?.id,
-          // });
-        });
-
-        socketRef.current?.on("offer", async (signalData: SignalingData) => {
-          // if (state.status === Status.WAITING) {
-          //   console.log("Offer skipped: status is not waiting", state.status);
-          //   return;
-          // }
-          const offerKey = `${signalData.userId}-${signalData.socketId}`;
-          if (processedOffers.current.has(offerKey)) {
-            console.log(`Ignoring duplicate offer from ${signalData.userId}`);
-            return;
-          }
-          processedOffers.current.add(offerKey);
-          let pc = peerConnections.current[signalData.userId];
-          if (pc && pc.signalingState !== "stable") {
-            console.log(
-              `Closing existing peer connection for ${signalData.userId}: invalid state (${pc.signalingState})`
-            );
-            try {
-              pc.close();
-            } catch (err) {
-              console.error("Error closing peer connection:", err);
-            }
-            delete peerConnections.current[signalData.userId];
-          }
-          if (!pc) {
-            pc = createPeerConnection({
-              userData: signalData,
-              localStream: localStreamRef.current!,
-              socketRef,
-              roomId,
-              peerConnections,
-              getCurrentStreams: () => videoStreamsRef.current,
-              setVideoStreams: (streams: VideoStream[]) =>
-                dispatch({
-                  type: MeetingActionType.SET_VIDEO_STREAMS,
-                  payload: streams,
-                }),
-            });
-          }
+          isProcessingTransports.current = true;
           try {
-            console.log("Offer received for", signalData.username);
-            if (pc.signalingState !== "stable") {
-              throw new Error(
-                `Cannot process offer: invalid signaling state (${pc.signalingState})`
+            console.log("Received SFU transports", sendTransportDetails);
+            if (!device.current) {
+              device.current = new Device();
+              await device.current.load({
+                routerRtpCapabilities: sendTransportDetails.rtpCapabilities,
+              });
+            }
+            if (!sendTransport.current) {
+              console.log(device.current);
+              console.log("hi" + device.current.loaded);
+              sendTransport.current = device.current.createSendTransport({
+                id: sendTransportDetails.id,
+                iceParameters: sendTransportDetails.iceParameters,
+                iceCandidates: sendTransportDetails.iceCandidates,
+                dtlsParameters: sendTransportDetails.dtlsParameters,
+                iceServers: [
+                  {
+                    urls:
+                      process.env.NEXT_PUBLIC_STUN_URL ||
+                      "stun:stun.l.google.com:19302",
+                  },
+                ],
+              });
+              console.log(
+                "sendTransport created, initial state:",
+                sendTransport.current.connectionState
               );
             }
-            await pc.setRemoteDescription(
-              new RTCSessionDescription(signalData.offer!)
+
+            if (!recvTransport.current) {
+              recvTransport.current = device.current.createRecvTransport({
+                id: recvTransportDetails.id,
+                iceParameters: recvTransportDetails.iceParameters,
+                iceCandidates: recvTransportDetails.iceCandidates,
+                dtlsParameters: recvTransportDetails.dtlsParameters,
+                iceServers: [
+                  {
+                    urls:
+                      process.env.NEXT_PUBLIC_STUN_URL ||
+                      "stun:stun.l.google.com:19302",
+                  },
+                ],
+              });
+            }
+
+            console.log("sendTransport............", sendTransport.current);
+            console.log(
+              "Has connect handler?",
+              sendTransport.current?.listenerCount("connect")
             );
-            console.log("Offer set for", signalData.userId);
-            // if (pc.signalingState !== "have-remote-offer") {
-            //   throw new Error(
-            //     `Cannot create answer: invalid signaling state (${pc.signalingState})`
-            //   );
-            // }
-            const answer = await pc.createAnswer();
-            console.log("Answer created:", answer);
-            await pc.setLocalDescription(answer);
-            socketRef.current?.emit("answer", {
-              target: signalData.socketId,
-              answer,
-              roomId,
-              userId: user.id,
-              role: state.currentUserRole,
+            console.log(
+              "Initial sendTransport state:",
+              sendTransport.current?.connectionState
+            );
+
+            sendTransport.current.on(
+              "connect",
+              ({ dtlsParameters }, callback) => {
+                console.log("transport connect attempt");
+                socket.current?.emit("connect-transport", {
+                  dtlsParameters,
+                  type: "send",
+                });
+                callback();
+              }
+            );
+
+            sendTransport.current.on("connectionstatechange", (state) => {
+              console.log("sendTransport state:", state);
             });
-          } catch (error) {
+
+            sendTransport.current.on("icecandidateerror", (candidate) => {
+              console.log("ICE candidate error:", candidate);
+            });
+            sendTransport.current.on("icecandidate" as any, (candidate) => {
+              console.log("ICE candidate error:", candidate);
+            });
+            
+            recvTransport.current.on(
+              "connect",
+              ({ dtlsParameters }, callback) => {
+                socket.current?.emit("connect-transport", {
+                  dtlsParameters,
+                  type: "recv",
+                });
+                callback();
+              }
+            );
+
+            sendTransport.current.on(
+              "produce",
+              async ({ kind, rtpParameters }, callback) => {
+                socket.current?.emit(
+                  "produce",
+                  { kind, rtpParameters },
+                  (data: { id: string }) => callback({ id: data.id })
+                );
+              }
+            );
+
+            Promise.all([
+              new Promise((resolve) =>
+                sendTransport.current?.on("connect", resolve)
+              ),
+              new Promise((resolve) =>
+                recvTransport.current?.on("connect", resolve)
+              ),
+            ]).then(() => {
+              navigator.mediaDevices
+                .getUserMedia({ video: true, audio: true })
+                .then((stream) => {
+                  const videoTrack = stream.getVideoTracks()[0];
+                  const audioTrack = stream.getAudioTracks()[0];
+                  if (videoTrack)
+                    sendTransport.current?.produce({ track: videoTrack });
+                  if (audioTrack)
+                    sendTransport.current?.produce({ track: audioTrack });
+                  streams.current[user.id!]!.stream = stream;
+                  updateStreams();
+                  dispatch({
+                    type: MeetingActionType.SET_STATUS,
+                    payload: Status.ACTIVE,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Media error:", err);
+                  let message = "Failed to access camera/microphone";
+                  if (err.name === "NotAllowedError") {
+                    message = "Camera/microphone access denied by user";
+                  } else if (err.name === "NotFoundError") {
+                    message = "No camera or microphone found";
+                  }
+                  dispatch({
+                    type: MeetingActionType.SET_STATUS,
+                    payload: Status.ERROR,
+                  });
+                  dispatch({
+                    type: MeetingActionType.SET_STATUS_MESSAGE,
+                    payload: message,
+                  });
+                });
+            });
+          } catch (err) {
+            console.error("Transport setup error:", err);
             dispatch({
               type: MeetingActionType.SET_STATUS,
               payload: Status.ERROR,
             });
-            console.error("Error processing offer:", error);
-            try {
-              pc.close();
-            } catch (err) {
-              console.error("Error closing peer connection:", err);
-            }
-            delete peerConnections.current[signalData.userId];
           } finally {
-            processedOffers.current.delete(offerKey);
+            isProcessingTransports.current = false;
           }
-        });
+        }
+      );
 
-        socketRef.current?.on("answer", (data: SignalingData) => {
-          // if (state.status === Status.WAITING) {
-          //   console.log("Offer skipped: status is not waiting", state.status);
-          //   return;
-          // }
-          if (!data.answer) {
-            console.error("Answer missing in data", data);
-            return;
-          }
-          const pc = peerConnections.current[data.userId];
-          if (pc) {
-            console.log("Answer received for", data.username);
-            pc.setRemoteDescription(
-              new RTCSessionDescription(data.answer!)
-            ).catch((err) => {
-              dispatch({
-                type: MeetingActionType.SET_STATUS,
-                payload: Status.ERROR,
-              });
-              console.error("Error setting answer: why man", err)
-            });
-          } else {
-            console.warn("No peer connection found for", data.userId);
-          }
-        });
-
-        socketRef.current?.on("ice-candidate", (data: SignalingData) => {
-          // if (state.status === Status.WAITING) {
-          //   console.log("Offer skipped: status is not waiting", state.status);
-          //   return;
-          // }
-          const pc = peerConnections.current[data.userId];
-          if (pc) {
-            console.log("Adding ICE candidate for", data.userId);
-            pc.addIceCandidate(new RTCIceCandidate(data.candidate!)).catch(
-              (err) => {
-                dispatch({
-                  type: MeetingActionType.SET_STATUS,
-                  payload: Status.ERROR,
-                });
-                console.error("Error adding ICE candidate:", err)
+      socket.current.on(
+        "new-producer",
+        async ({ producerId, userId: remoteUserId, username, isMuted }) => {
+          socket.current?.emit(
+            "consume",
+            { producerId, rtpCapabilities: device.current!.rtpCapabilities },
+            async (consumerDetails: ConsumerDetails) => {
+              const consumer = await recvTransport.current?.consume(
+                consumerDetails
+              );
+              if (consumer) {
+                const stream = new MediaStream([consumer.track]);
+                streams.current[remoteUserId] = {
+                  userId: remoteUserId,
+                  username,
+                  stream,
+                  isMuted,
+                };
+                consumer.resume();
+                console.log("consumed stream", consumer);
+                updateStreams();
               }
-            );
-          }
-        });
+            }
+          );
+        }
+      );
 
-        socketRef.current?.on("user-disconnected", (userId: string) => {
-          console.log("user-disconnected", userId);
-          if (peerConnections.current[userId]) {
-            peerConnections.current[userId].close();
-            delete peerConnections.current[userId];
-            dispatch({
-              type: MeetingActionType.SET_VIDEO_STREAMS,
-              payload: videoStreamsRef.current.filter((vs) => vs.userId !== userId),
-            });
-          }
-        });
+      socket.current.on(
+        "user-connected",
+        ({ userId: remoteUserId, username, isMuted }) => {
+          streams.current[remoteUserId] = {
+            userId: remoteUserId,
+            username,
+            stream: null,
+            isMuted,
+          };
+          updateStreams();
+        }
+      );
 
-        socketRef.current?.on(
-          "mute-status",
-          ({ userId, isMuted }: { userId: string; isMuted: boolean }) => {
-            dispatch({
-              type: MeetingActionType.TOGGLE_MUTE,
-              payload: { userId, isMuted },
-            });
-          }
-        );
+      socket.current.on("user-disconnected", (remoteUserId: string) => {
+        delete streams.current[remoteUserId];
+        updateStreams();
+      });
 
-        socketRef.current?.on("error", (error: { message: string }) => {
-          console.error("Socket error:", error);
+      // socket.current.on("chat-message", onMessage);
+      socket.current.on("mute-status", ({ userId, isMuted }) => {
+        streams.current[userId]!.isMuted = isMuted;
+        updateStreams();
+      });
+      socket.current.on("set-status", (status: Status) => {
+        dispatch({ type: MeetingActionType.SET_STATUS, payload: status });
+      });
+      socket.current.on(
+        "set-current-user",
+        ({ userId, username, avatar, role }) => {
           dispatch({
-            type: MeetingActionType.SET_STATUS,
-            payload: Status.ERROR,
+            type: MeetingActionType.SET_CURRENT_USER,
+            payload: { userId, username, avatar, role },
           });
-          dispatch({
-            type: MeetingActionType.SET_STATUS_MESSAGE,
-            payload: `Error: ${error.message}`,
-          });
-        });
-
-
-        socketRef.current?.on("ready-for-stream", (data: SignalingData) => {
-          if (data.userId !== user.id) {
-            console.log(`Received ready-for-stream from ${data.username}`);
-            connectToNewUser(data);
-          }
-        });
-        
-      })
-      .catch((error) => {
-        console.error("Media device error:", error);
+        }
+      );
+      socket.current.on("error", ({ message }) => {
         dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
         dispatch({
           type: MeetingActionType.SET_STATUS_MESSAGE,
-          payload: `Media error: ${error.message}`,
+          payload: message,
+        });
+      });
+      socket.current.on("waiting-for-host", () => {
+        dispatch({
+          type: MeetingActionType.SET_STATUS,
+          payload: Status.WAITING,
         });
       });
 
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.emit("leave-room", { roomId, userId: user.id });
-        socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      Object.values(peerConnections.current).forEach((pc) => pc.close());
-      peerConnections.current = {};
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-      }
-    };
-  }, []);
-
+      return () => {
+        disconnectSocket();
+        if (sendTransport.current) sendTransport.current.close();
+        if (recvTransport.current) recvTransport.current.close();
+        streams.current = {
+          [String(user.id)]: {
+            userId: state.currentUserId,
+            username: state.currentUsername,
+            stream: null,
+            isMuted: false,
+          },
+        };
+      };
+    },
+    [
+      // roomId,
+      // user.avatar,
+      // user.id,
+      // state.currentUsername,
+      // state.currentUserId,
+      // user.username,
+      // dispatch,
+      // updateStreams,
+    ]
+  );
 
   return (
-    <MeetingRoomUI
-      socketRef={socketRef.current || null}
-      videoStreams={state.videoStreams}
-      userId={state.currentUserId}
-    />
+    <MeetingRoomUI socketRef={socket.current} userId={state.currentUserId} />
   );
 }

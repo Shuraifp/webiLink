@@ -1,3 +1,6 @@
+import { MeetingAction } from "@/lib/MeetingContext";
+import { DtlsParameters, IceCandidate, IceParameters, RtpCapabilities, RtpParameters } from "mediasoup-client/types";
+
 export enum Status {
   CONNECTING = 'connecting',
   WAITING = 'waiting',
@@ -40,15 +43,6 @@ export interface UserConnectingData {
   isMuted: boolean;
 }
 
-export interface VideoStream {
-  socketId: string;
-  userId: string;
-  username: string;
-  avatar: string;
-  stream: MediaStream | null;
-  role: Role.HOST | Role.JOINEE;
-  isMuted: boolean;
-}
 
 // Chat
 
@@ -56,7 +50,45 @@ export interface ChatMessage {
   messageId: string;
   userId: string;
   username: string;
-  avatar: string;
   content: string;
   timestamp: number;
+  }
+
+  // SFU
+  export interface StreamMap {
+    [userId: string]: VideoStream | null;
+  }
+
+  export interface UseSfuProps {
+    roomId: string;
+    userId: string;
+    username: string;
+    avatar: string;
+    dispatch: React.Dispatch<MeetingAction>;
+    onMessage: (message: ChatMessage) => void;
+  }
+
+  export interface TransportDetails {
+    id: string;
+    iceParameters: IceParameters;
+    iceCandidates: IceCandidate[];
+    dtlsParameters: DtlsParameters;
+    rtpCapabilities: RtpCapabilities;
+  }
+
+  export interface ConsumerDetails {
+    id: string;
+    producerId: string;
+    kind: "audio" | "video";
+    rtpParameters: RtpParameters;
+  }
+
+  export interface VideoStream {
+    socketId?: string;
+    userId: string;
+    username: string;
+    avatar?: string;
+    stream: MediaStream | null;
+    role?: Role.HOST | Role.JOINEE;
+    isMuted: boolean;
   }

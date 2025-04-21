@@ -24,6 +24,8 @@ export enum MeetingActionType {
   TOGGLE_MORE = "TOGGLE_MORE",
   TOGGLE_MUTE = "TOGGLE_MUTE",
   SET_STATUS = "SET_STATUS",
+  ADD_STREAM = "ADD_STREAM",
+  REMOVE_STREAM = "REMOVE_STREAM",
 }
 
 export type MeetingAction =
@@ -55,7 +57,9 @@ export type MeetingAction =
         | Status.ACTIVE
         | Status.ERROR
         | Status.WAITING;
-    };
+    }
+  | { type: MeetingActionType.ADD_STREAM; payload: VideoStream }
+  | { type: MeetingActionType.REMOVE_STREAM; payload: string };
 
 export interface MeetingState {
   roomId: string;
@@ -123,29 +127,34 @@ const meetingReducer = (
     case MeetingActionType.TOGGLE_MORE:
       return { ...state, isMoreActive: !state.isMoreActive };
     case MeetingActionType.TOGGLE_MUTE:
-      const updatedStreams = state.videoStreams.map((stream) => {
-        if (stream.userId === action.payload.userId) {
-          const audioTracks = stream.stream?.getAudioTracks?.();
-          if (audioTracks && audioTracks.length > 0) {
-            audioTracks.forEach((track) => {
-              track.enabled = !action.payload.isMuted;
-            });
-          }else {
-            console.warn("No audio tracks found for user:", action.payload.userId);
-          }
-
-          return {
-            ...stream,
-            isMuted: action.payload.isMuted,
-          };
-        }
-        return stream;
-      });
-
       return {
         ...state,
-        isMuted: state.currentUserId === action.payload.userId ? action.payload.isMuted : state.isMuted,
-        videoStreams: updatedStreams,
+        isMuted:
+          state.currentUserId === action.payload.userId
+            ? action.payload.isMuted
+            : state.isMuted,
+        videoStreams: state.videoStreams.map((stream) =>
+          stream.userId === action.payload.userId
+            ? { ...stream, isMuted: action.payload.isMuted }
+            : stream
+        ),
+      };
+    case MeetingActionType.ADD_STREAM:
+      return {
+        ...state,
+        videoStreams: [
+          ...state.videoStreams.filter(
+            (s) => s.userId !== action.payload.userId
+          ),
+          action.payload,
+        ],
+      };
+    case MeetingActionType.REMOVE_STREAM:
+      return {
+        ...state,
+        videoStreams: state.videoStreams.filter(
+          (s) => s.userId !== action.payload
+        ),
       };
     default:
       return state;
@@ -158,8 +167,10 @@ export const MeetingProvider = ({
   children: React.ReactNode;
 }) => {
   const [state, dispatch] = useReducer(meetingReducer, initialState);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const saved = localStorage.getItem("meetingState");
     if (saved) {
       try {

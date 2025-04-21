@@ -1,3 +1,5 @@
+import { RtpCapabilities, RtpParameters } from "mediasoup/node/lib/rtpParametersTypes";
+
 export interface SignalingData {
   userId: string;
   username?: string;
@@ -49,3 +51,53 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   }
+
+  //////////////  SFU
+  export interface UserData {
+    userId: string;
+    username: string;
+    avatar: string;
+    isMuted: boolean;
+  }
+  export interface JoinRoomData {
+    roomId: string;
+    userId: string;
+    username: string;
+    avatar: string;
+    isMuted: boolean;
+  }
+  export interface ChatMessageData {
+    roomId: string;
+    userId: string;
+    content: string;
+  }
+  
+  export interface ToggleMuteData {
+    roomId: string;
+    userId: string;
+    isMuted: boolean;
+  }
+
+  export interface TransportDetails {
+    id: string;
+    iceParameters: any;
+    iceCandidates: any;
+    dtlsParameters: any;
+    rtpCapabilities: RtpCapabilities;
+  }
+  
+  export interface ConsumerDetails {
+    id: string;
+    producerId: string;
+    kind: "audio" | "video";
+    rtpParameters: RtpParameters;
+  }
+
+  export enum Status {
+    CONNECTING = 'connecting',
+    WAITING = 'waiting',
+    ACTIVE = 'active',
+    ERROR = 'error'
+  }
+
+  

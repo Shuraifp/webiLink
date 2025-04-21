@@ -5,4 +5,5 @@ export interface IRoomRepository {
   findAll(userId:string): Promise<IRoom[]>;
   create(roomData: Partial<IRoom>): Promise<IRoom>;
   findBySlug(slug: string): Promise<IRoom | null>;
+  findById(id: string): Promise<IRoom | null>;
 }

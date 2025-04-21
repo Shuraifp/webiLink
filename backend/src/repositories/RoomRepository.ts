@@ -18,4 +18,8 @@ export class RoomRepository implements IRoomRepository {
   async findBySlug(slug: string): Promise<IRoom | null> {
     return await this._roomModal.findOne({ slug });
   }
+  
+  async findById(id: string): Promise<IRoom | null> {
+    return await this._roomModal.findById(id);
+  }
 }

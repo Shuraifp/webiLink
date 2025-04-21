@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'
 import { errorHandler } from './middlewares/errorHandler';
 import dotenv from 'dotenv';
-import setupSocket from './socket/index'
+// import setupSocket from './socket/index'
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ import roomRoutes from './routes/roomRoutes';
 
 const app = express();
 export const server = http.createServer(app);
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: [process.env.FRONTEND_URL!],
     methods: ['GET', 'POST'],
@@ -43,4 +43,4 @@ app.use(errorHandler);
 
 // Socket.io setup
 
-setupSocket(io);
+// setupSocket(io);

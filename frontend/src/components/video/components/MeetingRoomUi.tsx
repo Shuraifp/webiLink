@@ -4,26 +4,25 @@ import { SetStateAction, useState } from "react";
 import { VideoPlayer } from "./VideoPlayer";
 import MeetingFooter from "./MeetingFooter";
 import MeetingNavbar from "./MeetingNavbar";
-import { VideoStream } from "@/types/chatRoom";
 import { Socket } from "socket.io-client";
 import ChatPanel from "./ChatPanel";
 import { useReducedState } from "@/hooks/useReducedState";
 
 interface Props {
-  videoStreams: VideoStream[];
   userId: string;
   socketRef: Socket | null;
 }
 
 export default function MeetingRoomUI({
-  videoStreams,
   userId,
   socketRef,
 }: Props) {
-  const { state, dispatch } = useReducedState()
+  const { state } = useReducedState()
   const [layout, setLayout] = useState("everyone");
   const [highlighted, setHighlighted] =
     useState<SetStateAction<number | null>>(null);
+
+    console.log("video streams in meeting room ui ",state);
 
   const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setLayout(e.target.value);
@@ -37,9 +36,9 @@ export default function MeetingRoomUI({
   const renderVideos = () => {
     if (layout === "hide") return null;
 
-    if (layout === "speaker" && videoStreams.length > 0) {
+    if (layout === "speaker" && state.videoStreams.length > 0) {
       const speakerIndex = highlighted ?? 0;
-      const stream = videoStreams[Number(speakerIndex)];
+      const stream = state.videoStreams[Number(speakerIndex)];
       return (
         <div className="w-full h-full flex items-center justify-center p-4">
           <div
@@ -66,7 +65,7 @@ export default function MeetingRoomUI({
             : "hidden"
         }`}
       >
-        {videoStreams.map((videoStream, index) => (
+        {state.videoStreams.map((videoStream, index) => (
           <div
             key={videoStream.userId}
             className={`relative bg-black overflow-hidden rounded-lg transition-all duration-300 ${ // aspect-video ?
