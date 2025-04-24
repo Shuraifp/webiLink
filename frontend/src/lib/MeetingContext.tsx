@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useReducer, useEffect } from "react";
-import { Role, Status, VideoStream } from "@/types/chatRoom";
+import { Role, Status, UserData, BreakoutRoom } from "@/types/chatRoom";
 
 export interface MeetingContextType {
   state: MeetingState;
@@ -15,21 +15,20 @@ export const MeetingContext = createContext<MeetingContextType | undefined>(
 export enum MeetingActionType {
   SET_ROOM_ID = "SET_ROOM_ID",
   SET_STATUS_MESSAGE = "SET_STATUS_MESSAGE",
-  SET_VIDEO_STREAMS = "SET_VIDEO_STREAMS",
   SET_CURRENT_USER = "SET_CURRENT_USER",
-  TOGGLE_LOCK = "TOGGLE_LOCK",
-  TOGGLE_INFO = "TOGGLE_INFO",
-  TOGGLE_USER = "TOGGLE_USER",
   TOGGLE_CHAT = "TOGGLE_CHAT",
-  TOGGLE_MORE = "TOGGLE_MORE",
   TOGGLE_MUTE = "TOGGLE_MUTE",
+  TOGGLE_USER = "TOGGLE_USER",
   SET_STATUS = "SET_STATUS",
+  SET_USERS = "SET_USERS",
+  ADD_USER = "ADD_USER",
+  REMOVE_USER = "REMOVE_USER",
+  UPDATE_BREAKOUT_ROOMS = "UPDATE_BREAKOUT_ROOMS",
 }
 
 export type MeetingAction =
   | { type: MeetingActionType.SET_ROOM_ID; payload: string }
   | { type: MeetingActionType.SET_STATUS_MESSAGE; payload: string | null }
-  | { type: MeetingActionType.SET_VIDEO_STREAMS; payload: VideoStream[] }
   | {
       type: MeetingActionType.SET_CURRENT_USER;
       payload: {
@@ -39,56 +38,54 @@ export type MeetingAction =
         role: Role.HOST | Role.JOINEE;
       };
     }
-  | { type: MeetingActionType.TOGGLE_LOCK }
-  | { type: MeetingActionType.TOGGLE_INFO }
-  | { type: MeetingActionType.TOGGLE_USER }
   | { type: MeetingActionType.TOGGLE_CHAT }
-  | { type: MeetingActionType.TOGGLE_MORE }
+  | { type: MeetingActionType.TOGGLE_USER }
   | {
       type: MeetingActionType.TOGGLE_MUTE;
       payload: { userId: string; isMuted: boolean };
     }
+  | { type: MeetingActionType.SET_STATUS; payload: Status }
+  | { type: MeetingActionType.SET_USERS; payload: UserData[] }
+  | { type: MeetingActionType.ADD_USER; payload: UserData }
+  | { type: MeetingActionType.REMOVE_USER; payload: string }
   | {
-      type: MeetingActionType.SET_STATUS;
-      payload:
-        | Status.CONNECTING
-        | Status.ACTIVE
-        | Status.ERROR
-        | Status.WAITING;
+      type: MeetingActionType.UPDATE_BREAKOUT_ROOMS;
+      payload: {
+        breakoutRooms: BreakoutRoom[];
+        mainRoomParticipants: string[];
+      };
     };
 
 export interface MeetingState {
   roomId: string;
-  status: Status.CONNECTING | Status.ACTIVE | Status.ERROR | Status.WAITING;
+  status: Status;
   statusMessage: string | null;
-  videoStreams: VideoStream[];
   isMuted: boolean;
   currentUserId: string;
   currentUsername: string;
   currentUserAvatar: string;
   currentUserRole: Role.HOST | Role.JOINEE;
-  isLocked: boolean;
-  isInfoActive: boolean;
-  isUserActive: boolean;
   isChatActive: boolean;
-  isMoreActive: boolean;
+  isUserActive: boolean;
+  users: UserData[];
+  breakoutRooms: BreakoutRoom[];
+  mainRoomParticipants: string[];
 }
 
 export const initialState: MeetingState = {
   roomId: "",
   status: Status.CONNECTING,
   statusMessage: null,
-  videoStreams: [],
   isMuted: true,
   currentUserId: "",
   currentUsername: "",
   currentUserAvatar: "",
   currentUserRole: Role.JOINEE,
-  isLocked: false,
-  isInfoActive: false,
-  isUserActive: false,
   isChatActive: false,
-  isMoreActive: false,
+  isUserActive: false,
+  users: [],
+  breakoutRooms: [],
+  mainRoomParticipants: [],
 };
 
 const meetingReducer = (
@@ -102,8 +99,6 @@ const meetingReducer = (
       return { ...state, status: action.payload };
     case MeetingActionType.SET_STATUS_MESSAGE:
       return { ...state, statusMessage: action.payload };
-    case MeetingActionType.SET_VIDEO_STREAMS:
-      return { ...state, videoStreams: [...action.payload] };
     case MeetingActionType.SET_CURRENT_USER:
       return {
         ...state,
@@ -112,40 +107,47 @@ const meetingReducer = (
         currentUserAvatar: action.payload.avatar,
         currentUserRole: action.payload.role,
       };
-    case MeetingActionType.TOGGLE_LOCK:
-      return { ...state, isLocked: !state.isLocked };
-    case MeetingActionType.TOGGLE_INFO:
-      return { ...state, isInfoActive: !state.isInfoActive };
-    case MeetingActionType.TOGGLE_USER:
-      return { ...state, isUserActive: !state.isUserActive };
     case MeetingActionType.TOGGLE_CHAT:
       return { ...state, isChatActive: !state.isChatActive };
-    case MeetingActionType.TOGGLE_MORE:
-      return { ...state, isMoreActive: !state.isMoreActive };
+    case MeetingActionType.TOGGLE_USER:
+      return { ...state, isUserActive: !state.isUserActive };
     case MeetingActionType.TOGGLE_MUTE:
-      const updatedStreams = state.videoStreams.map((stream) => {
-        if (stream.userId === action.payload.userId) {
-          const audioTracks = stream.stream?.getAudioTracks?.();
-          if (audioTracks && audioTracks.length > 0) {
-            audioTracks.forEach((track) => {
-              track.enabled = !action.payload.isMuted;
-            });
-          }else {
-            console.warn("No audio tracks found for user:", action.payload.userId);
-          }
-
-          return {
-            ...stream,
-            isMuted: action.payload.isMuted,
-          };
-        }
-        return stream;
-      });
-
       return {
         ...state,
-        isMuted: state.currentUserId === action.payload.userId ? action.payload.isMuted : state.isMuted,
-        videoStreams: updatedStreams,
+        isMuted:
+          state.currentUserId === action.payload.userId
+            ? action.payload.isMuted
+            : state.isMuted,
+      };
+    case MeetingActionType.ADD_USER:
+      return {
+        ...state,
+        users: [
+          ...state.users.filter((u) => u.userId !== action.payload.userId),
+          action.payload,
+        ],
+      };
+    case MeetingActionType.REMOVE_USER:
+      return {
+        ...state,
+        users: state.users.filter((u) => u.userId !== action.payload),
+      };
+    case MeetingActionType.SET_USERS:
+      return {
+        ...state,
+        users: [
+          ...state.users.filter(
+            (u) =>
+              !action.payload.some((newUser) => newUser.userId === u.userId)
+          ),
+          ...action.payload,
+        ],
+      };
+    case MeetingActionType.UPDATE_BREAKOUT_ROOMS:
+      return {
+        ...state,
+        breakoutRooms: action.payload.breakoutRooms,
+        mainRoomParticipants: action.payload.mainRoomParticipants,
       };
     default:
       return state;
@@ -158,8 +160,10 @@ export const MeetingProvider = ({
   children: React.ReactNode;
 }) => {
   const [state, dispatch] = useReducer(meetingReducer, initialState);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const saved = localStorage.getItem("meetingState");
     if (saved) {
       try {
@@ -185,9 +189,8 @@ export const MeetingProvider = ({
             role: parsed.currentUserRole || Role.JOINEE,
           },
         });
-        if (parsed.isLocked) dispatch({ type: MeetingActionType.TOGGLE_LOCK });
-        if (parsed.isInfoActive)
-          dispatch({ type: MeetingActionType.TOGGLE_INFO });
+        if (parsed.isChatActive)
+          dispatch({ type: MeetingActionType.TOGGLE_CHAT });
         if (parsed.isUserActive)
           dispatch({ type: MeetingActionType.TOGGLE_USER });
         if (parsed.isMuted)
@@ -195,14 +198,14 @@ export const MeetingProvider = ({
             type: MeetingActionType.TOGGLE_MUTE,
             payload: { userId: parsed.currentUserId, isMuted: parsed.isMuted },
           });
-        if (parsed.isChatActive)
-          dispatch({ type: MeetingActionType.TOGGLE_CHAT });
-        if (parsed.isMoreActive)
-          dispatch({ type: MeetingActionType.TOGGLE_MORE });
       } catch (e) {
         console.error("Failed to parse meeting state from localStorage", e);
       }
     }
+
+    return () => {
+      localStorage.removeItem("meetingState");
+    };
   }, []);
 
   useEffect(() => {
@@ -215,15 +218,16 @@ export const MeetingProvider = ({
         currentUsername: state.currentUsername,
         currentUserAvatar: state.currentUserAvatar,
         currentUserRole: state.currentUserRole,
-        isLocked: state.isLocked,
         isMuted: state.isMuted,
-        isInfoActive: state.isInfoActive,
-        isUserActive: state.isUserActive,
         isChatActive: state.isChatActive,
-        isMoreActive: state.isMoreActive,
+        isUserActive: state.isUserActive,
       };
       localStorage.setItem("meetingState", JSON.stringify(serializableState));
     }
+
+    return () => {
+      localStorage.removeItem("meetingState");
+    };
   }, [state]);
 
   return (

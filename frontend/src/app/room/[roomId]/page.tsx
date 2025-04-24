@@ -1,8 +1,10 @@
-// import Link from "next/link";
 import { headers } from "next/headers";
 import { UserData } from "@/types/type";
-import ChatRoom from "@/components/video/ChatRoom";
+// import ChatRoom from "@/components/video/ChatRoom";
 import { MeetingProvider } from "@/lib/MeetingContext";
+import dynamic from "next/dynamic";
+
+const ChatRoom = dynamic(() => import("@/components/video/ChatRoom"));
 
 export default async function HostingPage() {
   const headersList = await headers();
@@ -15,15 +17,6 @@ export default async function HostingPage() {
   return (
     <MeetingProvider>
       <div className="flex min-h-screen">
-        {/* <div className="absolute top-4 right-4">
-        <Link
-          href={"/host"}
-          className="text-4xl cursor-pointer font-bold lobster"
-        >
-          <span className="text-yellow-500">w</span>ebiLink
-        </Link>
-      </div> */}
-
         <ChatRoom user={user} />
       </div>
     </MeetingProvider>

@@ -1,67 +1,38 @@
 "use client";
 
-import {
-  Info,
-  Lock,
-  Unlock,
-  User,
-  MessageCircle,
-  MoreVertical,
-} from "lucide-react";
+import { User, MessageCircle, MoreVertical } from "lucide-react";
 import { useReducedState } from "@/hooks/useReducedState";
 import { MeetingActionType } from "@/lib/MeetingContext";
+import BreakoutRoomManager from "./BreakoutRoomManager";
+import { Socket } from "socket.io-client";
 
 interface Props {
   handleLayoutChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   layout: string;
+  socketRef: Socket;
 }
 
-const MeetingNavbar = ({ handleLayoutChange, layout }: Props) => {
+const MeetingNavbar = ({ handleLayoutChange, layout, socketRef }: Props) => {
   const { state, dispatch } = useReducedState();
 
+  const toggleChat = () => {
+    dispatch({ type: MeetingActionType.TOGGLE_CHAT });
+  };
+
   return (
-    <div className="flex justify-between items-center p-2 bg-gray-800 mb-2">
+    <div className="flex justify-between items-center p-2 bg-gray-800 mb-3">
       <div className="flex items-center space-x-4">
-        <button
-          className={`hover:text-white cursor-pointer ${
-            state.isInfoActive ? "text-blue-600" : "text-gray-300"
-          }`}
-          onClick={() => dispatch({ type: MeetingActionType.TOGGLE_INFO })}
-        >
-          <Info size={20} />
-        </button>
-        <button
-          className={`text-gray-300 hover:text-white ${
-            state.isLocked ? "text-green-400" : ""
-          }`}
-          onClick={() => dispatch({ type: MeetingActionType.TOGGLE_LOCK })}
-        >
-          <Lock size={20} />
-        </button>
-        <button
-          className={`text-gray-300 hover:text-white ${
-            !state.isLocked ? "text-red-400" : ""
-          }`}
-          onClick={() => dispatch({ type: MeetingActionType.TOGGLE_LOCK })}
-        >
-          <Unlock size={20} />
-        </button>
-        <select
-          className="bg-gray-700 text-white focus:outline-0 p-1 rounded"
-          value={layout}
-          onChange={handleLayoutChange}
-        >
-          <option value={"everyone"}>Everyone</option>
-          <option value={"speaker"}>{`Who's talking`}</option>
-          <option value={"hide"}>Hide everyone</option>
-        </select>
+        <BreakoutRoomManager socketRef={socketRef} />
       </div>
       <div className="flex items-center space-x-4">
         <button
           className={`text-gray-300 hover:text-white ${
             state.isUserActive ? "text-blue-400" : ""
           }`}
-          onClick={() => dispatch({ type: MeetingActionType.TOGGLE_USER })}
+          onClick={() => {
+            dispatch({ type: MeetingActionType.TOGGLE_USER });
+            toggleChat();
+          }}
         >
           <User size={20} />
         </button>
@@ -69,7 +40,7 @@ const MeetingNavbar = ({ handleLayoutChange, layout }: Props) => {
           className={`text-gray-300 hover:text-white ${
             state.isChatActive ? "text-blue-400" : ""
           }`}
-          onClick={() => dispatch({ type: MeetingActionType.TOGGLE_CHAT })}
+          onClick={toggleChat}
         >
           <MessageCircle size={20} />
         </button>
@@ -85,4 +56,5 @@ const MeetingNavbar = ({ handleLayoutChange, layout }: Props) => {
     </div>
   );
 };
+
 export default MeetingNavbar;

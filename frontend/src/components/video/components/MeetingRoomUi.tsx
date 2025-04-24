@@ -1,106 +1,62 @@
 "use client";
 
-import { SetStateAction, useState } from "react";
-import { VideoPlayer } from "./VideoPlayer";
-import MeetingFooter from "./MeetingFooter";
+import { useState } from "react";
 import MeetingNavbar from "./MeetingNavbar";
-import { VideoStream } from "@/types/chatRoom";
-import { Socket } from "socket.io-client";
 import ChatPanel from "./ChatPanel";
 import { useReducedState } from "@/hooks/useReducedState";
+import { Socket } from "socket.io-client";
 
 interface Props {
-  videoStreams: VideoStream[];
-  userId: string;
-  socketRef: Socket | null;
+  meetingContainerRef: React.RefObject<HTMLDivElement>;
+  socketRef: Socket;
 }
 
 export default function MeetingRoomUI({
-  videoStreams,
-  userId,
+  meetingContainerRef,
   socketRef,
 }: Props) {
-  const { state, dispatch } = useReducedState()
   const [layout, setLayout] = useState("everyone");
-  const [highlighted, setHighlighted] =
-    useState<SetStateAction<number | null>>(null);
+  const { state } = useReducedState();
+  const navbarHeight = "60px";
 
   const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setLayout(e.target.value);
-    setHighlighted(null);
-  };
-
-  const handleHighlight = (index: number) => {
-    setHighlighted((prev: number | null) => (prev === index ? null : index));
-  };
-
-  const renderVideos = () => {
-    if (layout === "hide") return null;
-
-    if (layout === "speaker" && videoStreams.length > 0) {
-      const speakerIndex = highlighted ?? 0;
-      const stream = videoStreams[Number(speakerIndex)];
-      return (
-        <div className="w-full h-full flex items-center justify-center p-4">
-          <div
-            className="w-full max-w-xl aspect-vide bg-black rounded-lg overflow-hidden ring-4 mb-14 ring-blue-400"
-            onDoubleClick={() => handleHighlight(Number(speakerIndex))}
-            style={{ minHeight: "200px" }}
-          >
-            <VideoPlayer
-              stream={stream.stream!}
-              isLocal={stream.userId === userId}
-              username={stream.username}
-              isMuted={stream.isMuted || false}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className={`grid gap-4 p-5 min-w-screen h-full overflow-hidden ${
-          layout === "everyone"
-            ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 place-items-center"
-            : "hidden"
-        }`}
-      >
-        {videoStreams.map((videoStream, index) => (
-          <div
-            key={videoStream.userId}
-            className={`relative bg-black overflow-hidden rounded-lg transition-all duration-300 ${ // aspect-video ?
-              highlighted === index
-                ? "ring-4 ring-blue-400 scale-105 z-10"
-                : "hover:ring-2 hover:ring-white"
-            }`}
-            onDoubleClick={() => handleHighlight(index)}
-          >
-            <VideoPlayer
-              stream={videoStream.stream!}
-              isLocal={videoStream.userId === userId}
-              username={videoStream.username}
-              isMuted={videoStream.isMuted || false}
-            />
-          </div>
-        ))}
-      </div>
-    );
   };
 
   return (
-    <div className="bg-gray-900 min-w-screen text-white flex flex-col relative overflow-hidden">
-      <MeetingNavbar 
-      layout={layout}
-      handleLayoutChange={handleLayoutChange}
-      />
-
-      <div className="flex-1">{renderVideos()}</div>
-
-      <ChatPanel socketRef={socketRef} isOpen={state.isChatActive} />
-
-      <div className="bg-white .......">
-        <MeetingFooter socketRef={socketRef} />
+    <div className="bg-gray-900 text-white flex flex-col h-screen min-w-screen overflow-hidden relative">
+      <div className="w-full">
+        <MeetingNavbar
+          layout={layout}
+          handleLayoutChange={handleLayoutChange}
+          socketRef={socketRef}
+        />
+      </div>
+      <div
+        className={`flex-1 transition-all bg-gray-800 duration-300 w-full ${
+          state.isChatActive ? "pr-[320px]" : "pr-0"
+        }`}
+      >
+        <div
+          ref={meetingContainerRef}
+          className="w-full relative"
+          style={{ height: `calc(100vh - ${navbarHeight})` }}
+        />
+      </div>
+      <div
+        className={`w-80 transform transition-transform duration-300 absolute right-0 z-20`}
+        style={{
+          top: navbarHeight,
+          height: `calc(100% - ${navbarHeight})`,
+        }}
+      >
+        <div
+          className={`h-full transform transition-transform duration-300 bg-gray-800 ${
+            state.isChatActive ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <ChatPanel socketRef={socketRef} />
+        </div>
       </div>
     </div>
   );
