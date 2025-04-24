@@ -9,14 +9,7 @@ export interface SignalingData {
   target?: string;
 }
 
-export interface UserConnectedData {
-  userId: string;
-  username: string;
-  avatar: string;
-  role: "host" | "joinee";
-}
-
-export interface UserConnectingData {
+export interface UserData {
   userId: string;
   username: string;
   avatar: string;
@@ -34,18 +27,31 @@ export interface VideoStream {
 }
 
 export enum Role {
-  HOST = 'host',
-  JOINEE = 'joinee'
+  HOST = "host",
+  JOINEE = "joinee",
 }
 
+export enum Status {
+  CONNECTING = "connecting",
+  WAITING = "waiting",
+  ACTIVE = "active",
+  ERROR = "error",
+}
 
 // Chat
 
-export interface ChatMessage {
+export interface ChatMessageData {
+  roomId: string;
   messageId: string;
   userId: string;
   username: string;
   avatar: string;
   content: string;
   timestamp: number;
-  }
+}
+
+export interface BreakoutRoom {
+  id: string;
+  name: string;
+  participants: string[]; 
+}

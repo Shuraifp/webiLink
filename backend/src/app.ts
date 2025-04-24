@@ -5,20 +5,19 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'
 import { errorHandler } from './middlewares/errorHandler';
 import dotenv from 'dotenv';
-import setupSocket from './socket/index'
-
-dotenv.config();
 
 // Routes
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
+import zegoRoutes from './routes/zegoRoutes';
 
+dotenv.config();
 
 const app = express();
 export const server = http.createServer(app);
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: [process.env.FRONTEND_URL!],
     methods: ['GET', 'POST'],
@@ -33,6 +32,8 @@ app.use(cors({
 }));
 app.use(cookieParser())
 
+app.use('/api/zego', zegoRoutes);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/plans', planRoutes);
@@ -40,7 +41,3 @@ app.use('/api/rooms', roomRoutes);
 
 app.use(errorHandler);
 
-
-// Socket.io setup
-
-setupSocket(io);
