@@ -1,0 +1,188 @@
+"use client";
+
+import { useEffect } from "react";
+import { useReducedState } from "@/hooks/useReducedState";
+import { Socket } from "socket.io-client";
+import { MeetingActionType } from "@/lib/MeetingContext";
+import {
+  Poll,
+  PollStatus,
+  Question,
+  QuestionStatus,
+  RoomState,
+  UserData,
+} from "@/types/chatRoom";
+
+interface Props {
+  socketRef: Socket | null;
+}
+
+export default function SocketManager({ socketRef }: Props) {
+  const { state, dispatch } = useReducedState();
+
+  useEffect(() => {
+    if (!socketRef) return;
+
+    // socketRef.emit("request-users", { roomId: state.roomId });
+    socketRef.emit("get-roomState", {roomId: state.roomId})
+
+    socketRef.on("user-list", (userList: UserData[]) => {
+      dispatch({
+        type: MeetingActionType.SET_USERS,
+        payload: userList,
+      });
+    });
+
+    socketRef.on(
+      "room-state-fetched",
+      ({ isWhiteboardVisible, isQAEnabled }: RoomState) => {
+        dispatch({
+          type: MeetingActionType.TOGGLE_WHITEBOARD,
+          payload: isWhiteboardVisible,
+        });
+        dispatch({ type: MeetingActionType.ENABLE_QA, payload: isQAEnabled });
+      }
+    );
+
+    socketRef.on("polls-fetched", (polls: Poll[]) => {
+      dispatch({ type: MeetingActionType.SET_POLLS, payload: polls });
+    });
+
+    socketRef.on("poll-created", (poll: Poll) => {
+      dispatch({ type: MeetingActionType.ADD_POLL, payload: poll });
+    });
+
+    socketRef.on("poll-launched", (pollId: number) => {
+      dispatch({
+        type: MeetingActionType.UPDATE_POLL,
+        payload: { pollId, updates: { status: PollStatus.ACTIVE } },
+      });
+      socketRef.emit("poll-timer-start", { pollId });
+    });
+
+    socketRef.on(
+      "poll-updated",
+      ({
+        pollId,
+        responses,
+      }: {
+        pollId: number;
+        responses: { [userId: string]: string[] };
+      }) => {
+        dispatch({
+          type: MeetingActionType.UPDATE_POLL,
+          payload: { pollId, updates: { responses } },
+        });
+      }
+    );
+
+    socketRef.on("poll-ended", (pollId: number) => {
+      dispatch({
+        type: MeetingActionType.UPDATE_POLL,
+        payload: { pollId, updates: { status: PollStatus.ENDED } },
+      });
+    });
+
+    socketRef.on("poll-deleted", (pollId: number) => {
+      dispatch({ type: MeetingActionType.DELETE_POLL, payload: pollId });
+    });
+
+    // Q&A events
+
+    socketRef.on("QA-Enabled", ({ isEnabled }) => {
+      dispatch({ type: MeetingActionType.ENABLE_QA, payload: isEnabled });
+    });
+
+    socketRef.on("QA-Disabled", ({ isEnabled }) => {
+      dispatch({ type: MeetingActionType.ENABLE_QA, payload: isEnabled });
+    });
+
+    socketRef.on("questions-fetched", (questions: Question[]) => {
+      dispatch({ type: MeetingActionType.SET_QUESTIONS, payload: questions });
+    });
+
+    socketRef.on("question-asked", (question: Question) => {
+      dispatch({ type: MeetingActionType.ADD_QUESTION, payload: question });
+    });
+
+    socketRef.on(
+      "question-upvoted",
+      ({ questionId, votes }: { questionId: number; userId: string, votes: string[] }) => {
+        dispatch({
+          type: MeetingActionType.UPDATE_QUESTION,
+          payload: {
+            questionId,
+            updates: {
+              upvotes: votes
+            },
+          },
+        });
+      }
+    );
+
+    socketRef.on("question-published", (questionId: number) => {
+      dispatch({
+        type: MeetingActionType.UPDATE_QUESTION,
+        payload: { questionId, updates: { isVisible: true } },
+      });
+    });
+
+    socketRef.on("question-dismissed", (questionId: number) => {
+      dispatch({
+        type: MeetingActionType.DELETE_QUESTION,
+        payload: questionId,
+      });
+    });
+
+    socketRef.on(
+      "question-answered",
+      ({
+        questionId,
+        answer,
+        answeredBy,
+      }: {
+        questionId: number;
+        answer?: string;
+        answeredBy: string;
+      }) => {
+        dispatch({
+          type: MeetingActionType.UPDATE_QUESTION,
+          payload: {
+            questionId,
+            updates: { answer, answeredBy, isAnswered: true },
+          },
+        });
+      }
+    );
+
+    socketRef.on("question-closed", (questionId: number) => {
+      dispatch({
+        type: MeetingActionType.UPDATE_QUESTION,
+        payload: { questionId, updates: { status: QuestionStatus.CLOSED } },
+      });
+    });
+
+    return () => {
+      // Poll events
+      socketRef.off("polls-fetched");
+      socketRef.off("poll-created");
+      socketRef.off("poll-launched");
+      socketRef.off("poll-updated");
+      socketRef.off("poll-ended");
+      socketRef.off("poll-deleted");
+
+      // Q&A events
+      socketRef.off("QA-Enabled");
+      socketRef.off("QA-Disabled");
+      socketRef.off("questions-fetched");
+      socketRef.off("question-asked");
+      socketRef.off("question-upvoted");
+      socketRef.off("question-published");
+      socketRef.off("question-dismissed");
+      socketRef.off("question-answered");
+      socketRef.off("question-closed");
+    };
+  }, [socketRef, dispatch]);
+
+  return null;
+}

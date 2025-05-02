@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
 import { ChatMessage, UserData } from "@/types/chatRoom";
-import { X, CornerDownRight, CornerDownLeft } from "lucide-react";
+import { CornerDownRight, CornerDownLeft, X } from "lucide-react";
 import { MeetingActionType } from "@/lib/MeetingContext";
 
 interface Props {
@@ -47,13 +47,6 @@ export default function ChatPanel({ socketRef }: Props) {
       }
     });
 
-    socketRef.on("user-list", (userList: UserData[]) => {
-      dispatch({
-        type: MeetingActionType.SET_USERS,
-        payload: userList,
-      });
-    });
-
     socketRef.on(
       "user-connected",
       ({ userId, username, avatar, isMuted, role }: UserData) => {
@@ -73,15 +66,19 @@ export default function ChatPanel({ socketRef }: Props) {
       });
     });
 
-    socketRef.emit("request-users", { roomId: state.roomId });
-
     return () => {
       socketRef.off("chat-message");
       socketRef.off("user-list");
       socketRef.off("user-connected");
       socketRef.off("user-disconnected");
     };
-  }, [socketRef, state.currentUserId, state.roomId, state.breakoutRooms]);
+  }, [
+    socketRef,
+    state.currentUserId,
+    state.roomId,
+    dispatch,
+    state.breakoutRooms,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,98 +119,110 @@ export default function ChatPanel({ socketRef }: Props) {
 
   const getAvailableRecipients = () => {
     if (currentBreakoutRoom) {
-      return state.users.filter((user) =>
-        currentBreakoutRoom.participants.includes(user.userId!)
+      return state.users.filter(
+        (user) =>
+          currentBreakoutRoom.participants.includes(user.userId!) &&
+          user.userId !== state.currentUserId
       );
     }
-    return state.users.filter((user) =>
-      state.mainRoomParticipants.includes(user.userId!)
+    return state.users.filter(
+      (user) =>
+        state.mainRoomParticipants.includes(user.userId!) &&
+        user.userId !== state.currentUserId
     );
   };
 
   return (
-    <div className="h-full w-80 bg-gray-800 text-white">
-      <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
         <div className="p-4 flex justify-between border-b border-gray-700">
           <h2 className="text-lg font-semibold">
             Chat {currentBreakoutRoom ? `- ${currentBreakoutRoom.name}` : ""}
           </h2>
           <button
             className="text-gray-600 hover:text-gray-900 focus:outline-none cursor-pointer"
-            onClick={() => dispatch({ type: MeetingActionType.TOGGLE_CHAT })}
+            onClick={() => {
+              dispatch({ type: MeetingActionType.CLOSE_SIDEBAR });
+            }}
           >
             <X className="w-6 h-6 text-white" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-          {messages.map((msg) => {
-            const label = getMessageLabel(msg);
-            return (
-              <div
-                key={msg.messageId}
-                className={`flex ${
-                  msg.userId === state.currentUserId
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
-                <div className="inline-flex flex-col max-w-[70%]">
-                  <div
-                    className={`p-2 rounded-lg break-words overflow-hidden ${
-                      msg.userId === state.currentUserId
-                        ? "bg-blue-600"
-                        : "bg-gray-700"
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">{msg.username}</div>
-                    <div className="text-sm">{msg.content}</div>
-                    <div className="text-xs mt-0.5 text-gray-400 whitespace-nowrap">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+        {messages.map((msg) => {
+          const label = getMessageLabel(msg);
+          return (
+            <div
+              key={msg.messageId}
+              className={`flex ${
+                msg.userId === state.currentUserId
+                  ? "justify-end"
+                  : "justify-start"
+              }`}
+            >
+              <div className="inline-flex flex-col max-w-[70%]">
+                <div
+                  className={`p-2 rounded-lg break-words overflow-hidden ${
+                    msg.userId === state.currentUserId
+                      ? "bg-blue-600"
+                      : "bg-gray-700"
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{msg.username}</div>
+                  <div className="text-sm">{msg.content}</div>
+                  <div className="text-xs mt-0.5 text-gray-400 whitespace-nowrap">
+                    {new Date(msg.timestamp).toLocaleTimeString()}
                   </div>
-                  <div className={`flex items-center ${msg.userId === state.currentUserId ? 'flex-row-reverse' : ''} gap-1 mt-1`}>
-                    { msg.userId === state.currentUserId ? <CornerDownLeft className="w-4 h-4 text-gray-400" /> : <CornerDownRight className="w-4 h-4 text-gray-400" />}
-                    <div className={`text-xs mt-1 ${label.className}`}>
-                      {label.text}
-                    </div>
+                </div>
+                <div
+                  className={`flex items-center ${
+                    msg.userId === state.currentUserId ? "flex-row-reverse" : ""
+                  } gap-1 mt-1`}
+                >
+                  {msg.userId === state.currentUserId ? (
+                    <CornerDownLeft className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <CornerDownRight className="w-4 h-4 text-gray-400" />
+                  )}
+                  <div className={`text-xs mt-1 ${label.className}`}>
+                    {label.text}
                   </div>
                 </div>
               </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="p-4 border-t border-gray-700">
+        <div className="flex gap-2 mb-2">
+          <select
+            value={selectedRecipient}
+            onChange={(e) => setSelectedRecipient(e.target.value)}
+            className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
+          >
+            <option value="everyone">To Everyone</option>
+            {getAvailableRecipients().map((user) => (
+              <option key={user.userId} value={user.userId}>
+                To {user.username}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="p-4 border-t border-gray-700">
-          <div className="flex gap-2 mb-2">
-            <select
-              value={selectedRecipient}
-              onChange={(e) => setSelectedRecipient(e.target.value)}
-              className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
-            >
-              <option value="everyone">To Everyone</option>
-              {getAvailableRecipients().map((user) => (
-                <option key={user.userId} value={user.userId}>
-                  To {user.username}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-              className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
-              placeholder="Type a message..."
-            />
-            <button
-              onClick={sendMessage}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-            >
-              Send
-            </button>
-          </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+            className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
+            placeholder="Type a message..."
+          />
+          <button
+            onClick={sendMessage}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Send
+          </button>
         </div>
       </div>
     </div>

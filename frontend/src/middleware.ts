@@ -11,19 +11,18 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-
+console.log("pathname", pathname);
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
   const isAdminNonAuthPage = ["/admin/auth/login"].includes(pathname);
   const isUserProtectedPage =
-    pathname.startsWith("/host") ||
-    pathname.startsWith("/landing/") ||
-    pathname.startsWith("/room/");
+    pathname.startsWith("/host") || pathname.startsWith("/room/");
   const isAdminProtectedPage =
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
   if (isHomePage || isPlansPage) {
+    console.time("Home Page or Plans Page");
     let user;
     let response;
     // User
@@ -43,11 +42,12 @@ export async function middleware(req: NextRequest) {
     if (user && response) {
       response.headers.set("x-user", JSON.stringify(user));
     }
+    console.timeEnd("Home Page or Plans Page");
     return response;
   }
 
   if (accessToken && isUserNonAuthPage) {
-    return NextResponse.redirect(new URL("/host", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   if (adminAccessToken && isAdminNonAuthPage) {
@@ -55,6 +55,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isUserProtectedPage) {
+    console.time("User Protected Page");
     let user;
     let response;
     if (!accessToken) {
@@ -64,7 +65,7 @@ export async function middleware(req: NextRequest) {
 
       const refreshResult = await refreshUserAccessToken(req);
       if (!refreshResult || !refreshResult.accessToken) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.redirect(new URL("/", req.url));
       }
       response = refreshResult.response;
       user = await decodeAndVerifyToken(refreshResult.accessToken);
@@ -78,6 +79,7 @@ export async function middleware(req: NextRequest) {
     }
 
     response.headers.set("x-user", JSON.stringify(user));
+    console.timeEnd("User Protected Page");
     return response;
   }
   if (isAdminProtectedPage) {
@@ -203,7 +205,6 @@ export const config = {
     "/signup",
     "/admin",
     "/host",
-    "/landing/:path*",
     "/room/:path*",
     "/admin/auth/login",
     "/reset-password",

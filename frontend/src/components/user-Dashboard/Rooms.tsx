@@ -77,17 +77,19 @@ export default function DashboardPage({
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
         >
           <div className="bg-white w-96 py-8 px-4 rounded-lg shadow-lg max-w-sm">
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center mb-5">
+              <p className="text-2xl raleway ml-2 font-semibold text-center text-gray-700">
+                Join Video Room
+              </p>
+
               <button
-                className="text-gray-600 hover:text-gray-900 focus:outline-none cursor-pointer"
                 onClick={() => setIsModalOpen(false)}
+                className="bg-white focus:outline-none rounded-sm text-red-700 hover:text-red-800 mr-1 cursor-pointer"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">
-              Join Video Room
-            </h2>
+
             <div className="space-y-4">
               <input
                 type="text"
@@ -175,7 +177,7 @@ export default function DashboardPage({
 
       <button
         onClick={() => handleSectionChange("create-meeting")}
-        className="fixed bottom-6 z-10 right-6 px-6 py-3 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
+        className="fixed bottom-6 z-10 right-6 px-6 py-3 cursor-pointer bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
       >
         + Create Room
       </button>

@@ -1,11 +1,24 @@
 "use client";
 
-import { createContext, useReducer, useEffect } from "react";
-import { Role, Status, UserData, BreakoutRoom } from "@/types/chatRoom";
+import { createContext, useReducer } from "react";
+import {
+  Role,
+  Status,
+  UserData,
+  BreakoutRoom,
+  Poll,
+  Question,
+} from "@/types/chatRoom";
 
 export interface MeetingContextType {
   state: MeetingState;
   dispatch: React.Dispatch<MeetingAction>;
+}
+
+export enum PanelType {
+  CHAT = "CHAT",
+  USERS = "USERS",
+  POLLS_AND_QA = "POLLS_AND_QA",
 }
 
 export const MeetingContext = createContext<MeetingContextType | undefined>(
@@ -14,21 +27,41 @@ export const MeetingContext = createContext<MeetingContextType | undefined>(
 
 export enum MeetingActionType {
   SET_ROOM_ID = "SET_ROOM_ID",
+  SET_LEFT_MEETING = "SET_LEFT_MEETING",
   SET_STATUS_MESSAGE = "SET_STATUS_MESSAGE",
+  OPEN_SIDEBAR = "OPEN_SIDEBAR",
+  CLOSE_SIDEBAR = "CLOSE_SIDEBAR",
+  SET_PANEL = "SET_PANEL",
   SET_CURRENT_USER = "SET_CURRENT_USER",
-  TOGGLE_CHAT = "TOGGLE_CHAT",
-  TOGGLE_MUTE = "TOGGLE_MUTE",
-  TOGGLE_USER = "TOGGLE_USER",
   SET_STATUS = "SET_STATUS",
   SET_USERS = "SET_USERS",
   ADD_USER = "ADD_USER",
   REMOVE_USER = "REMOVE_USER",
   UPDATE_BREAKOUT_ROOMS = "UPDATE_BREAKOUT_ROOMS",
+  TOGGLE_WHITEBOARD = "TOGGLE_WHITEBOARD",
+  SET_POLLS = "SET_POLLS",
+  ADD_POLL = "ADD_POLL",
+  UPDATE_POLL = "UPDATE_POLL",
+  DELETE_POLL = "DELETE_POLL",
+  ENABLE_QA = "ENABLE_QA",
+  SET_QUESTIONS = "SET_QUESTIONS",
+  ADD_QUESTION = "ADD_QUESTION",
+  UPDATE_QUESTION = "UPDATE_QUESTION",
+  DELETE_QUESTION = "DELETE_QUESTION",
 }
 
 export type MeetingAction =
   | { type: MeetingActionType.SET_ROOM_ID; payload: string }
+  | { type: MeetingActionType.SET_LEFT_MEETING; payload: boolean }
   | { type: MeetingActionType.SET_STATUS_MESSAGE; payload: string | null }
+  | { type: MeetingActionType.SET_PANEL; payload: PanelType }
+  | {
+      type: MeetingActionType.CLOSE_SIDEBAR;
+    }
+  | {
+      type: MeetingActionType.OPEN_SIDEBAR;
+      payload: { panel: PanelType };
+    }
   | {
       type: MeetingActionType.SET_CURRENT_USER;
       payload: {
@@ -37,12 +70,6 @@ export type MeetingAction =
         avatar: string;
         role: Role.HOST | Role.JOINEE;
       };
-    }
-  | { type: MeetingActionType.TOGGLE_CHAT }
-  | { type: MeetingActionType.TOGGLE_USER }
-  | {
-      type: MeetingActionType.TOGGLE_MUTE;
-      payload: { userId: string; isMuted: boolean };
     }
   | { type: MeetingActionType.SET_STATUS; payload: Status }
   | { type: MeetingActionType.SET_USERS; payload: UserData[] }
@@ -54,38 +81,62 @@ export type MeetingAction =
         breakoutRooms: BreakoutRoom[];
         mainRoomParticipants: string[];
       };
-    };
+    }
+  | { type: MeetingActionType.TOGGLE_WHITEBOARD, payload?:boolean }
+  | { type: MeetingActionType.SET_POLLS; payload: Poll[] }
+  | { type: MeetingActionType.ADD_POLL; payload: Poll }
+  | {
+      type: MeetingActionType.UPDATE_POLL;
+      payload: { pollId: number; updates: Partial<Poll> };
+    }
+  | { type: MeetingActionType.DELETE_POLL; payload: number }
+  | { type: MeetingActionType.ENABLE_QA; payload: boolean }
+  | { type: MeetingActionType.SET_QUESTIONS; payload: Question[] }
+  | { type: MeetingActionType.ADD_QUESTION; payload: Question }
+  | {
+      type: MeetingActionType.UPDATE_QUESTION;
+      payload: { questionId: number; updates: Partial<Question> };
+    }
+  | { type: MeetingActionType.DELETE_QUESTION; payload: number };
 
 export interface MeetingState {
   roomId: string;
   status: Status;
+  isLeftMeeting: boolean;
+  isSidebarOpen: boolean;
+  activePanel: PanelType | null;
   statusMessage: string | null;
-  isMuted: boolean;
   currentUserId: string;
   currentUsername: string;
   currentUserAvatar: string;
   currentUserRole: Role.HOST | Role.JOINEE;
-  isChatActive: boolean;
-  isUserActive: boolean;
   users: UserData[];
   breakoutRooms: BreakoutRoom[];
   mainRoomParticipants: string[];
+  isWhiteboardVisible: boolean;
+  polls: Poll[];
+  isQAEnabled: boolean;
+  questions: Question[];
 }
 
 export const initialState: MeetingState = {
   roomId: "",
+  isLeftMeeting: false,
+  isSidebarOpen: false,
+  activePanel: null,
   status: Status.CONNECTING,
   statusMessage: null,
-  isMuted: true,
   currentUserId: "",
   currentUsername: "",
   currentUserAvatar: "",
   currentUserRole: Role.JOINEE,
-  isChatActive: false,
-  isUserActive: false,
   users: [],
   breakoutRooms: [],
   mainRoomParticipants: [],
+  isWhiteboardVisible: false,
+  polls: [],
+  isQAEnabled: false,
+  questions: [],
 };
 
 const meetingReducer = (
@@ -95,10 +146,30 @@ const meetingReducer = (
   switch (action.type) {
     case MeetingActionType.SET_ROOM_ID:
       return { ...state, roomId: action.payload };
+    case MeetingActionType.SET_LEFT_MEETING:
+      return { ...state, isLeftMeeting: action.payload };
     case MeetingActionType.SET_STATUS:
       return { ...state, status: action.payload };
     case MeetingActionType.SET_STATUS_MESSAGE:
       return { ...state, statusMessage: action.payload };
+    case MeetingActionType.OPEN_SIDEBAR:
+      return {
+        ...state,
+        isSidebarOpen: true,
+        activePanel: action.payload.panel,
+      };
+    case MeetingActionType.CLOSE_SIDEBAR:
+      return {
+        ...state,
+        isSidebarOpen: false,
+        activePanel: null,
+      };
+    case MeetingActionType.SET_PANEL:
+      return {
+        ...state,
+        isSidebarOpen: true,
+        activePanel: action.payload,
+      };
     case MeetingActionType.SET_CURRENT_USER:
       return {
         ...state,
@@ -106,18 +177,6 @@ const meetingReducer = (
         currentUsername: action.payload.username,
         currentUserAvatar: action.payload.avatar,
         currentUserRole: action.payload.role,
-      };
-    case MeetingActionType.TOGGLE_CHAT:
-      return { ...state, isChatActive: !state.isChatActive };
-    case MeetingActionType.TOGGLE_USER:
-      return { ...state, isUserActive: !state.isUserActive };
-    case MeetingActionType.TOGGLE_MUTE:
-      return {
-        ...state,
-        isMuted:
-          state.currentUserId === action.payload.userId
-            ? action.payload.isMuted
-            : state.isMuted,
       };
     case MeetingActionType.ADD_USER:
       return {
@@ -149,6 +208,46 @@ const meetingReducer = (
         breakoutRooms: action.payload.breakoutRooms,
         mainRoomParticipants: action.payload.mainRoomParticipants,
       };
+    case MeetingActionType.TOGGLE_WHITEBOARD:
+      return { ...state, isWhiteboardVisible: action.payload ? action.payload : !state.isWhiteboardVisible };
+    case MeetingActionType.SET_POLLS:
+      return { ...state, polls: action.payload };
+    case MeetingActionType.ADD_POLL:
+      return { ...state, polls: [...state.polls, action.payload] };
+    case MeetingActionType.UPDATE_POLL:
+      return {
+        ...state,
+        polls: state.polls.map((p) =>
+          p.id === action.payload.pollId
+            ? { ...p, ...action.payload.updates }
+            : p
+        ),
+      };
+    case MeetingActionType.DELETE_POLL:
+      return {
+        ...state,
+        polls: state.polls.filter((p) => p.id !== action.payload),
+      };
+    case MeetingActionType.ENABLE_QA:
+      return { ...state, isQAEnabled: action.payload };
+    case MeetingActionType.SET_QUESTIONS:
+      return { ...state, questions: action.payload };
+    case MeetingActionType.ADD_QUESTION:
+      return { ...state, questions: [...state.questions, action.payload] };
+    case MeetingActionType.UPDATE_QUESTION:
+      return {
+        ...state,
+        questions: state.questions.map((q) =>
+          q.id === action.payload.questionId
+            ? { ...q, ...action.payload.updates }
+            : q
+        ),
+      };
+    case MeetingActionType.DELETE_QUESTION:
+      return {
+        ...state,
+        questions: state.questions.filter((q) => q.id !== action.payload),
+      };
     default:
       return state;
   }
@@ -160,75 +259,6 @@ export const MeetingProvider = ({
   children: React.ReactNode;
 }) => {
   const [state, dispatch] = useReducer(meetingReducer, initialState);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const saved = localStorage.getItem("meetingState");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        dispatch({
-          type: MeetingActionType.SET_ROOM_ID,
-          payload: parsed.roomId || "",
-        });
-        dispatch({
-          type: MeetingActionType.SET_STATUS,
-          payload: parsed.status || Status.CONNECTING,
-        });
-        dispatch({
-          type: MeetingActionType.SET_STATUS_MESSAGE,
-          payload: parsed.statusMessage || null,
-        });
-        dispatch({
-          type: MeetingActionType.SET_CURRENT_USER,
-          payload: {
-            userId: parsed.currentUserId || "",
-            username: parsed.currentUsername || "",
-            avatar: parsed.currentUserAvatar || "",
-            role: parsed.currentUserRole || Role.JOINEE,
-          },
-        });
-        if (parsed.isChatActive)
-          dispatch({ type: MeetingActionType.TOGGLE_CHAT });
-        if (parsed.isUserActive)
-          dispatch({ type: MeetingActionType.TOGGLE_USER });
-        if (parsed.isMuted)
-          dispatch({
-            type: MeetingActionType.TOGGLE_MUTE,
-            payload: { userId: parsed.currentUserId, isMuted: parsed.isMuted },
-          });
-      } catch (e) {
-        console.error("Failed to parse meeting state from localStorage", e);
-      }
-    }
-
-    return () => {
-      localStorage.removeItem("meetingState");
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const serializableState = {
-        roomId: state.roomId,
-        status: state.status,
-        statusMessage: state.statusMessage,
-        currentUserId: state.currentUserId,
-        currentUsername: state.currentUsername,
-        currentUserAvatar: state.currentUserAvatar,
-        currentUserRole: state.currentUserRole,
-        isMuted: state.isMuted,
-        isChatActive: state.isChatActive,
-        isUserActive: state.isUserActive,
-      };
-      localStorage.setItem("meetingState", JSON.stringify(serializableState));
-    }
-
-    return () => {
-      localStorage.removeItem("meetingState");
-    };
-  }, [state]);
 
   return (
     <MeetingContext.Provider value={{ state, dispatch }}>

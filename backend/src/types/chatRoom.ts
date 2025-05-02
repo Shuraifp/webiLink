@@ -55,3 +55,59 @@ export interface BreakoutRoom {
   name: string;
   participants: string[]; 
 }
+
+
+export interface DrawEvent {
+  roomId: string;
+  x: number;
+  y: number;
+  type: "start" | "draw" | "end";
+  color?: string;
+  lineWidth?: number;
+}
+
+export enum PollStatus {
+  ACTIVE = "active",
+  UPCOMING = "upcoming",
+  ENDED = "ended",
+}
+
+export interface Poll {
+  id: number;
+  question: string;
+  options: { text: string; image?: string }[];
+  allowMultiple: boolean;
+  anonymous: boolean;
+  showResults: boolean;
+  duration: number;
+  status: PollStatus
+  responses: { [userId: string]: string[] };
+  image?: string;
+}
+
+
+export enum QuestionStatus {
+  OPEN = "OPEN",
+  CLOSED = "CLOSED",
+}
+export interface Question {
+  id: number;
+  text: string;
+  userId: string;
+  username: string;
+  timestamp: number;
+  status: QuestionStatus;
+  isAnonymous: boolean; 
+  upvotes: string[]; 
+  isVisible: boolean; 
+  isAnswered: boolean; 
+  answer?: string; 
+  answeredBy?: string; 
+}
+
+export interface RoomState {
+  // users: UserData[];
+  // messages: ChatMessageData[];
+  isWhiteboardVisible: boolean;
+  isQAEnabled: boolean;
+}

@@ -6,10 +6,10 @@ import { UserData } from "@/types/type";
 import MeetingRoomUI from "./components/MeetingRoomUi";
 import { useReducedState } from "@/hooks/useReducedState";
 import { Socket } from "socket.io-client";
-import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { Status } from "@/types/chatRoom";
 import { MeetingActionType } from "@/lib/MeetingContext";
 import { disconnectSocket, getSocket } from "@/lib/socket";
+import toast from "react-hot-toast";
 
 function randomID(len: number) {
   let result = "";
@@ -24,20 +24,35 @@ function randomID(len: number) {
 }
 
 export default function MeetingRoom({ user }: { user: UserData }) {
-  const { dispatch } = useReducedState();
+  const { state, dispatch } = useReducedState();
   const { roomId } = useParams() as { roomId: string };
   const socket = useRef<Socket>(getSocket());
   const meetingContainerRef = useRef<HTMLDivElement | null>(null);
-  const zpRef = useRef<ZegoUIKitPrebuilt | null>(null);
+  const zpRef = useRef<any>(null);
+  const hasJoinedRef = useRef(false);
 
+  console.log(state);
   useEffect(() => {
     dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
   }, [roomId, dispatch]);
 
   useEffect(() => {
+    const currentSocket = socket.current;
+
     const joinRoom = async () => {
+      if (hasJoinedRef.current && zpRef.current && zpRef.current.getState?.()) {
+        console.log("Already joined Zego room, skipping re-join");
+        return;
+      }
+      if (zpRef.current) {
+        // zpRef.current.hangUp();
+        zpRef.current = null;
+        console.log("Zego room nullified");
+      }
+      hasJoinedRef.current = false;
+
       console.log("Emitting join-room", { roomId, userId: user.id });
-      socket.current.emit("join-room", {
+      currentSocket.emit("join-room", {
         roomId,
         userId: user.id,
         username: user.username,
@@ -52,12 +67,16 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         return;
       }
 
+      const { ZegoUIKitPrebuilt } = await import(
+        "@zegocloud/zego-uikit-prebuilt"
+      );
+
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         Number(appID),
         serverSecret,
         roomId,
         randomID(5),
-        user.username!
+        user.username || "Guest"
       );
 
       zpRef.current = ZegoUIKitPrebuilt.create(kitToken);
@@ -70,102 +89,107 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         showRoomDetailsButton: false,
         showUserList: false,
         showPreJoinView: false,
+        onJoinRoom: () => {
+          hasJoinedRef.current = true;
+          console.log("Successfully joined Zego room");
+        },
+        onLeaveRoom: () => {
+          hasJoinedRef.current = false;
+          console.log("Left Zego room");
+        },
       });
-
-      return () => {
-        disconnectSocket();
-        if (zpRef.current) zpRef.current.hangUp();
-      };
     };
 
-    if (socket.current.connected) {
+    if (typeof window !== "undefined") {
+      if (!currentSocket.connected) {
+        currentSocket.connect();
+      }
       joinRoom();
-    } else {
-      socket.current.on("connect", joinRoom);
+
+      currentSocket.on(
+        "set-current-user",
+        ({ userId, username, avatar, role }) => {
+          dispatch({
+            type: MeetingActionType.SET_CURRENT_USER,
+            payload: { userId, username, avatar, role },
+          });
+          dispatch({
+            type: MeetingActionType.SET_STATUS,
+            payload: Status.ACTIVE,
+          });
+        }
+      );
+
+      currentSocket.on("error", ({ message }) => {
+        toast.error(message)
+        dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
+        dispatch({
+          type: MeetingActionType.SET_STATUS_MESSAGE,
+          payload: message,
+        });
+      });
+
+      currentSocket.on("waiting-for-host", () => {
+        dispatch({
+          type: MeetingActionType.SET_STATUS,
+          payload: Status.WAITING,
+        });
+      });
+
+      currentSocket.on("host-joined", () => {
+        if (state.status === Status.WAITING) {
+          console.log("Reconnecting after host joined", {
+            roomId,
+            userId: user.id,
+          });
+          currentSocket.emit("join-room", {
+            roomId,
+            userId: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            isMuted: false,
+          });
+        }
+      });
+
+      currentSocket.on(
+        "breakout-room-update",
+        ({ breakoutRooms, mainRoomParticipants }) => {
+          dispatch({
+            type: MeetingActionType.UPDATE_BREAKOUT_ROOMS,
+            payload: { breakoutRooms, mainRoomParticipants },
+          });
+        }
+      );
     }
 
-    socket.current.on(
-      "user-connected",
-      ({ userId: remoteUserId, username, isMuted, avatar }) => {
-        dispatch({
-          type: MeetingActionType.ADD_STREAM,
-          payload: {
-            userId: remoteUserId,
-            username,
-            stream: null,
-            isMuted,
-            avatar,
-          },
-        });
-      }
-    );
-
-    socket.current.on("user-disconnected", (remoteUserId: string) => {
-      dispatch({
-        type: MeetingActionType.REMOVE_STREAM,
-        payload: remoteUserId,
-      });
-    });
-
-    socket.current.on("mute-status", ({ userId, isMuted }) => {
-      dispatch({
-        type: MeetingActionType.TOGGLE_MUTE,
-        payload: { userId, isMuted },
-      });
-    });
-
-    socket.current.on("set-status", (status: Status) => {
-      dispatch({ type: MeetingActionType.SET_STATUS, payload: status });
-    });
-
-    socket.current.on(
-      "set-current-user",
-      ({ userId, username, avatar, role }) => {
-        dispatch({
-          type: MeetingActionType.SET_CURRENT_USER,
-          payload: { userId, username, avatar, role },
-        });
-      }
-    );
-
-    socket.current.on("error", ({ message }) => {
-      dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
-      dispatch({
-        type: MeetingActionType.SET_STATUS_MESSAGE,
-        payload: message,
-      });
-    });
-
-    socket.current.on("waiting-for-host", () => {
-      dispatch({
-        type: MeetingActionType.SET_STATUS,
-        payload: Status.WAITING,
-      });
-    });
-
-    socket.current.on("breakout-room-update", ({ breakoutRooms, mainRoomParticipants }) => {
-      dispatch({
-        type: MeetingActionType.UPDATE_BREAKOUT_ROOMS,
-        payload: { breakoutRooms, mainRoomParticipants },
-      });
-    });
-
     return () => {
-      socket.current.off("user-connected");
-      socket.current.off("user-disconnected");
-      socket.current.off("mute-status");
-      socket.current.off("set-status");
-      socket.current.off("set-current-user");
-      socket.current.off("error");
-      socket.current.off("waiting-for-host");
-      socket.current.off("breakout-room-update");
+      if (typeof window !== "undefined") {
+        currentSocket.off("set-current-user");
+        currentSocket.off("error");
+        currentSocket.off("waiting-for-host");
+        currentSocket.off("breakout-room-update");
+        if (zpRef.current) {
+          zpRef.current.hangUp();
+          zpRef.current.destroy?.();
+          console.log("Zego room hung up and destroyed");
+        }
+        disconnectSocket();
+        hasJoinedRef.current = false;
+        if (meetingContainerRef.current) {
+          meetingContainerRef.current.innerHTML = "";
+        }
+        meetingContainerRef.current = null;
+      }
     };
   }, [roomId, user, dispatch]);
 
   return (
     <MeetingRoomUI
-      meetingContainerRef={meetingContainerRef as React.RefObject<HTMLDivElement>}
-      socketRef={socket.current}
+      meetingContainerRef={
+        meetingContainerRef as React.RefObject<HTMLDivElement>
+      }
+      socketRef={socket}
     />
   );
 }
