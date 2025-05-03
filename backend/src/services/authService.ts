@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
-import { inject, injectable } from "inversify";
+// import { inject, injectable } from "inversify";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { IAuthService } from "../interfaces/services/IAuthService";
 import { IUser } from "../models/userModel";
-import TYPES from "../di/types";
 import { Types } from "mongoose";
 import { JWTPayload, LoginResponse, UserRole } from "../types/type";
 import { IJwtService } from "../utils/jwt";
@@ -11,7 +10,6 @@ import { IMailService } from "../utils/mail";
 import crypto from "crypto";
 import { Document } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
-import e from "express";
 
 
 // @injectable()
@@ -42,13 +40,13 @@ export class AuthService implements IAuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
     const otpExpires = new Date(Date.now() + 90 * 1000);
     if (existingUser && !existingUser.isVerified) {
-      await this._userRepository.updateUser(existingUser._id, {
+      await this._userRepository.update(existingUser._id, {
         otp: hashedOtp,
         otpExpires,
       });
       return existingUser;
     }
-    return await this._userRepository.createUser({
+    return await this._userRepository.create({
       username,
       email,
       password: hashedPassword,
@@ -68,7 +66,7 @@ export class AuthService implements IAuthService {
     let user = await this._userRepository.findByEmail(email);
 
     if (!user) {
-      user = await this._userRepository.createUser({
+      user = await this._userRepository.create({
         username,
         email,
         googleId,
@@ -124,7 +122,7 @@ export class AuthService implements IAuthService {
     if (user.otpExpires && new Date() > user.otpExpires)
       throw new Error("OTP expired");
     user._id
-      ? await this._userRepository.updateUser(user?._id, {
+      ? await this._userRepository.update(user?._id, {
           isVerified: true,
           otp: undefined,
           otpExpires: undefined,
@@ -211,7 +209,7 @@ export class AuthService implements IAuthService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await this._userRepository.updateUser(user._id, {
+    await this._userRepository.update(user._id, {
       password: hashedPassword,
       resetPasswordToken: null,
       resetPasswordExpiry: null,

@@ -1,35 +1,18 @@
-import Plan, { IPlan, PlanInput } from "../models/PlanModel";
-import { Types } from "mongoose";
+import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
+import { IPlan } from "../models/PlanModel";
+import { BaseRepository } from "./baseRepository";
+import { Model } from "mongoose";
 
-export class PlanRepository {
-  constructor(private _planModel: typeof Plan) {}
-
-  async createPlan(data: PlanInput): Promise<IPlan> {
-    const plan = new Plan(data);
-    return await plan.save();
+export class PlanRepository extends BaseRepository<IPlan> implements IPlanRepository {
+  constructor(private _planModel: Model<IPlan>) {
+    super(_planModel)
   }
 
   async listActivePlans(): Promise<IPlan[]> {
-    return await Plan.find({ isArchived: false });
+    return await this._planModel.find({ isArchived: false });
   }
   
   async listArchivedPlans(): Promise<IPlan[]> {
-    return await Plan.find({ isArchived: true });
-  }
-
-  async findById(planId: Types.ObjectId): Promise<IPlan | null> {
-    return await Plan.findOne({ _id: planId, isArchived: false });
-  }
-
-  async updatePlan(planId: Types.ObjectId, data: Partial<IPlan>): Promise<IPlan | null> {
-    return await Plan.findByIdAndUpdate(planId, data, { new: true });
-  }
-
-  async archivePlan(planId: Types.ObjectId): Promise<IPlan | null> {
-    return await Plan.findByIdAndUpdate(planId, { isArchived: true }, { new: true });
-  }
-
-  async restorePlan(planId: Types.ObjectId): Promise<IPlan | null> {
-    return await Plan.findByIdAndUpdate(planId, { isArchived: false }, { new: true });
+    return await this._planModel.find({ isArchived: true });
   }
 }

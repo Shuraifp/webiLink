@@ -1,19 +1,18 @@
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
-import Room, { IRoom } from "../models/mainRoomModel";
+import { IRoom } from "../models/mainRoomModel";
+import { BaseRepository } from "./baseRepository";
+import { Model } from "mongoose";
 
-export class RoomRepository implements IRoomRepository {
+export class RoomRepository extends BaseRepository<IRoom> implements IRoomRepository {
   constructor(
-    private _roomModal: typeof Room
-  ) {}
+    private _roomModal: Model<IRoom>
+  ) {
+    super(_roomModal)
+  }
 
-  async findAll(userId:string): Promise<IRoom[]> {
+  async findByUserId(userId:string): Promise<IRoom[]> {
     return await this._roomModal.find({ userId });
   }  
-
-  async create(roomData: Partial<IRoom>): Promise<IRoom> {
-    const room = new this._roomModal(roomData);
-    return await room.save();
-  }
 
   async findBySlug(slug: string): Promise<IRoom | null> {
     return await this._roomModal.findOne({ slug });

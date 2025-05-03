@@ -61,7 +61,7 @@ export class RoomService implements IRoomService {
 
   async getAllRooms(userId:string): Promise<IRoom[]> {
       try {
-        const rooms = await this._roomRepository.findAll(userId);
+        const rooms = await this._roomRepository.findByUserId(userId);
         return rooms;
       } catch (err:any) {
         throw new InternalServerError(

@@ -8,6 +8,7 @@ import Settings from "@/components/user-Dashboard/Settings";
 import Subscription from "@/components/user-Dashboard/Subscription";
 import WhatsNew from "@/components/user-Dashboard/What'sNew";
 import Upgrade from "@/components/user-Dashboard/Upgrade";
+import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserData } from "@/types/type";
 
 interface DashboardContentProps {
@@ -57,21 +58,23 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-200">
-      <Sidebar
-        user={user}
-        onSectionChange={setSelectedSection}
-        selectedSection={selectedSection}
-        setPrevSection={setPrevSection}
-      />
-      <main className="flex-1 p-8">
-        <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
-          Wellcome, {user.username}
-        </h2>
-        <p className="border-b-1 border-gray-400 border-dashed"></p>
-        {renderContent()}
-      </main>
-    </div>
+    <ThemeProvider>
+      <div className="flex min-h-screen bg-gray-200">
+        <Sidebar
+          user={user}
+          onSectionChange={setSelectedSection}
+          selectedSection={selectedSection}
+          setPrevSection={setPrevSection}
+        />
+        <main className="flex-1 p-8">
+          <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
+            Wellcome, {user.username}
+          </h2>
+          <p className="border-b-1 border-gray-400 border-dashed"></p>
+          {renderContent()}
+        </main>
+      </div>
+    </ThemeProvider>
   );
 };
 

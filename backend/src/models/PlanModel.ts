@@ -11,6 +11,7 @@ export interface IPlan extends Document {
   };
   features: string[];
   isArchived: boolean;
+  stripePriceId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -38,6 +39,7 @@ const planSchema = new Schema<IPlan>(
     },
     features: {type:[String]},
     isArchived: { type: Boolean, default: false },
+    stripePriceId: { type: String }
   },
   { timestamps: true }
 );

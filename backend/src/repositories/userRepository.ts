@@ -1,41 +1,18 @@
-import { injectable, inject } from "inversify";
-import UserModel, { IUser, UserInput } from "../models/userModel";
+// import { injectable, inject } from "inversify";
+import { IUser } from "../models/userModel";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
-import { Document, Types } from "mongoose";
-import TYPES from "../di/types";
+import { Model, Types } from "mongoose";
+import { BaseRepository } from "./baseRepository";
 
 // @injectable()
-export class UserRepository implements IUserRepository {
-  constructor(private _userModel: typeof UserModel) {}
-
-  async createUser(user: UserInput): Promise<IUser & Document> {
-    try {
-      return await UserModel.create(user);
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw new Error("Database error while creating user");
-    }
+export class UserRepository extends BaseRepository<IUser> implements IUserRepository {
+  constructor(private _userModel: Model<IUser>) {
+    super(_userModel)
   }
+
 
   async findByEmail(email: string): Promise<IUser | null> {
-    return UserModel.findOne({ email });
-  }
-
-  async findById(userId: Types.ObjectId): Promise<IUser | null> {
-    return UserModel.findOne({ _id: userId });
-  }
-
-  async updateUser(
-    userId: Types.ObjectId,
-    updateData: Partial<IUser>
-  ): Promise<IUser | null> {
-    const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, {
-      new: true,
-    });
-    if (!updatedUser) {
-      throw new Error("User not found");
-    }
-    return updatedUser;
+    return this._userModel.findOne({ email });
   }
 
   async saveResetToken(
@@ -43,41 +20,25 @@ export class UserRepository implements IUserRepository {
     token: string,
     expiresAt: Date
   ): Promise<void> {
-    await UserModel.findByIdAndUpdate(userId, {
+    await this._userModel.findByIdAndUpdate(userId, {
       resetPasswordToken: token,
       resetPasswordExpiry: expiresAt,
     });
   }
 
   async findByResetToken(token: string): Promise<IUser | null> {
-    return await UserModel.findOne({ resetPasswordToken: token });
-  }
-
-  async listUsers(): Promise<IUser[]> {
-    return await UserModel.find({role:"user"}).select("username email isBlocked _id");
+    return await this._userModel.findOne({ resetPasswordToken: token });
   }
 
   async blockUser(userId: string): Promise<boolean> {
-    const updatedUser = await UserModel
+    const updatedUser = await this._userModel
       .findByIdAndUpdate(userId, { isBlocked: true }, { new: true })
     return updatedUser !== null;
   }
 
   async unblockUser(userId: string): Promise<boolean> {
-    const updatedUser = await UserModel
+    const updatedUser = await this._userModel
       .findByIdAndUpdate(userId, { isBlocked: false }, { new: true })
-    return updatedUser !== null;
-  }
-
-  async softDeleteUser(userId: string): Promise<boolean> {
-    const updatedUser = await UserModel
-      .findByIdAndUpdate(userId, { isArchived: true }, { new: true })
-    return updatedUser !== null;
-  }
-
-  async restoreUser(userId: string): Promise<boolean> {
-    const updatedUser = await UserModel
-      .findByIdAndUpdate(userId, { isArchived: false }, { new: true })
     return updatedUser !== null;
   }
 }

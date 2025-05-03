@@ -22,7 +22,7 @@ export class AdminService implements IAdminService {
   ) {}
 
   async listUsers(): Promise<IUser[]> {
-    let users = await this._userRepository.listUsers();
+    let users = await this._userRepository.findAll();
     if (!users) throw new NotFoundError("No users found");
     return users;
   }
@@ -67,7 +67,7 @@ export class AdminService implements IAdminService {
     );
     if (!user) throw new NotFoundError("User not found");
 
-    const success = await this._userRepository.softDeleteUser(userId);
+    const success = await this._userRepository.archive(new Types.ObjectId(userId));
     if (!success) throw new InternalServerError("Failed to archive user");
 
     const updatedUser = await this._userRepository.findById(
@@ -86,7 +86,7 @@ export class AdminService implements IAdminService {
     if (!user.isArchived)
       throw new InternalServerError("User is already active");
 
-    const success = await this._userRepository.restoreUser(userId);
+    const success = await this._userRepository.restore(new Types.ObjectId(userId));
     if (!success) throw new InternalServerError("Failed to restore user");
 
     const updatedUser = await this._userRepository.findById(
@@ -98,7 +98,7 @@ export class AdminService implements IAdminService {
 
   async createPlan(data: PlanInput): Promise<IPlan> {
     try {
-      const plan = await this._planRepository.createPlan(data);
+      const plan = await this._planRepository.create(data);
       if (!plan) throw new InternalServerError("Failed to create plan");
       return plan;
     } catch (error) {
@@ -139,7 +139,7 @@ export class AdminService implements IAdminService {
   
   async updatePlan(planId: string, data: Partial<IPlan>): Promise<IPlan | null> {
     try {
-      const updatedPlan = await this._planRepository.updatePlan(new Types.ObjectId(planId), data);
+      const updatedPlan = await this._planRepository.update(new Types.ObjectId(planId), data);
       if (!updatedPlan) throw new InternalServerError("Failed to update plan");
       return updatedPlan;
     } catch (error) {
@@ -149,8 +149,7 @@ export class AdminService implements IAdminService {
   
   async archivePlan(planId: string): Promise<IPlan | null> {
     try {
-      const archivedPlan = await this._planRepository.archivePlan(new Types.ObjectId(planId));
-      console.log(archivedPlan)
+      const archivedPlan = await this._planRepository.archive(new Types.ObjectId(planId));
       if (!archivedPlan) throw new InternalServerError("Failed to archive plan");
       return archivedPlan;
     } catch (error) {
@@ -160,7 +159,7 @@ export class AdminService implements IAdminService {
   
   async restorePlan(planId: string): Promise<IPlan | null> {
     try {
-      const restoredPlan = await this._planRepository.restorePlan(new Types.ObjectId(planId));
+      const restoredPlan = await this._planRepository.restore(new Types.ObjectId(planId));
       if (!restoredPlan) throw new InternalServerError("Failed to restore plan");
       return restoredPlan;
     } catch (error) {
