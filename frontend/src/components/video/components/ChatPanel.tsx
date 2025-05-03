@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
-import { ChatMessage, UserData } from "@/types/chatRoom";
+import { ChatMessage } from "@/types/chatRoom";
 import { CornerDownRight, CornerDownLeft, X } from "lucide-react";
 import { MeetingActionType } from "@/lib/MeetingContext";
 
@@ -13,7 +13,6 @@ interface Props {
 
 export default function ChatPanel({ socketRef }: Props) {
   const { state, dispatch } = useReducedState();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [selectedRecipient, setSelectedRecipient] =
     useState<string>("everyone");
@@ -24,66 +23,9 @@ export default function ChatPanel({ socketRef }: Props) {
   );
 
   useEffect(() => {
-    if (!socketRef) return;
-
-    socketRef.on("chat-message", (message: ChatMessage) => {
-      const userBreakoutRoom = state.breakoutRooms.find((room) =>
-        room.participants.includes(state.currentUserId)
-      );
-      if (message.isDM) {
-        if (
-          message.userId === state.currentUserId ||
-          message.targetUserId === state.currentUserId
-        ) {
-          setMessages((prev) => [...prev, message]);
-        }
-      } else if (
-        userBreakoutRoom &&
-        message.breakoutRoomId === userBreakoutRoom.id
-      ) {
-        setMessages((prev) => [...prev, message]);
-      } else if (!userBreakoutRoom && !message.breakoutRoomId) {
-        setMessages((prev) => [...prev, message]);
-      }
-    });
-
-    socketRef.on(
-      "user-connected",
-      ({ userId, username, avatar, isMuted, role }: UserData) => {
-        if (userId !== state.currentUserId) {
-          dispatch({
-            type: MeetingActionType.ADD_USER,
-            payload: { userId, username, avatar, isMuted, role },
-          });
-        }
-      }
-    );
-
-    socketRef.on("user-disconnected", (userId: string) => {
-      dispatch({
-        type: MeetingActionType.REMOVE_USER,
-        payload: userId,
-      });
-    });
-
-    return () => {
-      socketRef.off("chat-message");
-      socketRef.off("user-list");
-      socketRef.off("user-connected");
-      socketRef.off("user-disconnected");
-    };
-  }, [
-    socketRef,
-    state.currentUserId,
-    state.roomId,
-    dispatch,
-    state.breakoutRooms,
-  ]);
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-  console.log(state);
+  }, [state.messages]);
+  
   const sendMessage = () => {
     if (!input.trim() || !socketRef) return;
     socketRef.emit("chat-message", {
@@ -148,7 +90,7 @@ export default function ChatPanel({ socketRef }: Props) {
           </button>
         </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-        {messages.map((msg) => {
+        {state.messages.map((msg) => {
           const label = getMessageLabel(msg);
           return (
             <div

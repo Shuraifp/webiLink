@@ -100,9 +100,6 @@ export interface Question {
 }
 
 export interface RoomState {
-  roomId: string;
-  // users: UserData[];
-  // messages: ChatMessage[];
   isWhiteboardVisible: boolean;
   isQAEnabled: boolean;
 }

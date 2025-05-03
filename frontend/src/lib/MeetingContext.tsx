@@ -8,6 +8,7 @@ import {
   BreakoutRoom,
   Poll,
   Question,
+  ChatMessage,
 } from "@/types/chatRoom";
 
 export interface MeetingContextType {
@@ -48,6 +49,8 @@ export enum MeetingActionType {
   ADD_QUESTION = "ADD_QUESTION",
   UPDATE_QUESTION = "UPDATE_QUESTION",
   DELETE_QUESTION = "DELETE_QUESTION",
+  ADD_MESSAGE = "ADD_MESSAGE",
+  SET_MESSAGES = "SET_MESSAGES",
 }
 
 export type MeetingAction =
@@ -82,7 +85,7 @@ export type MeetingAction =
         mainRoomParticipants: string[];
       };
     }
-  | { type: MeetingActionType.TOGGLE_WHITEBOARD, payload?:boolean }
+  | { type: MeetingActionType.TOGGLE_WHITEBOARD; payload?: boolean }
   | { type: MeetingActionType.SET_POLLS; payload: Poll[] }
   | { type: MeetingActionType.ADD_POLL; payload: Poll }
   | {
@@ -97,7 +100,9 @@ export type MeetingAction =
       type: MeetingActionType.UPDATE_QUESTION;
       payload: { questionId: number; updates: Partial<Question> };
     }
-  | { type: MeetingActionType.DELETE_QUESTION; payload: number };
+  | { type: MeetingActionType.DELETE_QUESTION; payload: number }
+  | { type: MeetingActionType.ADD_MESSAGE; payload: ChatMessage }
+  | { type: MeetingActionType.SET_MESSAGES; payload: ChatMessage[] };
 
 export interface MeetingState {
   roomId: string;
@@ -114,6 +119,7 @@ export interface MeetingState {
   breakoutRooms: BreakoutRoom[];
   mainRoomParticipants: string[];
   isWhiteboardVisible: boolean;
+  messages: ChatMessage[];
   polls: Poll[];
   isQAEnabled: boolean;
   questions: Question[];
@@ -134,6 +140,7 @@ export const initialState: MeetingState = {
   breakoutRooms: [],
   mainRoomParticipants: [],
   isWhiteboardVisible: false,
+  messages: [],
   polls: [],
   isQAEnabled: false,
   questions: [],
@@ -209,7 +216,12 @@ const meetingReducer = (
         mainRoomParticipants: action.payload.mainRoomParticipants,
       };
     case MeetingActionType.TOGGLE_WHITEBOARD:
-      return { ...state, isWhiteboardVisible: action.payload ? action.payload : !state.isWhiteboardVisible };
+      return {
+        ...state,
+        isWhiteboardVisible: action.payload
+          ? action.payload
+          : !state.isWhiteboardVisible,
+      };
     case MeetingActionType.SET_POLLS:
       return { ...state, polls: action.payload };
     case MeetingActionType.ADD_POLL:
@@ -248,6 +260,10 @@ const meetingReducer = (
         ...state,
         questions: state.questions.filter((q) => q.id !== action.payload),
       };
+    case MeetingActionType.ADD_MESSAGE:
+      return { ...state, messages: [...state.messages, action.payload] };
+    case MeetingActionType.SET_MESSAGES:
+      return { ...state, messages: action.payload };
     default:
       return state;
   }

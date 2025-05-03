@@ -106,8 +106,6 @@ export interface Question {
 }
 
 export interface RoomState {
-  // users: UserData[];
-  // messages: ChatMessageData[];
   isWhiteboardVisible: boolean;
   isQAEnabled: boolean;
 }
