@@ -73,24 +73,7 @@ body {
   }
 }
 
-/* @layer utilities {
 
-  .animate-pulseCustom {
-    animation: pulseCustom 2s infinite ease-in-out;
-  }
-
-  @keyframes pulseCustom {
-    0% {
-      opacity: 0.7;
-    }
-    50% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0.7;
-    }
-  }
-} */
 
 :root {
   --background: #e5e7eb;
@@ -116,7 +99,6 @@ body {
   --accent-hover: #eab308;
 }
 
-/* Apply theme variables */
 body {
   background-color: var(--background);
   color: var(--text);
@@ -186,7 +168,6 @@ main {
   background-color: var(--button-hover-bg);
 }
 
-/* Toggle switch styles */
 .toggle-checkbox:checked {
   right: 0;
   border-color: #4b5563;
