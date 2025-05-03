@@ -7,7 +7,7 @@ export interface IAdminService {
   unblockUser(userId: string): Promise<IUser>;
   softDeleteUser(userId: string): Promise<IUser>;
   restoreUser(userId: string): Promise<IUser>;
-  createPlan(data: PlanInput): Promise<IPlan>;
+  createPlan(data: Partial<IPlan>): Promise<IPlan>;
   listActivePlans(): Promise<IPlan[]>;
   listArchivedPlans(): Promise<IPlan[]>;
   findById(planId: string): Promise<IPlan | null>;

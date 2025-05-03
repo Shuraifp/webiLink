@@ -96,7 +96,7 @@ export class AdminService implements IAdminService {
     return updatedUser;
   }
 
-  async createPlan(data: PlanInput): Promise<IPlan> {
+  async createPlan(data: Partial<IPlan>): Promise<IPlan> {
     try {
       const plan = await this._planRepository.create(data);
       if (!plan) throw new InternalServerError("Failed to create plan");

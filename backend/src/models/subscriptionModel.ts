@@ -1,8 +1,18 @@
 import { Schema, model } from "mongoose";
-import { ISubscriptionModel } from "../types/user";
+// import { ISubscriptionModel } from "../types/user";
 
+export interface ISubscription {
+  name: string;
+  description: string;
+  features: string[];
+  stripeProductId: string;
+  stripePriceId: string;
+  price: number;
+  billingCycle: 'monthly' | 'yearly';
+  isActive: boolean;
+}
 
-const subscriptionSchema = new Schema<ISubscriptionModel>(
+const subscriptionSchema = new Schema<ISubscription>(
   {
     name: { type: String, required: true },
     description: { type: String },
@@ -16,4 +26,4 @@ const subscriptionSchema = new Schema<ISubscriptionModel>(
   { timestamps: true }
 );
 
-export const Subscription = model<ISubscriptionModel>("Subscription", subscriptionSchema);
+export const Subscription = model<ISubscription>("Subscription", subscriptionSchema);

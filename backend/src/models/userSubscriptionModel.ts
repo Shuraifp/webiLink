@@ -1,5 +1,17 @@
 import { Schema, model, } from "mongoose";
-import { IUserSubscriptionModel } from "../types/user";
+// import { IUserSubscriptionModel } from "../types/user";
+
+export interface IUserSubscription {
+  userId: Schema.Types.ObjectId;
+  subscriptionId: Schema.Types.ObjectId;
+  stripeSubscriptionId: string;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+};
+
+interface IUserSubscriptionModel extends IUserSubscription, Document {};
 
 const userSubscriptionSchema = new Schema<IUserSubscriptionModel>(
   {

@@ -6,7 +6,7 @@ import { StatusCode } from "../types/types";
 import { HttpResponse } from "../utils/http.response";
 import stripe, { Stripe } from "stripe";
 
-export default class SubscriptionController implements ISubscriptionController {
+export class SubscriptionController implements ISubscriptionController {
   constructor(private _subscriptionService: ISubscriptionService) { };
 
   async createSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {

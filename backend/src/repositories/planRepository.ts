@@ -15,4 +15,8 @@ export class PlanRepository extends BaseRepository<IPlan> implements IPlanReposi
   async listArchivedPlans(): Promise<IPlan[]> {
     return await this._planModel.find({ isArchived: true });
   }
+
+  async findOne(query: object): Promise<IPlan | null> {
+    return await this._planModel.findOne(query).exec();
+  }
 }

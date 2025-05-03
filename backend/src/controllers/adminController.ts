@@ -5,6 +5,7 @@ import { IAdminController } from "../interfaces/controllers/IAdminController";
 import { IAdminService } from "../interfaces/services/IAdminService";
 import { HttpStatus } from "../types/type";
 import { InternalServerError, ForbiddenError, NotFoundError } from "../utils/errors";
+import { IPlan } from "../models/PlanModel";
 
 export class AdminController implements IAdminController {
   constructor(private _adminService : IAdminService) {}
@@ -62,9 +63,19 @@ export class AdminController implements IAdminController {
 
   async createPlan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const planData = req.body; 
-      const createdPlan = await this._adminService.createPlan(planData);
-      res.status(HttpStatus.CREATED).json(successResponse("Plan created successfully", createdPlan));
+      const parsedFeatures = JSON.parse(req.body.features);
+      const planData: Partial<IPlan> = {
+        name: req.body.name,
+        description: req.body.description,
+        features: parsedFeatures,
+        price: req.body.price,
+        billingCycle: req.body.billingCycle,
+        stripePriceId: req.body.stripePriceId,
+        stripeProductId: req.body.stripeProductId,
+        isArchived: false,
+      };
+      const newPlan = await this._adminService.createPlan(planData);
+      res.status(HttpStatus.CREATED).json(successResponse("Plan created successfully", newPlan));
     } catch (error) {
       next(error);
     }
@@ -93,7 +104,17 @@ export class AdminController implements IAdminController {
   async updatePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { planId } = req.params;
-      const planData = req.body; 
+      const parsedFeatures = JSON.parse(req.body.features);
+      const planData: Partial<IPlan> = {
+        name: req.body.name,
+        description: req.body.description,
+        features: parsedFeatures,
+        price: req.body.price,
+        billingCycle: req.body.billingCycle,
+        stripePriceId: req.body.stripePriceId,
+        stripeProductId: req.body.stripeProductId,
+        isArchived: req.body.isArchived,
+      };
       const updatedPlan = await this._adminService.updatePlan(planId, planData);
       if (!updatedPlan) throw new InternalServerError("Failed to update plan");
       res.status(HttpStatus.OK).json(successResponse("Plan updated successfully", updatedPlan));

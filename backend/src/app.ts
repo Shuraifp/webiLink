@@ -12,6 +12,7 @@ import adminRoutes from './routes/adminRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
 import zegoRoutes from './routes/zegoRoutes';
+// import subscriptionRoutes from './routes/subscriptionRoute';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/rooms', roomRoutes);
+// app.use('/api/subscription', subscriptionRoutes);
 
 app.use(errorHandler);
 

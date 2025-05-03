@@ -1,7 +1,6 @@
-import { BaseRepository } from "./base.repository";
-import TYPES from "../di/types";
+import { BaseRepository } from "./baseRepository";
 import { Model } from "mongoose";
-import { ISubscription, ISubscriptionModel } from "../types/user";
+import { IPlan } from "../models/PlanModel";
 import ISubscriptionRepository from "../interfaces/repositories/subscription.repository";
 
 

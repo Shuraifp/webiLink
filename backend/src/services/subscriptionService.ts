@@ -12,7 +12,7 @@ import IUserSubsRepository from "../interfaces/repositories/user.subscription.re
 import IUserRepository from "../interfaces/repositories/user.repository";
 
 // @injectable()
-export default class SubscriptionService implements ISubscriptionService {
+export class SubscriptionService implements ISubscriptionService {
   constructor(
     private _subscriptionRepository: ISubscriptionRepository,
     private _userSubsRepository: IUserSubsRepository,

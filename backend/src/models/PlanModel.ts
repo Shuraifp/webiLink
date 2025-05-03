@@ -1,17 +1,9 @@
 import mongoose, { Schema, Types, Document } from "mongoose";
 
 
-export interface IPlan extends Document {
-  name: string;
-  description?: string;
-  price: number;
-  billingCycle: {
-    interval: "day" | "week" | "month" | "year" | "lifetime";
-    frequency: number;
-  };
-  features: string[];
-  isArchived: boolean;
+export interface IPlan extends PlanInput, Document {
   stripePriceId?: string;
+  stripeProductId: string
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -39,7 +31,8 @@ const planSchema = new Schema<IPlan>(
     },
     features: {type:[String]},
     isArchived: { type: Boolean, default: false },
-    stripePriceId: { type: String }
+    stripePriceId: { type: String, required: true },
+    stripeProductId: { type: String, required: true },
   },
   { timestamps: true }
 );
