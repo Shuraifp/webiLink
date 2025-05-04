@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     localStorage.setItem("theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
+    document.querySelector('.host-root')?.setAttribute("data-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => {

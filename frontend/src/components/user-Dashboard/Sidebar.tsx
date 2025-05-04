@@ -50,7 +50,7 @@ const Sidebar: React.FC<{
     if (selectedSection === item) {
       return "flex items-center mx-2 bg-gray-200 text-gray-700 rounded-lg cursor-pointer transition";
     } else {
-      return "flex items-center mx-2 hover:bg-gray-100 text-gray-700 rounded-lg transition cursor-pointer";
+      return "flex items-center mx-2 light-bg text-gray-700 rounded-lg transition cursor-pointer";
     }
   };
 
@@ -101,9 +101,9 @@ const Sidebar: React.FC<{
             onClick={() => {
               handleSectionChange("create-meeting");
             }}
-            className="text-gray-700 bg-gray-300 hover:bg-gray-300 transition mx-2 flex justify-center cursor-pointer"
+            className="text-white bg-gray-300 transition mx-2 flex justify-center cursor-pointer"
           >
-            <button className="flex items-center justify-center gap-2 px-4 py-1 cursor-pointer">
+            <button className="flex items-center justify-center gap-2 px-4 py-1 cursor-pointer rounded-lg">
               <span className="text-blue-500 text-2xl">+</span> Create Meeting
             </button>
           </li>
@@ -113,7 +113,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("rooms")}
           >
-            <button className="flex items-center gap-2 px-4 py-2  rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
               <Building size={24} />
               Rooms
             </button>
@@ -124,7 +124,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("settings")}
           >
-            <button className="flex items-center gap-2 px-4 py-2">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer">
               <Settings size={24} />
               Settings
             </button>
@@ -135,7 +135,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("subscription")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg transition">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition">
               <CreditCard size={24} />
               Subscription
             </button>
@@ -146,7 +146,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("whats-new")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg transition">
+            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg cursor-pointer transition">
               <Megaphone size={24} />
               {`What's new`}
             </button>
@@ -157,7 +157,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("upgrade")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg transition">
+            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg transition cursor-pointer">
               <Rocket size={24} />
               Upgrade to Pro
             </button>

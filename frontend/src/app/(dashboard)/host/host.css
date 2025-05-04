@@ -1,0 +1,113 @@
+:where(.host-root) {
+  --background: #e5e7eb;
+  --light-background: #f2f4f8;
+  --text: #1f2937;
+  --card-bg: #ffffff;
+  --border: #9ca3af;
+  --button-bg: #7e828b;
+  --light-button-bg:#aeafb3;
+  --button-text: #f5f5f5;
+  --button-hover-bg: #4b5563;
+  --accent: #eab308;
+  --accent-hover: #ca8a04;
+}
+
+:where(.host-root[data-theme="dark"]) {
+  --background: #1f2937;
+  --light-background: #7f8083;
+  --text: #f3f4f6;
+  --card-bg: #374151;
+  --border: #6b7280;
+  --button-bg: #1a1b1d;
+  --light-button-bg:#1a1b1d;
+  --button-text: #1f2937;
+  --button-hover-bg: #d1d5db;
+  --accent: #facc15;
+  --accent-hover: #eab308;
+}
+
+.host-root {
+  background-color: var(--background);
+  color: var(--text);
+}
+
+.host-root main {
+  background-color: var(--background);
+}
+
+.host-root .border-dashed {
+  border-color: var(--border);
+}
+
+.host-root .text-3xl {
+  color: var(--text);
+}
+
+.host-root .bg-white {
+  background-color: var(--card-bg);
+}
+
+.host-root .bg-gray-200 {
+  background-color: var(--background);
+}
+
+.host-root .light-bg:hover {
+  background-color: var(--light-background);
+}
+
+.host-root .text-gray-800 {
+  color: var(--text);
+}
+
+.host-root .text-gray-500 {
+  color: var(--border);
+}
+
+.host-root .bg-gray-300 {
+  background-color: var(--light-button-bg);
+}
+
+.host-root .bg-gray-300:hover {
+  background-color: var(--button-bg);
+}
+
+.host-root .text-gray-700 {
+  color: var(--text);
+}
+
+.host-root .bg-yellow-500 {
+  background-color: var(--accent);
+}
+
+.host-root .text-amber-50 {
+  color: var(--button-text);
+}
+
+.host-root .bg-gray-500 {
+  background-color: var(--button-bg);
+}
+
+.host-root .bg-green-600 {
+  background-color: var(--accent);
+}
+
+.host-root .bg-green-700 {
+  background-color: var(--accent-hover);
+}
+
+.host-root .bg-yellow-600 {
+  background-color: var(--accent-hover);
+}
+
+.host-root .bg-gray-600 {
+  background-color: var(--button-hover-bg);
+}
+
+.host-root .toggle-checkbox:checked {
+  right: 0;
+  border-color: #4b5563;
+}
+
+.host-root .toggle-checkbox:checked + .toggle-label {
+  background-color: #4b5563;
+}
