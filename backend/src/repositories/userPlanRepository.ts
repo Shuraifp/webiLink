@@ -4,11 +4,11 @@ import { IUserPlan } from "../models/UserPlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 
 export class UserPlanRepository extends BaseRepository<IUserPlan> implements IUserPlanRepository {
-  constructor(userPlanModel: Model<IUserPlan>) {
+  constructor(private userPlanModel: Model<IUserPlan>) {
     super(userPlanModel);
   }
 
   async findUserPlan(userId: string): Promise<IUserPlan | null> {
-    return await this._model.findOne({ userId: new Types.ObjectId(userId) }).exec();
+    return await this.userPlanModel.findOne({ userId: new Types.ObjectId(userId) }).exec();
   }
 }

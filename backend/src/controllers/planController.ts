@@ -1,9 +1,11 @@
+// backend/controllers/planController.js
 import { NextFunction, Request, Response } from "express";
 import { IPlanController } from "../interfaces/controllers/IPlanController";
 import { IPlanService } from "../interfaces/services/IPlanService";
-import { NotFoundError, InternalServerError, BadRequestError } from "../utils/errors";
+import { NotFoundError } from "../utils/errors";
 import { HttpStatus, successResponse } from "../types/type";
 import stripe, { Stripe } from "stripe";
+import { IPlan } from "../models/PlanModel";
 
 export class PlanController implements IPlanController {
   constructor(private _planService: IPlanService) {}
@@ -11,8 +13,16 @@ export class PlanController implements IPlanController {
   async fetchActivePlans(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const plans = await this._planService.listActivePlans();
-      if (!plans || plans.length === 0) throw new NotFoundError("No active plans found");
       res.status(HttpStatus.OK).json(successResponse("Active plans fetched successfully", plans));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async fetchArchivedPlans(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const plans = await this._planService.listArchivedPlans();
+      res.status(HttpStatus.OK).json(successResponse("Archived plans fetched successfully", plans));
     } catch (error) {
       next(error);
     }
@@ -20,17 +30,16 @@ export class PlanController implements IPlanController {
 
   async createPlan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const parsedFeatures = JSON.parse(req.body.features);
+      const { name, description, price, billingCycle, features, isArchived } = req.body;
       const planData: Partial<IPlan> = {
-        name: req.body.name,
-        description: req.body.description,
-        features: parsedFeatures,
-        price: req.body.price,
-        billingCycle: req.body.billingCycle,
-        stripePriceId: req.body.stripePriceId,
-        stripeProductId: req.body.stripeProductId,
-        isArchived: false,
+        name,
+        description,
+        features,
+        price,
+        billingCycle,
+        isArchived: isArchived || false,
       };
+      
       const newPlan = await this._planService.createPlan(planData);
       res.status(HttpStatus.CREATED).json(successResponse("Plan created successfully", newPlan));
     } catch (error) {
@@ -41,20 +50,40 @@ export class PlanController implements IPlanController {
   async updatePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { planId } = req.params;
-      const parsedFeatures = JSON.parse(req.body.features);
+      const { name, description, price, billingCycle, features, isArchived } = req.body;
       const planData: Partial<IPlan> = {
-        name: req.body.name,
-        description: req.body.description,
-        features: parsedFeatures,
-        price: req.body.price,
-        billingCycle: req.body.billingCycle,
-        stripePriceId: req.body.stripePriceId,
-        stripeProductId: req.body.stripeProductId,
-        isArchived: req.body.isArchived,
+        name,
+        description,
+        features, 
+        price,
+        billingCycle,
+        isArchived,
       };
       const updatedPlan = await this._planService.updatePlan(planId, planData);
-      if (!updatedPlan) throw new InternalServerError("Failed to update plan");
+      if (!updatedPlan) throw new NotFoundError("Plan not found");
       res.status(HttpStatus.OK).json(successResponse("Plan updated successfully", updatedPlan));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async archivePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { planId } = req.params;
+      const updatedPlan = await this._planService.archivePlan(planId);
+      if (!updatedPlan) throw new NotFoundError("Plan not found");
+      res.status(HttpStatus.OK).json(successResponse("Plan archived successfully", updatedPlan));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async restorePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { planId } = req.params;
+      const updatedPlan = await this._planService.restorePlan(planId);
+      if (!updatedPlan) throw new NotFoundError("Plan not found");
+      res.status(HttpStatus.OK).json(successResponse("Plan restored successfully", updatedPlan));
     } catch (error) {
       next(error);
     }
@@ -62,7 +91,8 @@ export class PlanController implements IPlanController {
 
   async makeSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { priceId, planId, userId } = req.body;
+      const { _id: userId } = req.user!
+      const { priceId, planId } = req.body;
       const sessionUrl = await this._planService.makeSubscription(userId, priceId, planId);
       res.status(HttpStatus.OK).json(successResponse("Subscription session created", { url: sessionUrl }));
     } catch (error) {
@@ -71,28 +101,36 @@ export class PlanController implements IPlanController {
   }
 
   async handleWebhook(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const sig = req.headers['stripe-signature'] as string;
+    const sig = req.headers["stripe-signature"] as string;
     let event: Stripe.Event;
-
     try {
       event = stripe.webhooks.constructEvent(
         req.body,
         sig,
-        process.env.STRIPE_WEBHOOK_SECRET_KEY!
+        process.env.STRIPE_WEBHOOK_SECRET!
       );
       await this._planService.handleWebhook(event);
       res.status(HttpStatus.OK).json(successResponse("Webhook received", { received: true }));
-    } catch (err: any) {
-      console.error(`Webhook Error: ${err.message}`);
-      res.status(HttpStatus.BAD_REQUEST).json({ error: `Webhook Error: ${err.message}` });
+    } catch (error) {
+      next(error);
     }
   }
 
   async getUserPlan(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userPlan = await this._planService.getUserPlan(req);
-      if (!userPlan) throw new NotFoundError("User plan not found");
-      res.status(HttpStatus.OK).json(successResponse("User plan fetched successfully", userPlan));
+      const userId = req.user!._id;
+      const data = await this._planService.getUserPlan(userId);
+      res.status(HttpStatus.OK).json(successResponse("User plan retrieved", data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async cancelSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!._id;
+      await this._planService.cancelSubscription(userId);
+      res.status(HttpStatus.OK).json(successResponse("Subscription canceled", null));
     } catch (error) {
       next(error);
     }

@@ -11,19 +11,4 @@ export interface IAdminController {
     next: NextFunction
   ): Promise<void>;
   restoreUser(req: Request, res: Response, next: NextFunction): Promise<void>;
-  // plans
-  createPlan(req: Request, res: Response, next: NextFunction): Promise<void>;
-  getAllActivePlans(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void>;
-  getAllArchivedPlans(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void>;
-  updatePlan(req: Request, res: Response, next: NextFunction): Promise<void>;
-  archivePlan(req: Request, res: Response, next: NextFunction): Promise<void>;
-  restorePlan(req: Request, res: Response, next: NextFunction): Promise<void>;
 }

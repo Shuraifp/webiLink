@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   Settings,
-  Megaphone,
+  // Megaphone,
   Building,
   CreditCard,
   Rocket,
@@ -140,7 +140,7 @@ const Sidebar: React.FC<{
               Subscription
             </button>
           </li>
-          <li
+          {/* <li
             onClick={() => {
               handleSectionChange("whats-new");
             }}
@@ -150,7 +150,7 @@ const Sidebar: React.FC<{
               <Megaphone size={24} />
               {`What's new`}
             </button>
-          </li>
+          </li> */}
           <li
             onClick={() => {
               handleSectionChange("upgrade");

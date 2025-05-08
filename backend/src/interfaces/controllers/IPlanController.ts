@@ -6,5 +6,5 @@ export interface IPlanController {
   updatePlan(req: Request, res: Response, next: NextFunction): Promise<void>;
   makeSubscription(req: Request, res: Response, next: NextFunction): Promise<void>;
   handleWebhook(req: Request, res: Response, next: NextFunction): Promise<void>;
-  getUserPlan(req: Request, res: Response, next: NextFunction): Promise<void>;
+  // getUserPlan(req: Request, res: Response, next: NextFunction): Promise<void>;
 }

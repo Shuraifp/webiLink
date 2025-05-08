@@ -1,28 +1,37 @@
-import { Schema, model, Document } from "mongoose";
+  import { Schema, model, Document, Types } from "mongoose";
 
-export interface IUserPlan extends Document {
-  userId: Schema.Types.ObjectId;
-  planId: Schema.Types.ObjectId;
-  stripeSubscriptionId: string;
-  status: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  cancelAtPeriodEnd: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+  export enum PlanStatus {
+    ACTIVE = "active",
+    PAST_DUE = "past_due",
+    CANCELED = "canceled",
+  }
 
-const userPlanSchema = new Schema<IUserPlan>(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    planId: { type: Schema.Types.ObjectId, ref: "Plan", required: true },
-    stripeSubscriptionId: { type: String, required: true },
-    status: { type: String, required: true },
-    currentPeriodStart: { type: Date, required: true },
-    currentPeriodEnd: { type: Date, required: true },
-    cancelAtPeriodEnd: { type: Boolean, default: false },
-  },
-  { timestamps: true }
-);
+  export interface IUserPlan extends Document {
+    _id: Types.ObjectId | string;
+    userId: Types.ObjectId;
+    planId: Types.ObjectId;
+    stripeSubscriptionId?: string;
+    stripePaymentIntentId?: string;
+    status: PlanStatus;
+    currentPeriodStart: Date;
+    currentPeriodEnd?: Date | null;
+    cancelAtPeriodEnd?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }
 
-export default model<IUserPlan>("UserPlan", userPlanSchema);
+  const userPlanSchema = new Schema<IUserPlan>(
+    {
+      userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+      planId: { type: Schema.Types.ObjectId, ref: "Plan", required: true },
+      stripeSubscriptionId: { type: String },
+      stripePaymentIntentId: { type: String },
+      status: { type: String, enum: Object.values(PlanStatus), required: true },
+      currentPeriodStart: { type: Date, required: true },
+      currentPeriodEnd: { type: Date, default: null },
+      cancelAtPeriodEnd: { type: Boolean, default: false },// ?
+    },
+    { timestamps: true }
+  );
+
+  export default model<IUserPlan>("UserPlan", userPlanSchema);

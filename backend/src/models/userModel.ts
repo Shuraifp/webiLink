@@ -21,6 +21,8 @@ export interface IUser extends Document {
   isBlocked: boolean;
   isArchived:boolean;
   isPremium:boolean;
+  planId?: Types.ObjectId | null;
+  stripeCustomerId: string;
   isVerified: boolean;
   resetPasswordToken?: string | null;
   resetPasswordExpiry?: Date | null;
@@ -67,6 +69,8 @@ const userSchema = new Schema<IUser>({
   resetPasswordToken: { type: String },
   resetPasswordExpiry: { type:Date},
   isPremium: {type: Boolean, default: false},
+  planId: { type: Schema.Types.ObjectId, ref: "Plan", default: null },
+  stripeCustomerId: { type: String , default: '' },
   isBlocked: { type: Boolean, default: false },
   isArchived: { type: Boolean, default:false},
   isVerified: { type: Boolean, default: false },

@@ -12,9 +12,22 @@ import adminRoutes from './routes/adminRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
 import zegoRoutes from './routes/zegoRoutes';
-// import subscriptionRoutes from './routes/subscriptionRoute';
+import { PlanController } from "./controllers/planController"; 
+import { PlanService } from "./services/planService"; 
+import { PlanRepository } from "./repositories/planRepository";
+import { UserPlanRepository } from "./repositories/userPlanRepository";
+import { UserRepository } from "./repositories/userRepository";
+import PlanModel from "./models/PlanModel";
+import UserPlanModel from "./models/UserPlanModel";
+import UserModel from "./models/userModel";
 
 dotenv.config();
+
+const planRepository = new PlanRepository(PlanModel);
+const userPlanRepository = new UserPlanRepository(UserPlanModel);
+const userRepository = new UserRepository(UserModel);
+const planService = new PlanService(planRepository, userPlanRepository, userRepository);
+const planController = new PlanController(planService);
 
 const app = express();
 export const server = http.createServer(app);
@@ -25,6 +38,12 @@ export const io = new Server(server, {
     credentials: true,
   },
 })
+
+app.post(
+  "/api/plans/webhook",
+  express.raw({ type: "application/json" }), 
+  planController.handleWebhook.bind(planController)
+);
 
 app.use(express.json());
 app.use(cors({

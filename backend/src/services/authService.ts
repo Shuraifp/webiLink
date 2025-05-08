@@ -1,18 +1,20 @@
 import bcrypt from "bcryptjs";
-// import { inject, injectable } from "inversify";
+import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { IAuthService } from "../interfaces/services/IAuthService";
-import { IUser } from "../models/userModel";
-import { Types } from "mongoose";
-import { JWTPayload, LoginResponse, UserRole } from "../types/type";
 import { IJwtService } from "../utils/jwt";
 import { IMailService } from "../utils/mail";
-import crypto from "crypto";
-import { Document } from "mongoose";
-import { v4 as uuidv4 } from "uuid";
+import { IUser } from "../models/userModel";
+import { LoginResponse, UserRole } from "../types/type";
+import {
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  InternalServerError,
+} from "../utils/errors";
 
-
-// @injectable()
 export class AuthService implements IAuthService {
   constructor(
     private _userRepository: IUserRepository,
@@ -24,29 +26,36 @@ export class AuthService implements IAuthService {
     username: string,
     email: string,
     password: string
-  ): Promise<IUser & Document> {
+  ): Promise<IUser> {
     const existingUser = await this._userRepository.findByEmail(email);
     if (existingUser && existingUser.isVerified)
-      throw new Error("User already exists");
+      throw new BadRequestError("User already exists");
 
-    let otp = Math.floor(100000 + Math.random() * 900000);
-    console.log(otp);
-    let hashedOtp = crypto
-      .createHash("sha256")
-      .update(otp.toString())
-      .digest("hex");
-    await this._mailService.sendOtp(email, String(otp));
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    const otpExpires = new Date(Date.now() + 90 * 1000); // 90 seconds
+
+    try {
+      await this._mailService.sendOtp(email, otp);
+    } catch {
+      throw new InternalServerError("Failed to send OTP");
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otpExpires = new Date(Date.now() + 90 * 1000);
+
     if (existingUser && !existingUser.isVerified) {
-      await this._userRepository.update(existingUser._id, {
-        otp: hashedOtp,
-        otpExpires,
-      });
+      const success = await this._userRepository.update(
+        String(existingUser._id),
+        {
+          otp: hashedOtp,
+          otpExpires,
+        }
+      );
+      if (!success) throw new InternalServerError("Failed to update user OTP");
       return existingUser;
     }
-    return await this._userRepository.create({
+
+    const newUser = await this._userRepository.create({
       username,
       email,
       password: hashedPassword,
@@ -55,6 +64,9 @@ export class AuthService implements IAuthService {
       isBlocked: false,
       isVerified: false,
     });
+
+    if (!newUser) throw new InternalServerError("Failed to create user");
+    return newUser;
   }
 
   async googleSignIn(
@@ -70,13 +82,14 @@ export class AuthService implements IAuthService {
         username,
         email,
         googleId,
-        profile: { avatar: avatar },
+        profile: { avatar },
         isVerified: true,
         isBlocked: false,
       });
+      if (!user) throw new InternalServerError("Failed to create user");
     }
 
-    if (user.isBlocked) throw new Error("User is blocked");
+    if (user.isBlocked) throw new ForbiddenError("User is blocked");
 
     const accessToken = this._jwtService.generateAccessToken(user);
     const refreshToken = this._jwtService.generateRefreshToken(user);
@@ -86,103 +99,108 @@ export class AuthService implements IAuthService {
 
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await this._userRepository.findByEmail(email);
-    if (!user || user.role !== UserRole.USER) throw new Error("User not found");
-    if (user.isBlocked) throw new Error("User is blocked");
+    if (!user || user.role !== UserRole.USER)
+      throw new NotFoundError("User not found");
+    if (user.isBlocked) throw new ForbiddenError("User is blocked");
+
     if (!user.password || !(await bcrypt.compare(password, user.password)))
-      throw new Error("Invalid credentials");
+      throw new UnauthorizedError("Invalid credentials");
 
     const accessToken = this._jwtService.generateAccessToken(user);
     const refreshToken = this._jwtService.generateRefreshToken(user);
+
     return { accessToken, refreshToken, user };
   }
-  
+
   async adminLogin(email: string, password: string): Promise<LoginResponse> {
     const user = await this._userRepository.findByEmail(email);
-    if (!user || user.role !== UserRole.ADMIN ) throw new Error("Admin not found");
-    if (user.isBlocked) throw new Error("Admin is blocked");
+    if (!user || user.role !== UserRole.ADMIN)
+      throw new NotFoundError("Admin not found");
+    if (user.isBlocked) throw new ForbiddenError("Admin is blocked");
+
     if (!user.password || !(await bcrypt.compare(password, user.password)))
-      throw new Error("Invalid credentials");
+      throw new UnauthorizedError("Invalid credentials");
 
     const accessToken = this._jwtService.generateAccessToken(user);
     const refreshToken = this._jwtService.generateRefreshToken(user);
+
     return { accessToken, refreshToken, user };
   }
 
   async verifyOtp(email: string, otp: string): Promise<LoginResponse> {
-    let user = await this._userRepository.findByEmail(email);
+    const user = await this._userRepository.findByEmail(email);
+    if (!user) throw new NotFoundError("User not found");
 
-    if (!user) throw new Error("User not found");
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
-    const hashedOtp = crypto
-      .createHash("sha256")
-      .update(otp.toString())
-      .digest("hex");
-
-    if (user.otp !== hashedOtp) throw new Error("Invalid OTP");
+    if (user.otp !== hashedOtp) throw new BadRequestError("Invalid OTP");
     if (user.otpExpires && new Date() > user.otpExpires)
-      throw new Error("OTP expired");
-    user._id
-      ? await this._userRepository.update(user?._id, {
-          isVerified: true,
-          otp: undefined,
-          otpExpires: undefined,
-        })
-      : null;
+      throw new BadRequestError("OTP expired");
 
-    const accessToken = this._jwtService.generateAccessToken(user);
-    const refreshToken = this._jwtService.generateRefreshToken(user);
+    const success = await this._userRepository.update(String(user._id), {
+      isVerified: true,
+      otp: undefined,
+      otpExpires: undefined,
+    });
 
-    return { accessToken, refreshToken, user };
+    if (!success) throw new InternalServerError("Failed to verify user");
+
+    const updatedUser = await this._userRepository.findById(String(user._id));
+    if (!updatedUser) throw new NotFoundError("User not found after verification");
+
+    const accessToken = this._jwtService.generateAccessToken(updatedUser);
+    const refreshToken = this._jwtService.generateRefreshToken(updatedUser);
+
+    return { accessToken, refreshToken, user: updatedUser };
   }
 
   async verifyAccessToken(token: string): Promise<IUser> {
-    const { decoded, error }: { decoded: JWTPayload | null; error?: string } =
-      this._jwtService.verifyAccessToken(token);
+    const { decoded, error } = this._jwtService.verifyAccessToken(token);
 
-    if (error) throw new Error(error);
-    if (!decoded || !decoded._id) throw new Error("Invalid token");
+    if (error || !decoded || !decoded._id)
+      throw new UnauthorizedError(error || "Invalid token");
 
-    const user = await this._userRepository.findById(
-      new Types.ObjectId(decoded._id)
-    );
-    if (!user) throw new Error("User not found");
-    if (user.isBlocked) throw new Error("User is blocked");
+    const user = await this._userRepository.findById(decoded._id);
+    if (!user) throw new NotFoundError("User not found");
+    if (user.isBlocked) throw new ForbiddenError("User is blocked");
 
     return user;
   }
 
-  refreshToken(refreshToken: string): {
+  async refreshToken(refreshToken: string): Promise<{
     accessToken: string;
-    user: Promise<IUser>;
-  } {
-    try {
-      const { decoded, error }: { decoded: JWTPayload | null; error?: string } =
-        this._jwtService.verifyRefreshToken(refreshToken);
-      if (error) throw new Error(error);
-      if (!decoded || !decoded._id) throw new Error("Invalid token in service");
-      const newAccessToken = this._jwtService.generateAccessToken(decoded);
-      const validUser = this.verifyAccessToken(newAccessToken);
-      return { accessToken: newAccessToken, user: validUser };
-    } catch (error) {
-      throw new Error(error as string);
-    }
+    user: IUser;
+  }> {
+    const { decoded, error } = this._jwtService.verifyRefreshToken(refreshToken);
+    if (error || !decoded || !decoded._id)
+      throw new UnauthorizedError(error || "Invalid refresh token");
+
+    const user = await this._userRepository.findById(decoded._id);
+    if (!user) throw new NotFoundError("User not found");
+    if (user.isBlocked) throw new ForbiddenError("User is blocked");
+
+    const accessToken = this._jwtService.generateAccessToken(user);
+
+    return { accessToken, user };
   }
 
   async requestPasswordReset(email: string): Promise<void> {
     const user = await this._userRepository.findByEmail(email);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new NotFoundError("User not found");
     if (user.googleId && !user.password)
-      throw new Error(
+      throw new BadRequestError(
         "Use Google authentication to log in; no password to reset"
       );
 
     const resetToken = uuidv4();
+    const resetExpiry = new Date(Date.now() + 15 * 60 * 1000); 
 
-    await this._userRepository.saveResetToken(
-      user._id,
+    const success = await this._userRepository.saveResetToken(
+      String(user._id),
       resetToken,
-      new Date(Date.now() + 15 * 60 * 1000)
+      resetExpiry
     );
+    if (!success) throw new InternalServerError("Failed to save reset token");
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
     const emailBody = `
@@ -191,28 +209,34 @@ export class AuthService implements IAuthService {
       This link expires in 15 minutes. If you didn’t request this, ignore this email.
     `;
 
-    await this._mailService.sendOtpEmail(
-      email,
-      emailBody,
-      "Password Reset Request"
-    );
+    try {
+      await this._mailService.sendOtpEmail(
+        email,
+        emailBody,
+        "Password Reset Request"
+      );
+    } catch {
+      throw new InternalServerError("Failed to send password reset email");
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const user = await this._userRepository.findByResetToken(token);
     if (!user || !user.resetPasswordToken)
-      throw new Error("Invalid token");
-    if (token !== user.resetPasswordToken) throw new Error("Invalid token");
-
+      throw new BadRequestError("Invalid token");
+    if (token !== user.resetPasswordToken)
+      throw new BadRequestError("Invalid token");
     if (user.resetPasswordExpiry && new Date() > user.resetPasswordExpiry)
-      throw new Error("Reset token has expired");
+      throw new BadRequestError("Reset token has expired");
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await this._userRepository.update(user._id, {
+    const success = await this._userRepository.update(String(user._id), {
       password: hashedPassword,
       resetPasswordToken: null,
       resetPasswordExpiry: null,
     });
+
+    if (!success) throw new InternalServerError("Failed to reset password");
   }
 }

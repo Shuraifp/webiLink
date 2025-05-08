@@ -10,13 +10,10 @@ import {
   restoreUser,
   softDeleteUser,
 } from "@/lib/api/admin/adminApi";
+import { UserStatus } from "@/types/type";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
-export enum UserStatus {
-  Active = "active",
-  Blocked = "blocked",
-  Archived = "archived",
-}
 
 type User = {
   _id: string;
@@ -40,9 +37,11 @@ export default function UserManagementPage() {
         setUsers(fetchedUsers);
       } catch (err) {
         if (axios.isAxiosError(err)) {
+          toast.error(err?.response?.data.message)
           setError(err?.response?.data.message);
         } else {
           setError("An unexpected error occurred.");
+          toast.error("An unexpected error occurred.");
         }
       } finally {
         setLoading(false);
@@ -69,7 +68,11 @@ export default function UserManagementPage() {
         )
       );
     } catch (err) {
-      console.error("Error blocking user:", err);
+      if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message)
+      } else {
+        toast.error("An unexpected error occurred while blocking user.");
+      }
     }
   };
 
@@ -95,7 +98,11 @@ export default function UserManagementPage() {
         )
       );
     } catch (err) {
-      console.error("Error archiving user:", err);
+      if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message)
+      } else {
+        toast.error("error occurred while archiving user.");
+      }
     }
   };
 
@@ -108,11 +115,16 @@ export default function UserManagementPage() {
         )
       );
     } catch (err) {
-      console.error("Error restoring user:", err);
+      if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message)
+      } else {
+        toast.error("An unexpected error occurred while restoring user.");
+      }
     }
   };
   return (
     <div className="flex min-h-screen bg-gray-100">
+    <Toaster />
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800">

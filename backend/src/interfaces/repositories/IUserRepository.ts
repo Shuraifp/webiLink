@@ -1,11 +1,12 @@
-import { IUser,UserInput } from "../../models/userModel";
-import { Types } from "mongoose";
+import { IUser } from "../../models/userModel";
 import { IBaseRepository } from "./IBaseRepository";
 
 export interface IUserRepository extends IBaseRepository<IUser> {
-  findByEmail(email: string): Promise<IUser | null>;
-  saveResetToken(userId:Types.ObjectId,hashedToken:string,expiresAt:Date): Promise<void>;
+  findByEmail(id: string): Promise<IUser | null>;
+  archive(id: string): Promise<IUser | null>;
+  restore(id: string): Promise<IUser | null>;
+  saveResetToken(id:string,hashedToken:string,expiresAt:Date): Promise<boolean>;
   findByResetToken(token:string):Promise<IUser | null>;
-  blockUser(userId:string): Promise<boolean>;
-  unblockUser(userId:string): Promise<boolean>;
+  blockUser(id:string): Promise<boolean>;
+  unblockUser(id:string): Promise<boolean>;
 }

@@ -1,11 +1,18 @@
-import mongoose, { Schema, Types, Document } from "mongoose";
-
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPlan extends PlanInput, Document {
   stripePriceId?: string;
-  stripeProductId: string
+  stripeProductId?: string;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export enum BillingInterval {
+  DAY = "day",
+  WEEK = "week",
+  MONTH = "month",
+  YEAR = "year",
+  LIFETIME = "lifetime",
 }
 
 export interface PlanInput {
@@ -13,7 +20,7 @@ export interface PlanInput {
   description?: string;
   price: number;
   billingCycle: {
-    interval: "day" | "week" | "month" | "year" | "lifetime";
+    interval: BillingInterval;
     frequency: number;
   };
   features: string[];
@@ -26,13 +33,17 @@ const planSchema = new Schema<IPlan>(
     description: { type: String },
     price: { type: Number, required: true },
     billingCycle: {
-      interval: { type: String, enum: ["day", "week", "month", "year", "lifetime"], required: true },
-      frequency: { type: Number, required: true, min: 1 },
+      interval: {
+        type: String,
+        enum: ["day", "week", "month", "year", "lifetime"],
+        required: true,
+      },
+      frequency: { type: Number, required: true, min: 0 },
     },
-    features: {type:[String]},
+    features: { type: [String] },
     isArchived: { type: Boolean, default: false },
-    stripePriceId: { type: String, required: true },
-    stripeProductId: { type: String, required: true },
+    stripePriceId: { type: String },
+    stripeProductId: { type: String },
   },
   { timestamps: true }
 );

@@ -31,7 +31,7 @@ export class RoomController implements IRoomController {
       console.log(name)
       // const isPremiumUser = req.user?.isPremium || false;
       if(!name) throw new BadRequestError('room name is required');
-      const room = await this._roomService.createRoom(new Types.ObjectId(userId),name)
+      const room = await this._roomService.createRoom(userId!,name)
       res.status(HttpStatus.CREATED).json(successResponse('Room created successfully', room));
     } catch (error) {
       next(error);

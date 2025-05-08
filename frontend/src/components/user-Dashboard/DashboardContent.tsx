@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/user-Dashboard/Sidebar";
 import Rooms from "@/components/user-Dashboard/Rooms";
 import CreateMeeting from "@/components/user-Dashboard/CreateMeeting";
@@ -10,14 +10,24 @@ import WhatsNew from "@/components/user-Dashboard/What'sNew";
 import Upgrade from "@/components/user-Dashboard/Upgrade";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserData } from "@/types/type";
+import { useSearchParams } from "next/navigation";
+import { Toaster } from "react-hot-toast";
 
 interface DashboardContentProps {
   user: UserData;
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
-  const [selectedSection, setSelectedSection] = useState("rooms");
+  const searchParams = useSearchParams();
+  const initialSection = searchParams.get("section") || "rooms";
+  const [selectedSection, setSelectedSection] = useState(initialSection);
   const [prevSection, setPrevSection] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("section")) {
+      setSelectedSection(searchParams.get("section")!);
+    }
+  }, [searchParams]);
 
   const renderContent = () => {
     switch (selectedSection) {
@@ -40,7 +50,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
       case "settings":
         return <Settings />;
       case "subscription":
-        return <Subscription />;
+        return <Subscription onSectionChange={setSelectedSection}/>;
       case "whats-new":
         return <WhatsNew />;
       case "upgrade":
@@ -59,6 +69,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
 
   return (
     <ThemeProvider>
+      <Toaster />
       <div className="flex host-root min-h-screen bg-gray-200">
         <Sidebar
           user={user}
@@ -66,7 +77,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           selectedSection={selectedSection}
           setPrevSection={setPrevSection}
         />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8 min-h-[75%]">
           <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
             Wellcome, {user.username}
           </h2>

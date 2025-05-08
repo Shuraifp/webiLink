@@ -10,20 +10,10 @@ import {
   getArchivedPlans,
   restorePlan,
   editPlan,
-} from "@/lib/api/admin/adminApi";
-
-export interface Plan {
-  _id?: string;
-  name: string;
-  description?: string;
-  price: number;
-  billingCycle: {
-    interval: "day" | "week" | "month" | "year" | "lifetime";
-    frequency: number;
-  };
-  features: string[];
-  isArchived: boolean;
-}
+} from "@/lib/api/admin/planApi";
+import { Plan, BillingInterval } from "@/types/plan";
+import toast, { Toaster } from "react-hot-toast";
+import axios from "axios";
 
 export default function PlanManagementPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -38,13 +28,15 @@ export default function PlanManagementPage() {
     description: "",
     price: 0,
     billingCycle: {
-      interval: "lifetime",
+      interval: BillingInterval.LIFETIME,
       frequency: 0,
     },
     features: [],
     isArchived: false,
+    stripeProductId: "",
+    stripePriceId: "",
   });
-
+  console.log(newPlan);
   useEffect(() => {
     if (statusFilter === "active") {
       fetchPlans();
@@ -69,7 +61,11 @@ export default function PlanManagementPage() {
       const response = await getArchivedPlans();
       setPlans(response.data);
     } catch (error) {
-      console.error("Error fetching plans:", error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -86,14 +82,21 @@ export default function PlanManagementPage() {
         description: "",
         price: 0,
         billingCycle: {
-          interval: "lifetime",
+          interval: BillingInterval.LIFETIME,
           frequency: 0,
         },
         features: [],
         isArchived: false,
+        stripeProductId: "",
+        stripePriceId: "",
       });
+      toast.success("Plan was created successfully")
     } catch (error) {
-      console.error("Error creating plan:", error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
@@ -104,8 +107,13 @@ export default function PlanManagementPage() {
       }
       const res = await archivePlan(id);
       setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+      toast.success("Plan was archived successfully")
     } catch (error) {
-      console.error("Error archiving plan:", error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
@@ -116,31 +124,43 @@ export default function PlanManagementPage() {
       }
       const res = await restorePlan(id);
       setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+      toast.success("Plan was restored successfully")
     } catch (error) {
-      console.error("Error archiving plan:", error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
-  const handleEditPlan = async (e:React.FormEvent) => {
+  const handleEditPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await editPlan(newPlan);
       setPlans(plans.map((plan) => (plan._id === newPlan._id ? res : plan)));
-      setIsEditing(null)
+      setIsEditing(null);
       setIsCreateModalOpen(false);
       setNewPlan({
         name: "",
         description: "",
         price: 0,
         billingCycle: {
-          interval: "lifetime",
+          interval: BillingInterval.LIFETIME,
           frequency: 0,
         },
         features: [],
         isArchived: false,
+        stripeProductId: "",
+        stripePriceId: "",
       });
+      toast.success("Plan was updated successfully")
     } catch (error) {
-      console.error("Error archiving plan:", error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
@@ -173,11 +193,15 @@ export default function PlanManagementPage() {
   };
 
   const filtered = plans.filter((p) => {
-    return (statusFilter === "archived" && p.isArchived) || (statusFilter === "active" && !p.isArchived);
+    return (
+      (statusFilter === "archived" && p.isArchived) ||
+      (statusFilter === "active" && !p.isArchived)
+    );
   });
-  
+
   return (
     <>
+      <Toaster />
       <header className="bg-white shadow p-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800">Plan Management</h2>
         <div className="flex items-center gap-4">
@@ -211,7 +235,7 @@ export default function PlanManagementPage() {
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center mb-6 gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center mb-6 cursor-pointer gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-5 h-5" />
             Create Plan
@@ -281,13 +305,11 @@ export default function PlanManagementPage() {
                         setNewPlan({
                           ...newPlan,
                           billingCycle: {
-                            ...newPlan.billingCycle,
-                            interval: e.target.value as
-                              | "day"
-                              | "week"
-                              | "month"
-                              | "year"
-                              | "lifetime",
+                            interval: e.target.value as BillingInterval,
+                            frequency:
+                              e.target.value === BillingInterval.LIFETIME
+                                ? 0
+                                : newPlan.billingCycle.frequency,
                           },
                         })
                       }
@@ -360,18 +382,18 @@ export default function PlanManagementPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if(isEditing) setIsEditing(null)
-                      setIsCreateModalOpen(false)
+                      if (isEditing) setIsEditing(null);
+                      setIsCreateModalOpen(false);
                     }}
-                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="px-4 py-2 bg-gray-200 cursor-pointer rounded-lg hover:bg-gray-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg hover:bg-blue-700"
                   >
-                    {isEditing ? 'update' : 'create'}
+                    {isEditing ? "update" : "create"}
                   </button>
                 </div>
               </form>
@@ -452,9 +474,9 @@ export default function PlanManagementPage() {
                             //   (a) => a._id === plan._id
                             // );
                             // if (edititem) {
-                              setIsEditing(plan);
-                              setNewPlan(plan);
-                              setIsCreateModalOpen(true);
+                            setIsEditing(plan);
+                            setNewPlan(plan);
+                            setIsCreateModalOpen(true);
                             // }
                           }}
                           title="Edit plan"

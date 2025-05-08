@@ -1,7 +1,7 @@
 import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
 import { IPlan } from "../models/PlanModel";
 import { BaseRepository } from "./baseRepository";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 
 export class PlanRepository extends BaseRepository<IPlan> implements IPlanRepository {
   constructor(private _planModel: Model<IPlan>) {
@@ -16,7 +16,11 @@ export class PlanRepository extends BaseRepository<IPlan> implements IPlanReposi
     return await this._planModel.find({ isArchived: true });
   }
 
-  async findOne(query: object): Promise<IPlan | null> {
-    return await this._planModel.findOne(query).exec();
+  async archive(id: Types.ObjectId): Promise<IPlan | null> {
+    return await this._planModel.findByIdAndUpdate(id, { isArchived: true }, { new: true });
+  }
+
+  async restore(id: Types.ObjectId): Promise<IPlan | null> {
+    return await this._planModel.findByIdAndUpdate(id, { isArchived: false }, { new: true });
   }
 }

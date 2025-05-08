@@ -8,7 +8,7 @@ export interface IAuthService {
   adminLogin(email: string, password: string): Promise<LoginResponse>;
   verifyOtp(email: string, otp:string): Promise<LoginResponse>;
   verifyAccessToken(token:string): Promise<IUser>;
-  refreshToken(refreshToken:string): {accessToken: string, user: Promise<IUser>};
+  refreshToken(refreshToken:string): Promise<{accessToken: string, user: IUser}>;
   requestPasswordReset(email:string): Promise<void>;
   resetPassword(token:string, newPassword:string): Promise<void>;
 }

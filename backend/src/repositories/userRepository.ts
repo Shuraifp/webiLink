@@ -1,10 +1,9 @@
-// import { injectable, inject } from "inversify";
 import { IUser } from "../models/userModel";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
-import { Model, Types } from "mongoose";
+import { Model } from "mongoose";
 import { BaseRepository } from "./baseRepository";
 
-// @injectable()
+
 export class UserRepository extends BaseRepository<IUser> implements IUserRepository {
   constructor(private _userModel: Model<IUser>) {
     super(_userModel)
@@ -15,15 +14,25 @@ export class UserRepository extends BaseRepository<IUser> implements IUserReposi
     return this._userModel.findOne({ email });
   }
 
+  async archive(id: string): Promise<IUser | null> {
+      return await this._userModel.findByIdAndUpdate(id, { isArchived: true }, { new: true });
+    }
+  
+    async restore(id: string): Promise<IUser | null> {
+      return await this._userModel.findByIdAndUpdate(id, { isArchived: false }, { new: true });
+    }
+
   async saveResetToken(
-    userId: Types.ObjectId,
+    userId: string,
     token: string,
     expiresAt: Date
-  ): Promise<void> {
-    await this._userModel.findByIdAndUpdate(userId, {
+  ): Promise<boolean> {
+    const updatedUser = await this._userModel.findByIdAndUpdate(userId, {
       resetPasswordToken: token,
       resetPasswordExpiry: expiresAt,
-    });
+    }, {new:true});
+
+    return !!updatedUser
   }
 
   async findByResetToken(token: string): Promise<IUser | null> {

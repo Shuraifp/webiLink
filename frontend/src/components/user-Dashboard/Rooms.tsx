@@ -68,7 +68,7 @@ export default function DashboardPage({
 
   return (
     <>
-      <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-500">
+      <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
         My rooms
       </p>
       {isModalOpen && (

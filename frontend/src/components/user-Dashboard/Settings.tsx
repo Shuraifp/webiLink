@@ -6,9 +6,9 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-medium mb-6">Settings</h1>
-      <div className="flex items-center gap-4">
+    <>
+      <h1 className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">Settings</h1>
+      <div className="flex items-center gap-4 p-4 pt-6">
         <label htmlFor="theme-toggle" className="text-lg">
           Theme: {theme === "light" ? "Light" : "Dark"}
         </label>
@@ -27,6 +27,6 @@ export default function Settings() {
           ></label>
         </div>
       </div>
-    </div>
+    </>
   );
 }

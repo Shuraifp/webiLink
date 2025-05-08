@@ -1,11 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { inject, injectable } from "inversify";
-import TYPES from "../di/types";
 import { IAuthService } from "../interfaces/services/IAuthService";
 import { IAuthController } from "../interfaces/controllers/IAuthController";
-import { successResponse, errorResponse } from "../types/type";
+import { successResponse } from "../types/type";
 
-// @injectable()
 export class AuthController implements IAuthController {
   constructor(private _authService: IAuthService) {}
 
@@ -84,7 +81,6 @@ export class AuthController implements IAuthController {
   async verifyAccessToken(req: Request, res: Response, next: NextFunction) {
     try {
       const token = req.cookies.accessToken;
-      console.log(token);
 
       if (!token) {
         res.status(401).json({ message: "Access token is required" });
@@ -109,8 +105,9 @@ export class AuthController implements IAuthController {
         return;
       }
 
-      const { accessToken, user } =
-        await this._authService.refreshToken(refreshToken);
+      const { accessToken, user } = await this._authService.refreshToken(
+        refreshToken
+      );
 
       this.setAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });
@@ -128,8 +125,9 @@ export class AuthController implements IAuthController {
         return;
       }
 
-      const { accessToken, user } =
-        await this._authService.refreshToken(refreshToken);
+      const { accessToken, user } = await this._authService.refreshToken(
+        refreshToken
+      );
 
       this.setAdminAuthCookies(res, accessToken);
       res.status(200).json({ user, tokenNew: accessToken });
@@ -143,14 +141,15 @@ export class AuthController implements IAuthController {
     accessToken: string,
     refreshToken?: string
   ) {
-    refreshToken
-      ? res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
-      : null;
+    if (refreshToken) {
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -164,21 +163,20 @@ export class AuthController implements IAuthController {
     accessToken: string,
     refreshToken?: string
   ) {
-    refreshToken
-      ? res.cookie("adminRefreshToken", refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        })
-      : null;
+    if (refreshToken) {
+      res.cookie("adminRefreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
     res.cookie("adminAccessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 15 * 60 * 1000,
     });
-    console.log("donee");
   }
 
   async userLogout(req: Request, res: Response, next: NextFunction) {

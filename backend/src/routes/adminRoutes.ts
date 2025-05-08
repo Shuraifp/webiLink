@@ -27,11 +27,6 @@ router.put('/users/:userId/archive' , adminController.softDeleteUser.bind(adminC
 router.put('/users/:userId/restore' , adminController.restoreUser.bind(adminController))
 
 // plans
-router.post('/plans', adminController.createPlan.bind(adminController));
-router.get('/plans', adminController.getAllActivePlans.bind(adminController));
-router.get('/archived-plans', adminController.getAllArchivedPlans.bind(adminController));
-router.put('/plans/:planId', adminController.updatePlan.bind(adminController));
-router.patch('/plans/:planId/archive', adminController.archivePlan.bind(adminController));
-router.patch('/plans/:planId/restore', adminController.restorePlan.bind(adminController));
+
 
 export default router;

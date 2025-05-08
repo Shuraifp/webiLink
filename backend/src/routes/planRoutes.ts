@@ -19,8 +19,17 @@ const planController = new PlanController(planService);
 const router = Router();
 
 router.get("/", planController.fetchActivePlans.bind(planController));
-router.post("/create-subscription", authenticateJWT(UserRole.USER), planController.makeSubscription.bind(planController));
-router.post("/webhook", planController.handleWebhook.bind(planController));
+router.get("/:id",)
 router.get("/user-plan", authenticateJWT(UserRole.USER), planController.getUserPlan.bind(planController));
+router.post("/create-subscription", authenticateJWT(UserRole.USER), planController.makeSubscription.bind(planController));
+router.post("/cancel-subscription", authenticateJWT(UserRole.USER), planController.cancelSubscription.bind(planController));
+
+// Admin
+router.post('/', authenticateJWT(UserRole.ADMIN), planController.createPlan.bind(planController));
+router.get('/active-plans', authenticateJWT(UserRole.ADMIN), planController.fetchActivePlans.bind(planController));
+router.get('/archived-plans', authenticateJWT(UserRole.ADMIN), planController.fetchArchivedPlans.bind(planController));
+router.put('/:planId', authenticateJWT(UserRole.ADMIN), planController.updatePlan.bind(planController));
+router.patch('/:planId/archive', authenticateJWT(UserRole.ADMIN), planController.archivePlan.bind(planController));
+router.patch('/:planId/restore', authenticateJWT(UserRole.ADMIN), planController.restorePlan.bind(planController));
 
 export default router;

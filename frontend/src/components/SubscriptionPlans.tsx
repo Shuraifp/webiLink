@@ -1,23 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPlans } from "@/lib/api/user/planApi";
-import Link from "next/link";
-
-interface IPlan {
-  name: string;
-  description?: string;
-  price: number;
-  billingCycle: {
-    interval: "day" | "week" | "month" | "year" | "lifetime";
-    frequency: number;
-  };
-  features: string[];
-  isArchived: boolean;
-}
+import { getPlans, subscribeToPlan } from "@/lib/api/user/planApi";
+import { Plan } from "@/types/plan";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
 const SubscriptionPlans = () => {
-  const [plans, setPlans] = useState<IPlan[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchPlans();
@@ -32,8 +23,40 @@ const SubscriptionPlans = () => {
     }
   };
 
+  const handleSubscribe = async (plan: Plan) => {
+
+    setLoading(true);
+
+    try {
+      const response = await subscribeToPlan({
+        planId: plan._id!,
+        priceId: plan.stripePriceId || "",
+      });
+
+      window.location.href = response.data.url;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-80">
+        <div className="w-16 h-16 border-5 border-t-transparent border-b-transparent border-yellow-400 rounded-full animate-spin" />
+        <p className="mt-4 text-gray-600">Proceeding...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-yellow-100 to-pink-50 text-white pt-12 p-6">
+      <Toaster />
       <div className="max-w-5xl w-full">
         <p className="text-center text-xl mb-4 text-blue-500">
           webiLink Meetings
@@ -72,9 +95,8 @@ const SubscriptionPlans = () => {
                 </ul>
               </div>
 
-              {/* Button */}
-              <Link
-                href={plan.price === 0 ? "/host" : "/pricing"}
+              { plan.price !== 0 && <div
+                onClick={() => handleSubscribe(plan)}
                 className={`w-full py-3 rounded-lg text-center font-semibold transition-all duration-300 ${
                   plan.price > 0
                     ? "bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600"
@@ -82,7 +104,7 @@ const SubscriptionPlans = () => {
                 }`}
               >
                 {"Let's Go"}
-              </Link>
+              </div>}
             </div>
           ))}
         </div>

@@ -14,7 +14,7 @@ export class RoomService implements IRoomService {
   }
 
   async createRoom(
-    userId: Types.ObjectId,
+    userId: string,
     name: string,
     isPremiumUser: boolean = false
   ): Promise<IRoom> {
@@ -30,7 +30,7 @@ export class RoomService implements IRoomService {
     while (attempts < maxAttempts) {
       try {
         const roomData: Partial<IRoom> = {
-          userId,
+          userId: new Types.ObjectId(userId),
           name,
           slug,
           isPremiumUser,
