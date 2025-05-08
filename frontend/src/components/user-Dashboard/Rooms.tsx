@@ -109,7 +109,7 @@ export default function DashboardPage({
         </div>
       )}
 
-      <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto pr-4">
+      <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto mt-4">
         {rooms?.map((room, ind) => (
           <div
             key={ind}
@@ -164,6 +164,32 @@ export default function DashboardPage({
             </div>
           </div>
         ))}
+        {rooms.length === 0 && (
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center min-h-[200px] text-center">
+          <svg
+            className="w-12 h-12 text-gray-400 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7m-9 4h-4m4 4h-4m8-8h-4m4 4h-4"
+            />
+          </svg>
+          <p className="text-gray-600 text-lg font-medium mb-2">No rooms available</p>
+          <p className="text-gray-500 text-sm mb-4">Create a new room to get started!</p>
+          <button
+            onClick={() => handleSectionChange("create-meeting")}
+            className="px-4 py-2 bg-yellow-500 cursor-pointer text-white rounded-lg hover:bg-yellow-600 transition transform hover:scale-105"
+          >
+            + Create Room
+          </button>
+        </div>
+        )}
       </div>
 
       <div className="mt-6">
@@ -175,12 +201,12 @@ export default function DashboardPage({
         </button>
       </div>
 
-      <button
+      {rooms.length > 0 && <button
         onClick={() => handleSectionChange("create-meeting")}
         className="fixed bottom-6 z-10 right-6 px-6 py-3 cursor-pointer bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
       >
         + Create Room
-      </button>
+      </button>}
     </>
   );
 }
