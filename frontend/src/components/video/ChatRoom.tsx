@@ -40,18 +40,21 @@ export default function MeetingRoom({ user }: { user: UserData }) {
     const currentSocket = socket.current;
 
     const joinRoom = async () => {
-      if (hasJoinedRef.current && zpRef.current && zpRef.current.getState?.()) {
-        console.log("Already joined Zego room, skipping re-join");
+      if (hasJoinedRef.current && zpRef.current) {
         return;
       }
-      if (zpRef.current) {
-        // zpRef.current.hangUp();
-        zpRef.current = null;
-        console.log("Zego room nullified");
-      }
-      hasJoinedRef.current = false;
 
-      console.log("Emitting join-room", { roomId, userId: user.id });
+      if (zpRef.current) {
+      try {
+        zpRef.current.hangUp?.();
+        zpRef.current.destroy?.();
+      } catch {
+
+      }
+      zpRef.current = null;
+    }
+    hasJoinedRef.current = false;
+
       currentSocket.emit("join-room", {
         roomId,
         userId: user.id,
@@ -63,7 +66,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       const appID = process.env.NEXT_PUBLIC_ZEGO_APP_ID;
       const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET;
       if (!appID || !serverSecret) {
-        console.error("Zego App ID or Server Secret is not defined");
         return;
       }
 
@@ -182,7 +184,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         meetingContainerRef.current = null;
       }
     };
-  }, [roomId, user, dispatch]);
+  }, []);
 
   return (
     <MeetingRoomUI

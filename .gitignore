@@ -6,3 +6,5 @@ backend/.env
 
 frontend/.next/ 
 backend/dist/  
+
+backend/logs/

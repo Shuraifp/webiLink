@@ -30,7 +30,8 @@
     "slugify": "^1.6.6",
     "socket.io": "^4.8.1",
     "stripe": "^18.1.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.8",

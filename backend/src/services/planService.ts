@@ -101,7 +101,9 @@ export class PlanService implements IPlanService {
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
-        : new InternalServerError("An error occurred while fetching active plans");
+        : new InternalServerError(
+            "An error occurred while fetching active plans"
+          );
     }
   }
 
@@ -114,7 +116,9 @@ export class PlanService implements IPlanService {
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
-        : new InternalServerError("An error occurred while fetching archived plans");
+        : new InternalServerError(
+            "An error occurred while fetching archived plans"
+          );
     }
   }
 
@@ -504,13 +508,18 @@ export class PlanService implements IPlanService {
         (status === PlanStatus.ACTIVE ||
           (status === PlanStatus.CANCELED &&
             subscription.cancel_at_period_end &&
-            new Date(subscription.items.data[0].current_period_end * 1000) > new Date())) &&
+            new Date(subscription.items.data[0].current_period_end * 1000) >
+              new Date())) &&
         plan.price > 0;
 
       const userPlanData: Partial<IUserPlan> = {
         status,
-        currentPeriodStart: new Date(subscription.items.data[0].current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.items.data[0].current_period_end * 1000),
+        currentPeriodStart: new Date(
+          subscription.items.data[0].current_period_start * 1000
+        ),
+        currentPeriodEnd: new Date(
+          subscription.items.data[0].current_period_end * 1000
+        ),
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
       };
 
@@ -522,8 +531,8 @@ export class PlanService implements IPlanService {
           isPremium: false,
         });
         await this._userPlanRepository.update(userPlan._id.toString(), {
-          status: PlanStatus.CANCELED
-        })
+          status: PlanStatus.CANCELED,
+        });
       } else {
         await this._userRepository.update(userId, {
           isPremium,
@@ -543,18 +552,22 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async getUserPlan(userId: string): Promise<{ userPlan: IUserPlan; plan: IPlan }> {
+  async getUserPlan(
+    userId: string
+  ): Promise<{ userPlan: IUserPlan; plan: IPlan }> {
     try {
       const userPlan = await this._userPlanRepository.findUserPlan(userId);
       if (!userPlan) {
         throw new NotFoundError("No active plan found for user");
       }
-  
-      const plan = await this._planRepository.findById(userPlan.planId.toString());
+
+      const plan = await this._planRepository.findById(
+        userPlan.planId.toString()
+      );
       if (!plan) {
         throw new NotFoundError("Plan not found");
       }
-  
+
       return { userPlan, plan };
     } catch (error) {
       throw error instanceof NotFoundError
@@ -569,15 +582,18 @@ export class PlanService implements IPlanService {
       if (!userPlan) {
         throw new NotFoundError("No active plan found for user");
       }
-  
+
       if (!userPlan.stripeSubscriptionId) {
         throw new BadRequestError("No recurring subscription to cancel");
       }
-  
-      const subscription = await stripe.subscriptions.update(userPlan.stripeSubscriptionId, {
-        cancel_at_period_end: true,
-      });
-  
+
+      const subscription = await stripe.subscriptions.update(
+        userPlan.stripeSubscriptionId,
+        {
+          cancel_at_period_end: true,
+        }
+      );
+
       await this._userPlanRepository.update(userPlan._id.toString(), {
         status: subscription.status as PlanStatus,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,

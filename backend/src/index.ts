@@ -5,6 +5,7 @@ import { RoomService } from './services/roomService';
 import { RoomRepository } from './repositories/RoomRepository';
 import { SocketService } from './services/socketService';
 import mainRoomModel from './models/mainRoomModel';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ async function startServer() {
   new SocketService(io, roomService);
   
   const PORT = process.env.PORT || 8000;
-  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  server.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
 }
 
 startServer();
