@@ -56,7 +56,6 @@ export default function Upgrade() {
     }
   };
 
-
   const planRef = useRef<HTMLDivElement>(null);
   const [hoverDirection, setHoverDirection] = useState<string | null>(null);
 
@@ -155,16 +154,15 @@ export default function Upgrade() {
             </div>
           </div>
         </div>
-
-        <div className="min-w-[30%] p-6">
-          <h2 className="flex items-center text-lg raleway font-semibold mb-2 text-gray-600">
-            <Circle className="w-4 h-4 mr-1 bg-gray-50 rounded-full p-0.5 border border-gray-400 text-gray-400" />Current plan
-          </h2>
-          {plans
-            .filter((p) => p._id === userPlan)
-            .map((pl) => (
+        {plans
+          .filter((p) => p._id === userPlan)
+          .map((pl) => (
+            <div key={pl._id} className="min-w-[30%] p-6">
+              <h2 className="flex items-center text-lg raleway font-semibold mb-2 text-gray-600">
+                <Circle className="w-4 h-4 mr-1 bg-gray-50 rounded-full p-0.5 border border-gray-400 text-gray-400" />
+                Current plan
+              </h2>
               <div
-                key={pl._id}
                 ref={planRef}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -181,10 +179,12 @@ export default function Upgrade() {
                 }`}
               >
                 <p>{pl.name}</p>
-                <p className="text-gray-600 text-2xl font-semibold">{pl.price.toFixed(2)}</p>
+                <p className="text-gray-600 text-2xl font-semibold">
+                  {pl.price.toFixed(2)}
+                </p>
               </div>
-            ))}
-        </div>
+            </div>
+          ))}
       </div>
     </div>
   );

@@ -42,7 +42,7 @@ export default function ConfirmationModal({
                 <button
                   onClick={() => {
                     onConfirm();
-                    setIsModalOpen(false); // Close modal after confirm
+                    setIsModalOpen(false);
                   }}
                   className={`w-full py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                     loading ? "opacity-50 cursor-not-allowed" : ""

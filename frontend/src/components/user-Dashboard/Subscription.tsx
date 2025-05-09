@@ -12,15 +12,21 @@ interface UserPlanData {
   plan: Plan;
 }
 
-const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateAction<string>>;}) => {
+const Subscription = ({
+  onSectionChange,
+}: {
+  onSectionChange: Dispatch<SetStateAction<string>>;
+}) => {
   const [userPlanData, setUserPlanData] = useState<UserPlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState("");
-  const [postConfirmAction, setPostConfirmAction] = useState<(() => void) | null>(null)
-
+  const [postConfirmAction, setPostConfirmAction] = useState<
+    (() => void) | null
+  >(null);
+  console.log(userPlanData);
   useEffect(() => {
     fetchUserPlan();
   }, []);
@@ -42,13 +48,15 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
   };
 
   const handleCancelSubscription = async () => {
-    if (!userPlanData?.userPlan.stripeSubscriptionId) {
-      setError("No recurring subscription to cancel");
+    if (!userPlanData?.userPlan.stripeSubscriptionId && !userPlanData?.userPlan.stripePaymentIntentId) {
+      toast.error("No recurring subscription to cancel");
       return;
     }
 
-    confirmAction(
-      "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.",
+    const msg = userPlanData.plan.billingCycle.interval === BillingInterval.LIFETIME ? 
+    "Are you sure you want to cancel your Lifetime access?" :
+    "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period." 
+    confirmAction(msg,
       executeCancelSubscription
     );
   };
@@ -63,7 +71,7 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
       });
       setError(null);
       toast.success("Subscription canceled successfully");
-      setIsModalOpen(false)
+      setIsModalOpen(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         toast.error(err?.response?.data.message);
@@ -79,17 +87,30 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
   const confirmAction = (msg: string, cb: () => void) => {
     setConfirmationMessage(msg);
     setIsModalOpen(true);
-    setPostConfirmAction(() =>cb)
+    setPostConfirmAction(() => cb);
   };
 
   const closeModal = () => {
     setConfirmationMessage("");
     setIsModalOpen(false);
-    setPostConfirmAction(null)
+    setPostConfirmAction(null);
   };
 
-  const handleUpgradePlan = () => {
-    onSectionChange("upgrade")
+  const handleUpgradePlan = (
+    cb: () => void,
+    msg = "Are you sure you want to cancel your subscription?"
+  ) => {
+    setConfirmationMessage(msg);
+    setIsModalOpen(true);
+    setPostConfirmAction(() => cb);
+  };
+
+  const upgradePlan = () => {
+    onSectionChange("upgrade");
+  };
+
+  const handleCreatePlan = () => {
+    onSectionChange("upgrade");
   };
 
   const formatBillingCycle = (plan: Plan, userPlan: IUserPlan) => {
@@ -135,7 +156,7 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
         message={confirmationMessage}
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
-        onConfirm={postConfirmAction || (() => {})} 
+        onConfirm={postConfirmAction || (() => {})}
         loading={cancelLoading}
       />
       <h2 className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
@@ -159,7 +180,9 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
               </p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-4">
-              {userPlanData.userPlan.stripeSubscriptionId &&
+              {(userPlanData.userPlan.stripeSubscriptionId ||
+                userPlanData.plan.billingCycle.interval ===
+                  BillingInterval.LIFETIME) &&
                 !userPlanData.userPlan.cancelAtPeriodEnd && (
                   <button
                     onClick={handleCancelSubscription}
@@ -170,11 +193,16 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
                         : "bg-red-500 hover:bg-red-600"
                     }`}
                   >
-                    {cancelLoading ? "Canceling..." : "Cancel Subscription"}
+                    {cancelLoading
+                      ? "Processing..."
+                      : userPlanData.plan.billingCycle.interval ===
+                        BillingInterval.LIFETIME
+                      ? "Request Refund"
+                      : "Cancel Subscription"}
                   </button>
                 )}
               <button
-                onClick={handleUpgradePlan}
+                onClick={() => handleUpgradePlan(upgradePlan)}
                 className="px-4 py-2 rounded-lg bg-gradient-to-r raleway from-yellow-400 to-yellow-500 text-white font-medium hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300"
               >
                 Change Plan
@@ -202,7 +230,7 @@ const Subscription = ({onSectionChange}:{onSectionChange: Dispatch<SetStateActio
               You don’t have any active Premium plan.
             </p>
             <button
-              onClick={handleUpgradePlan}
+              onClick={handleCreatePlan}
               className="px-6 py-3 rounded-lg bg-gradient-to-r raleway from-yellow-400 to-yellow-500 text-white font-medium hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300"
             >
               Upgrade to Pro

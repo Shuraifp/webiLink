@@ -29,10 +29,10 @@ export default function Cancel() {
           </div>
 
           <h1 className="text-3xl font-bold text-gray-800 text-center mb-4">
-            Subscription Canceled
+            Subscription Incomplete
           </h1>
           <p className="text-gray-600 text-center mb-8">
-            Your subscription has been successfully canceled. You can still access your account or explore other plans.
+            Your subscription has not been completed. You can still access your account or explore other plans.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
