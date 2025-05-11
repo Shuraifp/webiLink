@@ -118,6 +118,7 @@ export default function MeetingComponent({
           whiteboardPlaceholderRef.current.className = "whiteboard-placeholder";
           whiteboardPlaceholderRef.current.style.flex = "0 0 100%";
           whiteboardPlaceholderRef.current.style.height = "100%";
+          whiteboardPlaceholderRef.current.style.width = "100%";
           whiteboardPlaceholderRef.current.style.backgroundColor = "#ffffff";
           whiteboardPlaceholderRef.current.style.borderRight = "2px solid #ccc";
           whiteboardPlaceholderRef.current.style.display =

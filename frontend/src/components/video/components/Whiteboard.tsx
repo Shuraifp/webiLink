@@ -11,8 +11,10 @@ interface WhiteboardProps {
   socketRef: React.RefObject<Socket>;
 }
 
-export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) {
-  // const socketRef = useRef<Socket>(getSocket());
+export default function Whiteboard({
+  containerRef,
+  socketRef,
+}: WhiteboardProps) {
   const socket = socketRef.current;
   const { state } = useReducedState();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -20,12 +22,11 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [color] = useState("#000000");
   const [lineWidth] = useState(2);
+  const [drawingUsername, setDrawingUsername] = useState<string | null>(null);
   const drawingActionsRef = useRef<DrawEvent[]>([]);
+  const captionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    console.log("Socket connected:", socket.connected);
-    console.log("Socket ID:", socket.id);
-    console.log("SocketEvent.Whiteboard_DRAW:", SocketEvent.Whiteboard_DRAW);
     if (!socket.connected) {
       socket.connect();
     }
@@ -54,17 +55,26 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
 
     const resizeCanvas = () => {
       if (!canvas || !container) return;
-      const prevWidth = canvas.width;
-      const prevHeight = canvas.height;
-      canvas.width = container.clientWidth || 100;
-      canvas.height = container.clientHeight || 300;
+      const dpr = window.devicePixelRatio || 1; // Account for high-DPI displays
+      const rect = container.getBoundingClientRect();
+      
+      // Set canvas logical dimensions based on container size
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      
+      // Scale context to match DPR
+      ctx.scale(dpr, dpr);
+      
+      // Set CSS dimensions to match container
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
       ctx.lineCap = "round";
 
-      const scaleX = canvas.width / (prevWidth || canvas.width);
-      const scaleY = canvas.height / (prevHeight || canvas.height);
-      replayDrawings(scaleX, scaleY);
+      // Redraw existing drawings
+      replayDrawings(1, 1); // No scaling needed since we're not resizing dynamically
     };
 
     const replayDrawings = (scaleX: number, scaleY: number) => {
@@ -88,8 +98,13 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
     resizeCanvas();
     setContext(ctx);
 
+    const timeout = setTimeout(resizeCanvas, 100);
+
     window.addEventListener("resize", resizeCanvas);
-    return () => window.removeEventListener("resize", resizeCanvas);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener("resize", resizeCanvas);
+    };
   }, [color, lineWidth, containerRef]);
 
   useEffect(() => {
@@ -101,12 +116,28 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
       if (data.type === DrawingState.START) {
         context.beginPath();
         context.moveTo(data.x, data.y);
+        if (data.username) {
+          setDrawingUsername(data.username);
+          if (captionTimeoutRef.current) {
+            clearTimeout(captionTimeoutRef.current);
+          }
+          captionTimeoutRef.current = setTimeout(() => {
+            setDrawingUsername(null);
+          }, 2000);
+        }
       } else if (data.type === DrawingState.DRAW) {
         context.lineTo(data.x, data.y);
         context.stroke();
       } else if (data.type === DrawingState.END) {
         context.closePath();
+        setDrawingUsername(null);
+        if (captionTimeoutRef.current) {
+          clearTimeout(captionTimeoutRef.current);
+        }
       }
+      requestAnimationFrame(() => {
+      context.stroke(); 
+    });
     };
 
     socket.on(SocketEvent.Whiteboard_DRAW, handleDraw);
@@ -128,7 +159,14 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
     context.moveTo(x, y);
     setIsDrawing(true);
 
-    const drawEvent: DrawEvent = { roomId: state.roomId, x, y, type: DrawingState.START, color, lineWidth };
+    const drawEvent: DrawEvent = {
+      roomId: state.roomId,
+      x,
+      y,
+      type: DrawingState.START,
+      color,
+      lineWidth,
+    };
     drawingActionsRef.current.push(drawEvent);
     socket.emit("whiteboard-draw", drawEvent);
     console.log("Emitting whiteboard-draw (start):", drawEvent);
@@ -144,12 +182,18 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
     context.lineTo(x, y);
     context.stroke();
 
-    const drawEvent: DrawEvent = { roomId: state.roomId, x, y, type: DrawingState.DRAW, color, lineWidth };
+    const drawEvent: DrawEvent = {
+      roomId: state.roomId,
+      x,
+      y,
+      type: DrawingState.DRAW,
+      color,
+      lineWidth,
+    };
     drawingActionsRef.current.push(drawEvent);
     socket.emit("whiteboard-draw", drawEvent, () => {
       console.log("Draw event emitted:", drawEvent);
-    }
-    );
+    });
     console.log("Emitting whiteboard-draw (draw):", drawEvent);
   };
 
@@ -159,7 +203,14 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
     context.closePath();
     setIsDrawing(false);
 
-    const drawEvent: DrawEvent = { roomId: state.roomId, x: 0, y: 0, type: DrawingState.END, color, lineWidth };
+    const drawEvent: DrawEvent = {
+      roomId: state.roomId,
+      x: 0,
+      y: 0,
+      type: DrawingState.END,
+      color,
+      lineWidth,
+    };
     drawingActionsRef.current.push(drawEvent);
     socket.emit(SocketEvent.Whiteboard_DRAW, drawEvent);
     console.log("Emitting whiteboard-draw (end):", drawEvent);
@@ -182,8 +233,31 @@ export default function Whiteboard({ containerRef,socketRef }: WhiteboardProps) 
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
-        style={{ display: "block", width: "100%", height: "100%", position: "relative", zIndex: 31 }}
+        style={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          zIndex: 31,
+        }}
       />
+      {drawingUsername && (
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            color: "white",
+            padding: "5px 10px",
+            borderRadius: "4px",
+            zIndex: 32,
+            fontSize: "14px",
+          }}
+        >
+          {drawingUsername} is drawing
+        </div>
+      )}
     </div>
   );
 }

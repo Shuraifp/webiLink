@@ -50,11 +50,11 @@ export class SocketService {
 
   private setupSocket() {
     this.io.on("connection", (socket: Socket) => {
-      logger.info("User connected:", socket.id);
+      logger.info(`User connected: ${socket.id}`);
 
       socket.onAny((event, args) => {
-        logger.info("socketId:", socket.id);
-        logger.info(`Received event: ${event}`, args);
+        logger.info(`socketId: ${socket.id}`);
+        logger.info(`Received event: ${event} ${args}`);
       });
 
       socket.on("join-room", async (data) => this.handleJoin(socket, data));
@@ -62,9 +62,6 @@ export class SocketService {
       socket.on("get-roomState", ({ roomId }) =>
         this.fetchRoomState(socket, roomId)
       );
-      // socket.on("request-users", (data) =>
-      //   this.handleRequestUsers(socket, data)
-      // );
       socket.on("create-breakout-rooms", (data) =>
         this.handleCreateBreakoutRooms(socket, data)
       );
@@ -157,7 +154,7 @@ export class SocketService {
     if (!user) return;
     let roomState = this.roomState.get(roomId);
     if (!roomState) {
-      roomState = { isQAEnabled: false, isWhiteboardVisible: false };
+      roomState = { isQAEnabled: false, isDrawing: false };
       this.roomState.set(roomId, roomState);
     }
     socket.emit("room-state-fetched", roomState);
@@ -298,9 +295,18 @@ export class SocketService {
 
   private handleWhiteboardDraw(socket: Socket, data: DrawEvent) {
     const user = this.users.get(socket.id);
-    logger.info('drawing ..',user?.username)
-    // if (!user) return;
-    socket.to(data.roomId).emit("whiteboard-draw", data);
+  if (!user || !user.username) {
+    logger.warn(`No user or username found for socket: ${socket.id}`);
+    return;
+  }
+
+  logger.info(`Drawing by ${user.username}`);
+  const drawEventWithUsername: DrawEvent = {
+    ...data,
+    username: user.username,
+  };
+
+  this.io.to(data.roomId).emit("whiteboard-draw", drawEventWithUsername);
   }
 
   private handleChatMessage(
@@ -397,7 +403,7 @@ export class SocketService {
   private handleDisconnect(socket: Socket) {
     const user = this.users.get(socket.id);
     if (!user) return;
-    logger.info("User disconnected:", socket.id, user.userId);
+    logger.info(`User disconnected: ${socket.id} ${user.userId}`);
     const roomId = socket.rooms.values().next().value;
     if (roomId) {
       socket.to(roomId).emit("user-disconnected", user.userId);

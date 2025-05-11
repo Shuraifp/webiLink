@@ -33,11 +33,7 @@ export default function SocketManager({ socketRef }: Props) {
     });
     socketRef.on(
       "room-state-fetched",
-      ({ isWhiteboardVisible, isQAEnabled }: RoomState) => {
-        dispatch({
-          type: MeetingActionType.TOGGLE_WHITEBOARD,
-          payload: isWhiteboardVisible,
-        });
+      ({  isQAEnabled }: RoomState) => {
         dispatch({ type: MeetingActionType.ENABLE_QA, payload: isQAEnabled });
       }
     );

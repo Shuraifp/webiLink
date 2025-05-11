@@ -53,6 +53,7 @@ export interface DrawEvent {
   type: DrawingState;
   color?: string;
   lineWidth?: number;
+  username?:string;
 }
 export enum SocketEvent {
   JOIN_ROOM = "join-room",
@@ -100,6 +101,6 @@ export interface Question {
 }
 
 export interface RoomState {
-  isWhiteboardVisible: boolean;
+  isDrawing: boolean;
   isQAEnabled: boolean;
 }

@@ -64,6 +64,7 @@ export interface DrawEvent {
   type: "start" | "draw" | "end";
   color?: string;
   lineWidth?: number;
+  username?: string;
 }
 
 export enum PollStatus {
@@ -106,6 +107,6 @@ export interface Question {
 }
 
 export interface RoomState {
-  isWhiteboardVisible: boolean;
+  isDrawing: boolean;
   isQAEnabled: boolean;
 }
