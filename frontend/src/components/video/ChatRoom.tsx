@@ -6,7 +6,7 @@ import { UserData } from "@/types/type";
 import MeetingRoomUI from "./components/MeetingRoomUi";
 import { useReducedState } from "@/hooks/useReducedState";
 import { Socket } from "socket.io-client";
-import { Status } from "@/types/chatRoom";
+import { Role, Status } from "@/types/chatRoom";
 import { MeetingActionType } from "@/lib/MeetingContext";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import toast from "react-hot-toast";
@@ -45,15 +45,13 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       }
 
       if (zpRef.current) {
-      try {
-        zpRef.current.hangUp?.();
-        zpRef.current.destroy?.();
-      } catch {
-
+        try {
+          zpRef.current.hangUp?.();
+          zpRef.current.destroy?.();
+        } catch {}
+        zpRef.current = null;
       }
-      zpRef.current = null;
-    }
-    hasJoinedRef.current = false;
+      hasJoinedRef.current = false;
 
       currentSocket.emit("join-room", {
         roomId,
@@ -102,6 +100,29 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       });
     };
 
+    const cleanup = () => {
+      if (zpRef.current) {
+        zpRef.current.hangUp?.();
+        zpRef.current.destroy?.();
+        zpRef.current = null;
+        console.log("Zego room hung up and destroyed");
+      }
+      disconnectSocket();
+      hasJoinedRef.current = false;
+      if (meetingContainerRef.current) {
+        meetingContainerRef.current.innerHTML = "";
+      }
+      meetingContainerRef.current = null;
+      dispatch({
+        type: MeetingActionType.SET_STATUS,
+        payload: Status.LEFT,
+      });
+      dispatch({
+        type: MeetingActionType.SET_CURRENT_USER,
+        payload: { userId: "", username: "", avatar: "", role: Role.JOINEE },
+      });
+    };
+
     if (typeof window !== "undefined") {
       if (!currentSocket.connected) {
         currentSocket.connect();
@@ -123,7 +144,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       );
 
       currentSocket.on("error", ({ message }) => {
-        toast.error(message)
+        toast.error(message);
         dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
       });
 
@@ -134,8 +155,12 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         });
       });
 
+      currentSocket.onAny((event, args) => {
+        console.log(`Received event: ${event} ${args}`);
+      });
+
       currentSocket.on("host-joined", () => {
-        if (state.status === Status.WAITING) {
+        if (state.status === Status.WAITING || state.status === Status.LEFT) {
           console.log("Reconnecting after host joined", {
             roomId,
             userId: user.id,
@@ -161,6 +186,23 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       );
     }
 
+    currentSocket.on("user-left", (userId: string) => {
+        console.log(`User ${userId} left the room`);
+      });
+
+      currentSocket.on("user-disconnected", (userId: string) => {
+        console.log(`User ${userId} disconnected from the room`);
+      });
+
+    currentSocket.on("host-left", () => {
+      console.log("Host has left the meeting. You will be disconnected.");
+      currentSocket.emit("leave-room", {
+        roomId,
+        userId: user.id,
+      });
+      cleanup();
+    });
+
     return () => {
       if (typeof window !== "undefined") {
         currentSocket.off("set-current-user");
@@ -168,20 +210,11 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         currentSocket.off("host-joined");
         currentSocket.off("waiting-for-host");
         currentSocket.off("breakout-room-update");
-        if (zpRef.current) {
-          zpRef.current.hangUp();
-          zpRef.current.destroy?.();
-          console.log("Zego room hung up and destroyed");
-        }
-        disconnectSocket();
-        hasJoinedRef.current = false;
-        if (meetingContainerRef.current) {
-          meetingContainerRef.current.innerHTML = "";
-        }
-        meetingContainerRef.current = null;
+        currentSocket.off("host-left");
+        cleanup();
       }
     };
-  }, [dispatch, roomId, user.avatar,user.id, user.username]);
+  }, [dispatch, roomId, user.avatar, user.id, user.username]);
 
   return (
     <MeetingRoomUI

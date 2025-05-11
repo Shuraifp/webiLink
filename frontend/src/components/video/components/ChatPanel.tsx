@@ -25,7 +25,7 @@ export default function ChatPanel({ socketRef }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages]);
-  
+
   const sendMessage = () => {
     if (!input.trim() || !socketRef) return;
     socketRef.emit("chat-message", {

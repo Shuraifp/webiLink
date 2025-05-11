@@ -339,7 +339,6 @@ export class SocketService {
   ) {
     const user = this.users.get(socket.id);
     if (!user || user.userId !== userId) return;
-
     const breakoutRooms = this.breakoutRooms.get(roomId) || [];
     const userBreakoutRoom = breakoutRooms.find((room) =>
       room.participants.includes(userId)
@@ -383,7 +382,7 @@ export class SocketService {
         .map((u) => u.userId!);
       mainRoomParticipants.forEach((participantId) => {
         const participantSocketId = Array.from(this.users.entries()).find(
-          ([k, u]) => u.userId === participantId && k
+          ([, u]) => u.userId === participantId
         )?.[0];
         if (participantSocketId) {
           this.io.to(participantSocketId).emit("chat-message", message);

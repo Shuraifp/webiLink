@@ -26,6 +26,10 @@ export default function SocketManager({ socketRef }: Props) {
   useEffect(() => {
     if (!socketRef) return;
 
+    socketRef.onAny((event, args) => {
+        console.log(`Received event: ${event} ${args}`);
+      });
+
     socketRef.emit("get-roomState", {roomId: state.roomId})
     socketRef.on("user-list", (userList: UserData[]) => {
       dispatch({
@@ -48,6 +52,7 @@ export default function SocketManager({ socketRef }: Props) {
           message.userId === state.currentUserId ||
           message.targetUserId === state.currentUserId
         ) {
+          console.log(message.isDM)
           dispatch({
             type: MeetingActionType.ADD_MESSAGE,
             payload: message,
@@ -229,7 +234,7 @@ export default function SocketManager({ socketRef }: Props) {
       // Timer
       socketRef.off(SocketEvent.TIMER_UPDATE)
     };
-  }, [socketRef, dispatch,state.roomId]);
+  }, [socketRef, dispatch,state.roomId, state.currentUserId]);
 
   return null;
 }

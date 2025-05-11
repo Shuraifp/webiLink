@@ -2,6 +2,7 @@ export enum Status {
   CONNECTING = "connecting",
   WAITING = "waiting",
   ACTIVE = "active",
+  LEFT = "left",
   ERROR = "error",
 }
 export enum Role {
