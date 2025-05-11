@@ -26,6 +26,16 @@ export interface VideoStream {
   isMuted: boolean;
 }
 
+export enum SocketEvent {
+  JOIN_ROOM = "join-room",
+  LEAVE_ROOM = "leave-room",
+  Whiteboard_DRAW = "whiteboard-draw",
+  TIMER_START = "timer-start",
+  TIMER_PAUSE = "timer-pause",
+  TIMER_RESET = "timer-reset",
+  TIMER_UPDATE = "timer-update",
+}
+
 export enum Role {
   HOST = "host",
   JOINEE = "joinee",
@@ -109,4 +119,10 @@ export interface Question {
 export interface RoomState {
   isDrawing: boolean;
   isQAEnabled: boolean;
+}
+
+export interface TimerState {
+  isRunning: boolean;
+  duration: number;
+  timeLeft: number; 
 }

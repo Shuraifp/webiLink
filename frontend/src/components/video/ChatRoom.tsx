@@ -125,10 +125,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       currentSocket.on("error", ({ message }) => {
         toast.error(message)
         dispatch({ type: MeetingActionType.SET_STATUS, payload: Status.ERROR });
-        dispatch({
-          type: MeetingActionType.SET_STATUS_MESSAGE,
-          payload: message,
-        });
       });
 
       currentSocket.on("waiting-for-host", () => {

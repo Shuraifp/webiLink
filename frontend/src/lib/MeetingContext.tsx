@@ -9,6 +9,7 @@ import {
   Poll,
   Question,
   ChatMessage,
+  TimerState,
 } from "@/types/chatRoom";
 
 export interface MeetingContextType {
@@ -29,7 +30,6 @@ export const MeetingContext = createContext<MeetingContextType | undefined>(
 export enum MeetingActionType {
   SET_ROOM_ID = "SET_ROOM_ID",
   SET_LEFT_MEETING = "SET_LEFT_MEETING",
-  SET_STATUS_MESSAGE = "SET_STATUS_MESSAGE",
   OPEN_SIDEBAR = "OPEN_SIDEBAR",
   CLOSE_SIDEBAR = "CLOSE_SIDEBAR",
   SET_PANEL = "SET_PANEL",
@@ -51,12 +51,14 @@ export enum MeetingActionType {
   DELETE_QUESTION = "DELETE_QUESTION",
   ADD_MESSAGE = "ADD_MESSAGE",
   SET_MESSAGES = "SET_MESSAGES",
+  SET_TIMER = "SET_TIMER",
+  UPDATE_TIMER = "UPDATE_TIMER",
+  RESET_TIMER = "RESET_TIMER",
 }
 
 export type MeetingAction =
   | { type: MeetingActionType.SET_ROOM_ID; payload: string }
   | { type: MeetingActionType.SET_LEFT_MEETING; payload: boolean }
-  | { type: MeetingActionType.SET_STATUS_MESSAGE; payload: string | null }
   | { type: MeetingActionType.SET_PANEL; payload: PanelType }
   | {
       type: MeetingActionType.CLOSE_SIDEBAR;
@@ -102,7 +104,13 @@ export type MeetingAction =
     }
   | { type: MeetingActionType.DELETE_QUESTION; payload: number }
   | { type: MeetingActionType.ADD_MESSAGE; payload: ChatMessage }
-  | { type: MeetingActionType.SET_MESSAGES; payload: ChatMessage[] };
+  | { type: MeetingActionType.SET_MESSAGES; payload: ChatMessage[] }
+  | { type: MeetingActionType.SET_TIMER; payload: TimerState }
+  | {
+      type: MeetingActionType.UPDATE_TIMER;
+      payload: { timeLeft: number; isRunning: boolean };
+    }
+  | { type: MeetingActionType.RESET_TIMER; payload: { duration: number } };
 
 export interface MeetingState {
   roomId: string;
@@ -110,7 +118,6 @@ export interface MeetingState {
   isLeftMeeting: boolean;
   isSidebarOpen: boolean;
   activePanel: PanelType | null;
-  statusMessage: string | null;
   currentUserId: string;
   currentUsername: string;
   currentUserAvatar: string;
@@ -123,6 +130,7 @@ export interface MeetingState {
   polls: Poll[];
   isQAEnabled: boolean;
   questions: Question[];
+  timer: TimerState;
 }
 
 export const initialState: MeetingState = {
@@ -131,7 +139,6 @@ export const initialState: MeetingState = {
   isSidebarOpen: false,
   activePanel: null,
   status: Status.CONNECTING,
-  statusMessage: null,
   currentUserId: "",
   currentUsername: "",
   currentUserAvatar: "",
@@ -144,6 +151,7 @@ export const initialState: MeetingState = {
   polls: [],
   isQAEnabled: false,
   questions: [],
+  timer: { isRunning: false, duration: 0, timeLeft: 0 },
 };
 
 const meetingReducer = (
@@ -157,8 +165,6 @@ const meetingReducer = (
       return { ...state, isLeftMeeting: action.payload };
     case MeetingActionType.SET_STATUS:
       return { ...state, status: action.payload };
-    case MeetingActionType.SET_STATUS_MESSAGE:
-      return { ...state, statusMessage: action.payload };
     case MeetingActionType.OPEN_SIDEBAR:
       return {
         ...state,
@@ -264,6 +270,26 @@ const meetingReducer = (
       return { ...state, messages: [...state.messages, action.payload] };
     case MeetingActionType.SET_MESSAGES:
       return { ...state, messages: action.payload };
+    case MeetingActionType.SET_TIMER:
+      return { ...state, timer: action.payload };
+    case MeetingActionType.UPDATE_TIMER:
+      return {
+        ...state,
+        timer: {
+          ...state.timer,
+          timeLeft: action.payload.timeLeft,
+          isRunning: action.payload.isRunning,
+        },
+      };
+    case MeetingActionType.RESET_TIMER:
+      return {
+        ...state,
+        timer: {
+          isRunning: false,
+          duration: action.payload.duration,
+          timeLeft: action.payload.duration,
+        },
+      };
     default:
       return state;
   }

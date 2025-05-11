@@ -50,7 +50,7 @@ export default function BreakoutRoomManager({ socketRef }: Props) {
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="text-gray-300 hover:text-white cursor-pointer p-2"
+        className="text-gray-300 hover:text-white cursor-pointer flex justify-center items-center"
       >
         <Split className="w-5 h-5 text-white" />
       </button>

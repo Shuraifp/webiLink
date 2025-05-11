@@ -11,6 +11,8 @@ import {
   Question,
   QuestionStatus,
   RoomState,
+  TimerState,
+  SocketEvent,
 } from "../types/chatRoom";
 import logger from "../utils/logger";
 
@@ -23,6 +25,7 @@ export class SocketService {
   private polls: Map<string, Poll[]> = new Map();
   private questions: Map<string, Question[]> = new Map();
   private roomState: Map<string, RoomState> = new Map();
+  private timers: Map<string, { intervalId: NodeJS.Timeout | null; state: TimerState }> = new Map();
 
   constructor(io: Server, roomService: IRoomService) {
     this.io = io;
@@ -77,14 +80,12 @@ export class SocketService {
       socket.on("whiteboard-draw", (data: DrawEvent) =>
         this.handleWhiteboardDraw(socket, data)
       );
-      socket.on("disconnect", () => this.handleDisconnect(socket));
 
       // Polls
 
       socket.on("fetch-polls", ({ roomId }) =>
         this.handleFetchPolls(socket, { roomId })
       );
-
       socket.on("create-poll", ({ roomId, poll }) =>
         this.handleCreatePoll(socket, { roomId, poll })
       );
@@ -146,6 +147,23 @@ export class SocketService {
       socket.on("close-question", ({ roomId, questionId }) =>
         this.handleCloseQuestion(socket, { roomId, questionId })
       );
+
+      // Timer handlers
+      socket.on(SocketEvent.TIMER_START, ({ roomId, duration }) =>
+        this.handleTimerStart(socket, { roomId, duration })
+      );
+      socket.on(SocketEvent.TIMER_PAUSE, ({ roomId }) =>
+        this.handleTimerPause(socket, { roomId })
+      );
+      socket.on(SocketEvent.TIMER_RESET, ({ roomId, duration }) =>
+        this.handleTimerReset(socket, { roomId, duration })
+      );
+      socket.on("fetch-timer", ({ roomId }) =>
+        this.handleFetchTimer(socket, { roomId })
+      );
+
+
+      socket.on("disconnect", () => this.handleDisconnect(socket));
     });
   }
 
@@ -203,6 +221,7 @@ export class SocketService {
       });
 
       this.fetchRoomState(socket, roomId);
+      this.handleFetchTimer(socket, { roomId });
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
@@ -440,6 +459,11 @@ export class SocketService {
     this.polls.delete(roomId);
     this.breakoutRooms.delete(roomId);
     this.hosts.delete(roomId);
+    const timer = this.timers.get(roomId);
+    if (timer?.intervalId) {
+      clearInterval(timer.intervalId);
+    }
+    this.timers.delete(roomId);
     logger.info(`Cleaned up data for empty room: ${roomId}`);
   }
 
@@ -853,5 +877,101 @@ export class SocketService {
     this.questions.set(roomId, roomQuestions);
 
     this.io.to(roomId).emit("question-closed", questionId);
+  }
+
+  private handleTimerStart(
+    socket: Socket,
+    { roomId, duration }: { roomId: string; duration: number }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user || this.hosts.get(roomId) !== socket.id) {
+      socket.emit("error", { message: "Only the host can start the timer" });
+      return;
+    }
+
+    let timer = this.timers.get(roomId);
+    if (!timer) {
+      timer = {
+        intervalId: null,
+        state: { isRunning: false, duration, timeLeft: duration },
+      };
+    } else {
+      timer.state.duration = duration;
+      timer.state.timeLeft = duration;
+    }
+
+    if (timer.intervalId) {
+      clearInterval(timer.intervalId);
+    }
+
+    timer.state.isRunning = true;
+    timer.intervalId = setInterval(() => {
+      if (timer!.state.timeLeft <= 0) {
+        clearInterval(timer!.intervalId!);
+        timer!.state.isRunning = false;
+        timer!.intervalId = null;
+      } else {
+        timer!.state.timeLeft -= 1;
+      }
+      this.io.to(roomId).emit(SocketEvent.TIMER_UPDATE, timer!.state);
+    }, 1000);
+
+    this.timers.set(roomId, timer);
+    this.io.to(roomId).emit(SocketEvent.TIMER_UPDATE, timer.state);
+  }
+
+  private handleTimerPause(socket: Socket, { roomId }: { roomId: string }) {
+    const user = this.users.get(socket.id);
+    if (!user || this.hosts.get(roomId) !== socket.id) {
+      socket.emit("error", { message: "Only the host can pause the timer" });
+      return;
+    }
+
+    const timer = this.timers.get(roomId);
+    if (!timer || !timer.intervalId) return;
+
+    clearInterval(timer.intervalId);
+    timer.intervalId = null;
+    timer.state.isRunning = false;
+
+    this.timers.set(roomId, timer);
+    this.io.to(roomId).emit(SocketEvent.TIMER_UPDATE, timer.state);
+  }
+
+  private handleTimerReset(
+    socket: Socket,
+    { roomId, duration }: { roomId: string; duration: number }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user || this.hosts.get(roomId) !== socket.id) {
+      socket.emit("error", { message: "Only the host can reset the timer" });
+      return;
+    }
+
+    let timer = this.timers.get(roomId);
+    if (!timer) {
+      timer = {
+        intervalId: null,
+        state: { isRunning: false, duration, timeLeft: duration },
+      };
+    } else {
+      if (timer.intervalId) {
+        clearInterval(timer.intervalId);
+      }
+      timer.intervalId = null;
+      timer.state = { isRunning: false, duration, timeLeft: duration };
+    }
+
+    this.timers.set(roomId, timer);
+    this.io.to(roomId).emit(SocketEvent.TIMER_UPDATE, timer.state);
+  }
+
+  private handleFetchTimer(socket: Socket, { roomId }: { roomId: string }) {
+    const timer = this.timers.get(roomId);
+    if (timer) {
+      socket.emit(SocketEvent.TIMER_UPDATE, timer.state);
+    } else {
+      socket.emit(SocketEvent.TIMER_UPDATE, { isRunning: false, duration: 0, timeLeft: 0 });
+    }
   }
 }

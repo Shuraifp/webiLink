@@ -1,10 +1,12 @@
 "use client";
 
-import { User, MessageCircle, MoreVertical, MessageSquare } from "lucide-react";
+import { User, MessageCircle, MessageSquare } from "lucide-react";
 import { useReducedState } from "@/hooks/useReducedState";
 import { MeetingActionType, PanelType } from "@/lib/MeetingContext";
 import BreakoutRoomManager from "./BreakoutRoomManager";
 import { Socket } from "socket.io-client";
+import Timer from "./Timer";
+import { Role } from "@/types/chatRoom";
 
 interface Props {
   handleLayoutChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -14,7 +16,6 @@ interface Props {
 
 const MeetingNavbar = ({ socketRef }: Props) => {
   const { state, dispatch } = useReducedState();
-  // const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   const togglePanel = (panel: PanelType) => {
     if (state.isSidebarOpen && state.activePanel === panel) {
@@ -24,11 +25,37 @@ const MeetingNavbar = ({ socketRef }: Props) => {
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   return (
-    <div className={`flex justify-between items-center p-2 bg-gray-800 mb-3 ${state.isLeftMeeting ? "hidden" : ""}`}>
+    <div
+      className={`flex justify-between relative items-center p-4 bg-gray-800 mb-2 ${
+        state.isLeftMeeting ? "hidden" : ""
+      }`}
+    >
       <div className="flex items-center space-x-4">
         <BreakoutRoomManager socketRef={socketRef} />
+        { state.currentUserRole === Role.HOST && <Timer socketRef={socketRef} />}
       </div>
+
+      { state.timer.isRunning && <div className="absolute left-1/2 -translate-x-1/2 bg-gray-900 py-2 px-8 border-2 border-gray-600 rounded-2xl">
+        <span
+          className={`animate-pulse text-blue-400 font-mono text-lg`}
+        >
+          {formatTime(
+            state.timer.isRunning
+              ? state.timer.timeLeft
+              : state.timer.duration || 0
+          )}
+        </span>
+      </div>}
+
       <div className="flex items-center space-x-4">
         <button
           className={`text-gray-300 hover:text-white cursor-pointer ${
@@ -60,23 +87,6 @@ const MeetingNavbar = ({ socketRef }: Props) => {
         >
           <MessageSquare size={20} />
         </button>
-        <div className="relative">
-          <button
-          // className={`text-gray-300 pt-2 hover:text-white cursor-pointer
-
-          // onClick={() => {
-          //   toggleSidebar();
-          //   toggleMoreMenu();
-          // }
-          >
-            <MoreVertical size={20} />
-          </button>
-          {/* {isMoreMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-gray-700 cursor-pointer rounded-md shadow-lg z-10">
-            nothing
-            </div>
-          )} */}
-        </div>
       </div>
     </div>
   );

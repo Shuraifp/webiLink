@@ -11,6 +11,8 @@ import {
   Question,
   QuestionStatus,
   RoomState,
+  SocketEvent,
+  TimerState,
   UserData,
 } from "@/types/chatRoom";
 
@@ -188,6 +190,15 @@ export default function SocketManager({ socketRef }: Props) {
       });
     });
 
+    // Timer 
+
+    socketRef.on(SocketEvent.TIMER_UPDATE, (timerState: TimerState) => {
+      dispatch({
+        type: MeetingActionType.SET_TIMER,
+        payload: timerState,
+      });
+    });
+
     return () => {
       socketRef.off("get-roomState")
       socketRef.off("user-list")
@@ -214,6 +225,9 @@ export default function SocketManager({ socketRef }: Props) {
       socketRef.off("question-dismissed");
       socketRef.off("question-answered");
       socketRef.off("question-closed");
+
+      // Timer
+      socketRef.off(SocketEvent.TIMER_UPDATE)
     };
   }, [socketRef, dispatch,state.roomId]);
 
