@@ -20,7 +20,7 @@ export default function Upgrade() {
   const fetchUserPlan = async () => {
     try {
       const response = await getUserPlan();
-      setUserPlan(response.data.userPlan.planId);
+      setUserPlan(response.data?.userPlan.planId);
     } catch (error) {
       console.error("Error fetching UserPlan:", error);
     }

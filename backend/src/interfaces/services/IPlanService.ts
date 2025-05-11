@@ -12,6 +12,6 @@ export interface IPlanService {
   makeSubscription(userId: string, priceId: string, planId: string): Promise<string>;
   handleWebhook(event: Stripe.Event): Promise<void>;
   handleCheckoutSessionCompleted(event: Stripe.Event): Promise<void>;
-  getUserPlan(userId: string): Promise<{ userPlan: IUserPlan; plan: IPlan }> 
+  getUserPlan(userId: string): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> 
   cancelSubscription(userId: string): Promise<void>
 }

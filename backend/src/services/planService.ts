@@ -554,11 +554,12 @@ export class PlanService implements IPlanService {
 
   async getUserPlan(
     userId: string
-  ): Promise<{ userPlan: IUserPlan; plan: IPlan }> {
+  ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
     try {
       const userPlan = await this._userPlanRepository.findUserPlan(userId);
       if (!userPlan) {
-        throw new NotFoundError("No active plan found for user");
+        // throw new NotFoundError("No active plan found for user");
+        return null
       }
 
       const plan = await this._planRepository.findById(
