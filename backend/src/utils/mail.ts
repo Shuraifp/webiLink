@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
-import { injectable } from "inversify";
 import dotenv from "dotenv";
+import logger from "./logger";
 dotenv.config();
 
 
@@ -17,7 +17,6 @@ export interface IMailService {
   sendOtpEmail(to: string, text: string, subject?: string): Promise<void>;
 }
 
-// @injectable()
 export class MailService implements IMailService {
 
   async sendOtp(to: string, otp: string, subject: string = "Your OTP Code"): Promise<void> {
@@ -28,10 +27,10 @@ export class MailService implements IMailService {
         subject,
         text: `Your OTP code is: ${otp}. It expires in 1:30 minutes.`,
       });
-      
-      console.log(`OTP email sent to ${to} with subject: ${subject}`);
+      logger.info(otp)
+      logger.info(`OTP email sent to ${to} with subject: ${subject}`);
     } catch (error: any) {
-      console.error(`Failed to send OTP email to ${to}:`, error);
+      logger.error(`Failed to send OTP email to ${to}:`, error);
       throw new Error("Failed to send email");
     }
   }

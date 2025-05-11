@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { parse } from "cookie";
+import { JWTPayload } from "./types/type";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -11,7 +12,7 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-console.log("pathname", pathname);
+
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
@@ -117,11 +118,12 @@ console.log("pathname", pathname);
 async function decodeAndVerifyToken(token: string) {
   try {
     const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
+    const { payload  } = await jwtVerify(token, secret) as { payload: JWTPayload}
     return {
       id: payload._id,
       username: payload.username,
       email: payload.email,
+      avatar: payload.avatar
     };
   } catch (error) {
     console.error("Token verification failed:", error);

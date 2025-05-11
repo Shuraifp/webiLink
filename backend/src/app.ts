@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 // Routes
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
+import userRoutes from './routes/userRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
 import zegoRoutes from './routes/zegoRoutes';
@@ -56,6 +57,7 @@ app.use('/api/zego', zegoRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/rooms', roomRoutes);
 // app.use('/api/subscription', subscriptionRoutes);

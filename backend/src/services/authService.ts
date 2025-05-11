@@ -146,7 +146,8 @@ export class AuthService implements IAuthService {
     if (!success) throw new InternalServerError("Failed to verify user");
 
     const updatedUser = await this._userRepository.findById(String(user._id));
-    if (!updatedUser) throw new NotFoundError("User not found after verification");
+    if (!updatedUser)
+      throw new NotFoundError("User not found after verification");
 
     const accessToken = this._jwtService.generateAccessToken(updatedUser);
     const refreshToken = this._jwtService.generateRefreshToken(updatedUser);
@@ -171,7 +172,8 @@ export class AuthService implements IAuthService {
     accessToken: string;
     user: IUser;
   }> {
-    const { decoded, error } = this._jwtService.verifyRefreshToken(refreshToken);
+    const { decoded, error } =
+      this._jwtService.verifyRefreshToken(refreshToken);
     if (error || !decoded || !decoded._id)
       throw new UnauthorizedError(error || "Invalid refresh token");
 
@@ -193,7 +195,7 @@ export class AuthService implements IAuthService {
       );
 
     const resetToken = uuidv4();
-    const resetExpiry = new Date(Date.now() + 15 * 60 * 1000); 
+    const resetExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
     const success = await this._userRepository.saveResetToken(
       String(user._id),
@@ -238,5 +240,31 @@ export class AuthService implements IAuthService {
     });
 
     if (!success) throw new InternalServerError("Failed to reset password");
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this._userRepository.findById(userId);
+
+    if (!user) throw new NotFoundError("User not found");
+    if (user.isBlocked) throw new ForbiddenError("User is blocked");
+    if (user.googleId && !user.password)
+      throw new BadRequestError(
+        "Use Google authentication to log in; no password to change"
+      );
+
+    if (!user.password || !(await bcrypt.compare(currentPassword, user.password)))
+      throw new UnauthorizedError("Current password is incorrect");
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const success = await this._userRepository.update(String(user._id), {
+      password: hashedPassword,
+    });
+
+    if (!success) throw new InternalServerError("Failed tohjh change password");
   }
 }

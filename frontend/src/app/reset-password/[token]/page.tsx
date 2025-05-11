@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import BackgroundIMG from "../../../../public/images/login.jpeg";
 import Navbar from "@/components/Navbar";
 import axios from "axios";
-import { resetPassword } from "@/lib/api/authApi";
+import { resetPassword } from "@/lib/api/user/authApi";
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");

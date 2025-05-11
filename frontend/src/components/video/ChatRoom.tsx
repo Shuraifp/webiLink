@@ -169,6 +169,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       if (typeof window !== "undefined") {
         currentSocket.off("set-current-user");
         currentSocket.off("error");
+        currentSocket.off("host-joined");
         currentSocket.off("waiting-for-host");
         currentSocket.off("breakout-room-update");
         if (zpRef.current) {
@@ -184,7 +185,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         meetingContainerRef.current = null;
       }
     };
-  }, []);
+  }, [dispatch, roomId, user.avatar,user.id, user.username]);
 
   return (
     <MeetingRoomUI

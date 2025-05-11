@@ -283,7 +283,7 @@ export class PlanService implements IPlanService {
           );
         }
 
-        if (existingUserPlan.stripeSubscriptionId) {
+        if (existingUserPlan.stripeSubscriptionId && !existingUserPlan.cancelAtPeriodEnd) {
           await stripe.subscriptions.update(
             existingUserPlan.stripeSubscriptionId,
             {

@@ -10,7 +10,7 @@ import {
   User,
   LogOut,
 } from "lucide-react";
-import { useState, useRef, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useRef, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
 import { useRouter } from "next/navigation";
 import { UserData } from "@/types/type";
@@ -24,23 +24,11 @@ const Sidebar: React.FC<{
   const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleLogout = async () => {
     try {
       await logout();
-      router.replace("/login");
+      router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -54,15 +42,15 @@ const Sidebar: React.FC<{
     }
   };
 
-  const handleSectionChange = (sec:string) => {
-    if(selectedSection === sec) return
-    const curSec = selectedSection
-    onSectionChange(sec)
-    setPrevSection(curSec)
-  }
+  const handleSectionChange = (sec: string) => {
+    if (selectedSection === sec) return;
+    const curSec = selectedSection;
+    onSectionChange(sec);
+    setPrevSection(curSec);
+  };
 
   return (
-    <aside className=" bg-white shadow-md">
+    <aside className=" bg-white shadow-md min-h-screen">
       <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-md">
         <Link href={"/"} className="text-4xl font-bold lobster cursor-pointer">
           <span className="text-yellow-500">w</span>ebiLink
@@ -73,29 +61,22 @@ const Sidebar: React.FC<{
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-14 h-14 cursor-pointer rounded-full bg-gray-500 flex items-center justify-center text-2xl font-bold text-white border-2 border-gray-400 hover:scale-105 transition-all"
           >
-            {user.username?.split(' ').map((a) => a[0].toUpperCase()).join('')}
+            {user.avatar !== "" ? (
+              <img
+                src={user.avatar}
+                alt="Avatar"
+                className="w-full h-full rounded-full border-white relative z-10"
+              />
+            ) : (
+              user.username
+                ?.split(" ")
+                .map((a) => a[0].toUpperCase())
+                .join("")
+            )}
           </div>
-
-          {showDropdown && (
-            <div className="absolute right-0 mt-3 w-48 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200 animate-fade-in">
-              <ul className="text-gray-700">
-                <li className="flex items-center gap-2 px-4 py-3 hover:bg-gray-100 cursor-pointer transition-all">
-                  <User className="w-5 h-5 text-gray-600" />
-                  Profile
-                </li>
-                <li
-                  className="flex items-center gap-2 px-4 py-3 hover:bg-red-100 text-red-500 cursor-pointer transition-all"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-5 h-5 text-red-500" />
-                  Sign Out
-                </li>
-              </ul>
-            </div>
-          )}
         </div>
       </div>
-      <nav className="mt-4">
+      <nav className="mt-4 h-[520px] flex flex-col justify-between">
         <ul className="space-y-2">
           <li
             onClick={() => {
@@ -120,6 +101,17 @@ const Sidebar: React.FC<{
           </li>
           <li
             onClick={() => {
+              handleSectionChange("profile");
+            }}
+            className={getStyle("profile")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <User size={24} />
+              Profile
+            </button>
+          </li>
+          <li
+            onClick={() => {
               handleSectionChange("settings");
             }}
             className={getStyle("settings")}
@@ -140,17 +132,6 @@ const Sidebar: React.FC<{
               Subscription
             </button>
           </li>
-          {/* <li
-            onClick={() => {
-              handleSectionChange("whats-new");
-            }}
-            className={getStyle("whats-new")}
-          >
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg cursor-pointer transition">
-              <Megaphone size={24} />
-              {`What's new`}
-            </button>
-          </li> */}
           <li
             onClick={() => {
               handleSectionChange("upgrade");
@@ -163,6 +144,15 @@ const Sidebar: React.FC<{
             </button>
           </li>
         </ul>
+        <div
+          className="flex items-center gap-2 hover:bg-red-100 mx-2 rounded-lg bg-red-50 text-red-500 cursor-pointer transition-all"
+          onClick={handleLogout}
+        >
+          <button className="flex items-center gap-2 px-4 py-2 cursor-pointer">
+            <LogOut size={24} />
+            Logout
+          </button>
+        </div>
       </nav>
     </aside>
   );

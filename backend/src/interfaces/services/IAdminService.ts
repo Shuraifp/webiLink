@@ -1,5 +1,4 @@
-import { IUser } from "../../models/userModel";
-import { IPlan, PlanInput } from "../../models/PlanModel";
+import { IUser } from "../../models/userModel";;
 
 export interface IAdminService {
   listUsers(): Promise<IUser[]>;

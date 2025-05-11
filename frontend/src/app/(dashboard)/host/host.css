@@ -2,6 +2,7 @@
   --background: #e5e7eb;
   --medium-background: #fcfcfc; 
   --light-background: #f2f4f8;
+  --micro-bg: #fdfdff;
   --text: #1f2937;
   --card-bg: #ffffff;
   --border: #9ca3af;
@@ -17,6 +18,7 @@
   --background: #1f2937;
   --medium-background: #131a24;
   --light-background: #7f8083;
+  --micro-bg: #2c2d30;
   --text: #f3f4f6;
   --card-bg: #374151;
   --border: #6b7280;
@@ -40,6 +42,11 @@
 .host-root .border-dashed {
   border-color: var(--border);
 }
+
+.host-root .bg-red-50 {
+  background-color: var(--micro-bg);
+}
+
 
 .host-root .text-3xl {
   color: var(--text);

@@ -26,7 +26,6 @@ router.put('/users/:userId/unblock' , adminController.unblockUser.bind(adminCont
 router.put('/users/:userId/archive' , adminController.softDeleteUser.bind(adminController))
 router.put('/users/:userId/restore' , adminController.restoreUser.bind(adminController))
 
-// plans
 
 
 export default router;

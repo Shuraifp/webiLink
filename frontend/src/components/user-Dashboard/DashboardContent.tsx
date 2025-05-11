@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserData } from "@/types/type";
 import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
+import Profile from "./Profile";
 
 interface DashboardContentProps {
   user: UserData;
@@ -38,6 +39,13 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
             prevSection={prevSection}
           />
         );
+      case "profile":
+        return (
+          <Profile
+          // onSectionChange={setSelectedSection}
+          // prevSection={prevSection}
+          />
+        );
       case "rooms":
         return (
           <Rooms
@@ -50,7 +58,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
       case "settings":
         return <Settings />;
       case "subscription":
-        return <Subscription onSectionChange={setSelectedSection}/>;
+        return <Subscription onSectionChange={setSelectedSection} />;
       case "whats-new":
         return <WhatsNew />;
       case "upgrade":
@@ -77,13 +85,17 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           selectedSection={selectedSection}
           setPrevSection={setPrevSection}
         />
-        <main className="flex-1 p-8 min-h-[75%]">
-          <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
-            Wellcome, {user.username}
-          </h2>
-          <p className="border-b-1 border-gray-400 border-dashed"></p>
-          {renderContent()}
-        </main>
+        <div className="flex-1 h-screen overflow-y-scroll">
+          <main className=" p-8 ">
+            <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
+              {selectedSection === "profile"
+                ? "Profile"
+                : `Wellcome, ${user.username}`}
+            </h2>
+            {selectedSection !== "profile" && <p className="border-b-1 border-gray-400 border-dashed"></p>}
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </ThemeProvider>
   );

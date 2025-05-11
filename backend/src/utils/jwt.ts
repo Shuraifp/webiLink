@@ -1,6 +1,5 @@
 import  Jwt from "jsonwebtoken";
 import { TokenExpiredError, JsonWebTokenError } from "jsonwebtoken";
-import { inject, injectable } from "inversify";
 import { IUser } from "../models/userModel";
 import { JWTPayload } from "../types/type";
 
@@ -12,16 +11,21 @@ export interface IJwtService {
   verifyRefreshToken(token:string): { decoded: JWTPayload | null; error?: string }
 }
 
-@injectable()
 export class JwtService implements IJwtService {
   constructor() {}
 
+  private isIUser(user: IUser | JWTPayload): user is IUser {
+    return (user as IUser).profile !== undefined;
+  }
+
   generateAccessToken(user:IUser | JWTPayload):string {
-    return Jwt.sign({ _id:user._id,username:user.username,email:user.email,role:user.role }, process.env.ACCESS_TOKEN_SECRET!, { expiresIn: "15m" });
+    const avatar = this.isIUser(user) ? user.profile?.avatar || "" : user.avatar;
+    return Jwt.sign({ _id:user._id,username:user.username,email:user.email,role:user.role, avatar: avatar }, process.env.ACCESS_TOKEN_SECRET!, { expiresIn: "15m" });
   }
 
   generateRefreshToken(user:IUser | JWTPayload):string {
-    return Jwt.sign({ _id:user._id,username:user.username,email:user.email,role:user.role }, process.env.REFRESH_TOKEN_SECRET!, { expiresIn: "7d" });
+    const avatar = this.isIUser(user) ? user.profile?.avatar || "" : user.avatar;
+    return Jwt.sign({ _id:user._id,username:user.username,email:user.email,role:user.role, avatar: avatar }, process.env.REFRESH_TOKEN_SECRET!, { expiresIn: "7d" });
   }
 
   verifyAccessToken(token: string): { decoded: JWTPayload | null; error?: string } {

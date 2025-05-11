@@ -26,10 +26,22 @@ export interface LoginResponse {
 
 
 export interface ResponseUser {
-  _id:Types.ObjectId;
-  username:string;
-  email:string;
-  role:string;
+  username: string;
+  email: string;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+    backgroundImage?: string;
+    bio?: string;
+    jobTitle?: string;
+    company?: string;
+  };
+  isPremium:boolean;
+  planId?: Types.ObjectId | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  _id: Types.ObjectId;
 }
 
 export interface ApiResponse<T> {
@@ -56,5 +68,6 @@ export interface JWTPayload {
   username: string;
   email: string;
   role: string;
+  avatar: string;
 }
 
