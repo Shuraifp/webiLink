@@ -12,7 +12,7 @@ import adminRoutes from './routes/adminRoutes';
 import userRoutes from './routes/userRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
-import zegoRoutes from './routes/zegoRoutes';
+import chatRoomRoutes from './routes/chatRoomRoutes';
 import { PlanController } from "./controllers/planController"; 
 import { PlanService } from "./services/planService"; 
 import { PlanRepository } from "./repositories/planRepository";
@@ -53,14 +53,13 @@ app.use(cors({
 }));
 app.use(cookieParser())
 
-app.use('/api/zego', zegoRoutes);
+app.use('/api/zego', chatRoomRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/rooms', roomRoutes);
-// app.use('/api/subscription', subscriptionRoutes);
 
 app.use(errorHandler);
 

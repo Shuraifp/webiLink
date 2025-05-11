@@ -12,6 +12,7 @@ import {
   QuestionStatus,
   RoomState,
 } from "../types/chatRoom";
+import logger from "../utils/logger";
 
 export class SocketService {
   private io: Server;
@@ -41,7 +42,7 @@ export class SocketService {
         connected: socket.connected,
       })
     );
-    console.log(`Connected Users (${event}):`, {
+    logger.info(`Connected Users (${event}):`, {
       count: connectedUsers.length,
       users: connectedUsers,
     });
@@ -49,11 +50,11 @@ export class SocketService {
 
   private setupSocket() {
     this.io.on("connection", (socket: Socket) => {
-      console.log("User connected:", socket.id);
+      logger.info("User connected:", socket.id);
 
       socket.onAny((event, args) => {
-        console.log("socketId:", socket.id);
-        console.log(`Received event: ${event}`, args);
+        logger.info("socketId:", socket.id);
+        logger.info(`Received event: ${event}`, args);
       });
 
       socket.on("join-room", async (data) => this.handleJoin(socket, data));
@@ -177,17 +178,16 @@ export class SocketService {
 
       if (!isHost && !this.hosts.has(roomId)) {
         socket.emit("waiting-for-host");
-        console.log("Waiting for host:", roomId, username);
+        logger.info("Waiting for host:", roomId, username);
         return;
       }
 
       this.users.set(socket.id, { userId, username, avatar, isMuted });
-      console.log("User joined room:", username);
-      // this.logConnectedUsers(username);
+      logger.info("User joined room:", username);
       if (isHost) {
         this.hosts.set(roomId, socket.id);
         socket.to(roomId).emit("host-joined");
-        console.log("Host joined", socket.id, roomId);
+        logger.info("Host joined", socket.id, roomId);
       } else {
         socket.to(roomId).emit("user-connected", {
           userId,
@@ -209,8 +209,7 @@ export class SocketService {
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
-    } catch (err) {
-      console.error("Join error:", err);
+    } catch {
       socket.emit("error", { message: "Failed to join room" });
     }
   }
@@ -221,12 +220,8 @@ export class SocketService {
         const socket = this.io.sockets.sockets.get(socketId);
         return socket?.rooms.has(roomId);
       })
-      .map(([_, user]) => user);
+      .map(([, user]) => user);
   }
-
-  // private handleRequestUsers(socket: Socket, { roomId }: { roomId: string }) {
-  //   socket.emit("user-list", this.getRoomUsers(roomId));
-  // }
 
   private handleCreateBreakoutRooms(
     socket: Socket,
@@ -303,9 +298,7 @@ export class SocketService {
 
   private handleWhiteboardDraw(socket: Socket, data: DrawEvent) {
     const user = this.users.get(socket.id);
-    console.log("user", user);
-    console.log("socket.id", socket.id);
-    console.log("users", this.users);
+    logger.info('drawing ..',user?.username)
     // if (!user) return;
     socket.to(data.roomId).emit("whiteboard-draw", data);
   }
@@ -341,7 +334,7 @@ export class SocketService {
 
     if (targetUserId) {
       const targetSocketId = Array.from(this.users.entries()).find(
-        ([_, u]) => u.userId === targetUserId
+        ([, u]) => u.userId === targetUserId
       )?.[0];
       if (targetSocketId) {
         this.io.to(targetSocketId).emit("chat-message", message);
@@ -350,7 +343,7 @@ export class SocketService {
     } else if (userBreakoutRoom) {
       userBreakoutRoom.participants.forEach((participantId) => {
         const participantSocketId = Array.from(this.users.entries()).find(
-          ([_, u]) => u.userId === participantId
+          ([, u]) => u.userId === participantId
         )?.[0];
         if (participantSocketId) {
           this.io.to(participantSocketId).emit("chat-message", message);
@@ -365,7 +358,7 @@ export class SocketService {
         .map((u) => u.userId!);
       mainRoomParticipants.forEach((participantId) => {
         const participantSocketId = Array.from(this.users.entries()).find(
-          ([_, u]) => u.userId === participantId
+          ([k, u]) => u.userId === participantId && k
         )?.[0];
         if (participantSocketId) {
           this.io.to(participantSocketId).emit("chat-message", message);
@@ -404,7 +397,7 @@ export class SocketService {
   private handleDisconnect(socket: Socket) {
     const user = this.users.get(socket.id);
     if (!user) return;
-    console.log("User disconnected:", socket.id, user.userId);
+    logger.info("User disconnected:", socket.id, user.userId);
     const roomId = socket.rooms.values().next().value;
     if (roomId) {
       socket.to(roomId).emit("user-disconnected", user.userId);
@@ -441,7 +434,7 @@ export class SocketService {
     this.polls.delete(roomId);
     this.breakoutRooms.delete(roomId);
     this.hosts.delete(roomId);
-    console.log(`Cleaned up data for empty room: ${roomId}`);
+    logger.info(`Cleaned up data for empty room: ${roomId}`);
   }
 
   // Polls

@@ -1,5 +1,5 @@
 import express from "express";
-import { generateToken } from "../services/zegoService";
+import { generateToken } from "../utils/token";
 
 const router = express.Router();
 
@@ -8,7 +8,7 @@ router.get("/access_token", async (req, res) => {
   try {
     const token = await generateToken(userID as string, parseInt(expired_ts as string));
     res.json({ token });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to generate token" });
   }
 });
