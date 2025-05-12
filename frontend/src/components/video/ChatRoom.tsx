@@ -10,6 +10,7 @@ import { Role, Status } from "@/types/chatRoom";
 import { MeetingActionType } from "@/lib/MeetingContext";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 function randomID(len: number) {
   let result = "";
@@ -24,6 +25,7 @@ function randomID(len: number) {
 }
 
 export default function MeetingRoom({ user }: { user: UserData }) {
+  const router = useRouter()
   const { state, dispatch } = useReducedState();
   const { roomId } = useParams() as { roomId: string };
   const socket = useRef<Socket>(getSocket());
@@ -153,6 +155,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
           type: MeetingActionType.SET_STATUS,
           payload: Status.WAITING,
         });
+        router.replace("/host");
       });
 
       currentSocket.onAny((event, args) => {
@@ -160,7 +163,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       });
 
       currentSocket.on("host-joined", () => {
-        if (state.status === Status.WAITING || state.status === Status.LEFT) {
+        if (state.status === Status.WAITING || state.status === Status.LEFT || state.status === Status.CONNECTING) {
           console.log("Reconnecting after host joined", {
             roomId,
             userId: user.id,
@@ -200,7 +203,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         roomId,
         userId: user.id,
       });
-      cleanup();
+      router.replace("/host");
     });
 
     return () => {
@@ -214,7 +217,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         cleanup();
       }
     };
-  }, [dispatch, roomId, user.avatar, user.id, user.username]);
+  }, [dispatch, user.avatar, user.id, user.username]);
 
   return (
     <MeetingRoomUI

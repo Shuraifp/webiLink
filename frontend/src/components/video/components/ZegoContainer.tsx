@@ -21,7 +21,9 @@ export default function MeetingComponent({
   const { state, dispatch } = useReducedState();
   const whiteboardPlaceholderRef = useRef<HTMLDivElement>(null);
   const whiteboardButtonRef = useRef<HTMLButtonElement>(null);
+  const raiseHandButtonRef = useRef<HTMLButtonElement>(null);
   const lastWhiteboardVisibleState = useRef(true);
+  const lastHandRaisedState = useRef(false);
 
   const debounce = <T extends (...args: unknown[]) => unknown>(
     func: T,
@@ -35,6 +37,34 @@ export default function MeetingComponent({
     };
   };
 
+  const lowerHand = () => {
+    socketRef.current?.emit("lower-hand", {
+      roomId: state.roomId,
+      userId: state.currentUserId,
+    });
+  };
+
+  const raiseHand = () => {
+    socketRef.current?.emit("raise-hand", {
+      roomId: state.roomId,
+      userId: state.currentUserId,
+    });
+  };
+
+  const toggleHand = () => {
+    if (state.raisedHands.includes(state.currentUserId)) {
+    console.log("lower");
+    lowerHand();
+  } else {
+    console.log("raise");
+    raiseHand();
+  }
+  };
+
+  useEffect(() => {
+    console.log("raisedHands updated:", state.raisedHands);
+  }, [state.raisedHands]);
+
   useEffect(() => {
     const injectLayout = () => {
       if (!meetingContainerRef.current) return;
@@ -45,7 +75,7 @@ export default function MeetingComponent({
       if (streamParent) {
         dispatch({
           type: MeetingActionType.SET_LEFT_MEETING,
-          payload: false
+          payload: false,
         });
         const footer = meetingContainerRef.current.querySelector(
           "#ZegoRoomFooter"
@@ -94,6 +124,36 @@ export default function MeetingComponent({
         }
 
         if (
+          !raiseHandButtonRef.current ||
+          !footerMiddle.contains(raiseHandButtonRef.current)
+        ) {
+          if (raiseHandButtonRef.current) {
+            raiseHandButtonRef.current.removeEventListener("click", () => {});
+          }
+          raiseHandButtonRef.current = document.createElement(
+            "button"
+          ) as HTMLButtonElement;
+          raiseHandButtonRef.current.id = "zegoRoomRaiseHandButton";
+          raiseHandButtonRef.current.style.backgroundColor = "#333445";
+          raiseHandButtonRef.current.style.border = "none";
+          raiseHandButtonRef.current.style.borderRadius = "20%";
+          raiseHandButtonRef.current.style.width = "40px";
+          raiseHandButtonRef.current.style.height = "40px";
+          raiseHandButtonRef.current.style.margin = "0 5px 0 10px";
+          raiseHandButtonRef.current.style.cursor = "pointer";
+          raiseHandButtonRef.current.style.display = "flex";
+          raiseHandButtonRef.current.style.alignItems = "center";
+          raiseHandButtonRef.current.style.justifyContent = "center";
+          raiseHandButtonRef.current.addEventListener("click", () => {
+            toggleHand();
+          });
+          footerMiddle.insertBefore(
+            raiseHandButtonRef.current,
+            footerMiddle.children[3]
+          );
+        }
+
+        if (
           whiteboardButtonRef.current &&
           lastWhiteboardVisibleState.current !== state.isWhiteboardVisible
         ) {
@@ -109,6 +169,24 @@ export default function MeetingComponent({
         `;
           whiteboardButtonRef.current.innerHTML = baseSvg;
           lastWhiteboardVisibleState.current = state.isWhiteboardVisible;
+        }
+
+        if (
+          raiseHandButtonRef.current &&
+          lastHandRaisedState.current !== state.raisedHands.includes(state.currentUserId)
+        ) {
+          const handSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="${
+              state.raisedHands.includes(state.currentUserId) ? "yellow" : "white"
+            }" viewBox="0 0 24 24">
+              <path d="M21 9c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2s-2 .9-2 2v2h-1V4c0-1.1-.9-2-2-2s-2 .9-2 2v3H9V5c0-1.1-.9-2-2-2S5 3.9 5 5v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9h-1zm-2 9H5v-7h14v7z"/>
+            </svg>
+          `;
+          raiseHandButtonRef.current.innerHTML = handSvg;
+          raiseHandButtonRef.current.style.backgroundColor = state.raisedHands.includes(state.currentUserId)
+            ? "#555566"
+            : "#333445";
+          lastHandRaisedState.current = state.raisedHands.includes(state.currentUserId);
         }
 
         if (!whiteboardPlaceholderRef.current) {
@@ -159,7 +237,7 @@ export default function MeetingComponent({
       } else {
         dispatch({
           type: MeetingActionType.SET_LEFT_MEETING,
-          payload: true
+          payload: true,
         });
         const buttons = Array.from(
           meetingContainerRef.current.querySelectorAll("div button")
@@ -174,7 +252,7 @@ export default function MeetingComponent({
         ) {
           const parentContainer = rejoinButton.parentElement;
           rejoinButton.style.marginBottom = "14px";
-  
+
           const backButton = document.createElement(
             "button"
           ) as HTMLButtonElement;
@@ -187,7 +265,7 @@ export default function MeetingComponent({
           backButton.style.border = "none";
           backButton.style.borderRadius = "10px";
           backButton.style.cursor = "pointer";
-  
+
           backButton.addEventListener("click", () => {
             router.replace("/host");
           });
@@ -222,6 +300,8 @@ export default function MeetingComponent({
     meetingContainerRef,
     state.isWhiteboardVisible,
     dispatch,
+    state.raisedHands,
+    socketRef,
   ]);
 
   return (
@@ -232,7 +312,9 @@ export default function MeetingComponent({
     >
       <div
         ref={meetingContainerRef}
-        className={`my-container-for-zego w-full relative ${state.isLeftMeeting ? "h-full" : `h-[100vh - ${navbarHeight}]`}`}
+        className={`my-container-for-zego w-full relative ${
+          state.isLeftMeeting ? "h-full" : `h-[100vh - ${navbarHeight}]`
+        }`}
       />
       {whiteboardPlaceholderRef.current &&
         state.isWhiteboardVisible &&

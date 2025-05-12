@@ -34,6 +34,9 @@ export enum SocketEvent {
   TIMER_PAUSE = "timer-pause",
   TIMER_RESET = "timer-reset",
   TIMER_UPDATE = "timer-update",
+  RISE_HAND = "rise-hand",
+  LOWER_HAND = "lower-hand",
+  FETCH_RISED_HANDS = "fetch-rised-hands"
 }
 
 export enum Role {

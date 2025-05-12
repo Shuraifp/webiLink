@@ -25,12 +25,15 @@ export default function SocketManager({ socketRef }: Props) {
 
   useEffect(() => {
     if (!socketRef) return;
-
+     
+    
+    
     socketRef.onAny((event, args) => {
-        console.log(`Received event: ${event} ${args}`);
-      });
-
+      console.log(`Received event: ${event} ${args}`);
+    });
+    
     socketRef.emit("get-roomState", {roomId: state.roomId})
+    socketRef.emit("fetch-raised-hands", { roomId: state.roomId });
     socketRef.on("user-list", (userList: UserData[]) => {
       dispatch({
         type: MeetingActionType.SET_USERS,
@@ -204,6 +207,19 @@ export default function SocketManager({ socketRef }: Props) {
       });
     });
 
+    // Rise hand
+    socketRef.on("hand-raised", ({ userId }: { userId: string }) => {
+      dispatch({ type: MeetingActionType.RAISE_HAND, payload: userId });
+    });
+
+    socketRef.on("hand-lowered", ({ userId }: { userId: string }) => {
+      dispatch({ type: MeetingActionType.LOWER_HAND, payload: userId });
+    });
+
+    socketRef.on("raised-hands-fetched", (raisedHands: string[]) => {
+      dispatch({ type: MeetingActionType.SET_RAISED_HANDS, payload: raisedHands });
+    });
+
     return () => {
       socketRef.off("get-roomState")
       socketRef.off("user-list")
@@ -233,6 +249,11 @@ export default function SocketManager({ socketRef }: Props) {
 
       // Timer
       socketRef.off(SocketEvent.TIMER_UPDATE)
+
+      // Rise hand
+      socketRef.off("hand-raised");
+      socketRef.off("hand-lowered");
+      socketRef.off("raised-hands-fetched");
     };
   }, [socketRef, dispatch,state.roomId, state.currentUserId]);
 

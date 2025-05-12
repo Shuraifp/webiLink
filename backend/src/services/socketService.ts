@@ -25,7 +25,11 @@ export class SocketService {
   private polls: Map<string, Poll[]> = new Map();
   private questions: Map<string, Question[]> = new Map();
   private roomState: Map<string, RoomState> = new Map();
-  private timers: Map<string, { intervalId: NodeJS.Timeout | null; state: TimerState }> = new Map();
+  private timers: Map<
+    string,
+    { intervalId: NodeJS.Timeout | null; state: TimerState }
+  > = new Map();
+  private raisedHands: Map<string, Set<string>> = new Map();
 
   constructor(io: Server, roomService: IRoomService) {
     this.io = io;
@@ -162,6 +166,16 @@ export class SocketService {
         this.handleFetchTimer(socket, { roomId })
       );
 
+      // Rise hand
+      socket.on("raise-hand", ({ roomId, userId }) =>
+        this.handleRaiseHand(socket, { roomId, userId })
+      );
+      socket.on("lower-hand", ({ roomId, userId }) =>
+        this.handleLowerHand(socket, { roomId, userId })
+      );
+      socket.on("fetch-raised-hands", ({ roomId }) =>
+        this.handleFetchRaisedHands(socket, { roomId })
+      );
 
       socket.on("disconnect", () => this.handleDisconnect(socket));
     });
@@ -222,6 +236,7 @@ export class SocketService {
 
       this.fetchRoomState(socket, roomId);
       this.handleFetchTimer(socket, { roomId });
+      this.handleFetchRaisedHands(socket, { roomId });
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
@@ -314,18 +329,18 @@ export class SocketService {
 
   private handleWhiteboardDraw(socket: Socket, data: DrawEvent) {
     const user = this.users.get(socket.id);
-  if (!user || !user.username) {
-    logger.warn(`No user or username found for socket: ${socket.id}`);
-    return;
-  }
+    if (!user || !user.username) {
+      logger.warn(`No user or username found for socket: ${socket.id}`);
+      return;
+    }
 
-  logger.info(`Drawing by ${user.username}`);
-  const drawEventWithUsername: DrawEvent = {
-    ...data,
-    username: user.username,
-  };
+    logger.info(`Drawing by ${user.username}`);
+    const drawEventWithUsername: DrawEvent = {
+      ...data,
+      username: user.username,
+    };
 
-  this.io.to(data.roomId).emit("whiteboard-draw", drawEventWithUsername);
+    this.io.to(data.roomId).emit("whiteboard-draw", drawEventWithUsername);
   }
 
   private handleChatMessage(
@@ -410,6 +425,13 @@ export class SocketService {
     }));
     this.breakoutRooms.set(roomId, updatedRooms);
 
+    const roomRaisedHands = this.raisedHands.get(roomId);
+    if (roomRaisedHands) {
+      roomRaisedHands.delete(userId);
+      this.raisedHands.set(roomId, roomRaisedHands);
+      this.io.to(roomId).emit("hand-lowered", { userId });
+    }
+
     this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
     this.emitBreakoutRoomUpdate(roomId);
 
@@ -437,6 +459,13 @@ export class SocketService {
       }));
       this.breakoutRooms.set(roomId, updatedRooms);
 
+      const roomRaisedHands = this.raisedHands.get(roomId);
+      if (roomRaisedHands) {
+        roomRaisedHands.delete(user.userId!);
+        this.raisedHands.set(roomId, roomRaisedHands);
+        this.io.to(roomId).emit("hand-lowered", { userId: user.userId });
+      }
+
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
 
@@ -458,6 +487,7 @@ export class SocketService {
     this.polls.delete(roomId);
     this.breakoutRooms.delete(roomId);
     this.hosts.delete(roomId);
+    this.raisedHands.delete(roomId);
     const timer = this.timers.get(roomId);
     if (timer?.intervalId) {
       clearInterval(timer.intervalId);
@@ -970,7 +1000,62 @@ export class SocketService {
     if (timer) {
       socket.emit(SocketEvent.TIMER_UPDATE, timer.state);
     } else {
-      socket.emit(SocketEvent.TIMER_UPDATE, { isRunning: false, duration: 0, timeLeft: 0 });
+      socket.emit(SocketEvent.TIMER_UPDATE, {
+        isRunning: false,
+        duration: 0,
+        timeLeft: 0,
+      });
     }
+  }
+
+  private handleRaiseHand(
+    socket: Socket,
+    { roomId, userId }: { roomId: string; userId: string }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user || user.userId !== userId) {
+      socket.emit("error", { message: "Invalid user" });
+      return;
+    }
+
+    if (!this.raisedHands.has(roomId)) {
+      this.raisedHands.set(roomId, new Set());
+    }
+
+    const roomRaisedHands = this.raisedHands.get(roomId)!;
+    if (!roomRaisedHands.has(userId)) {
+    roomRaisedHands.add(userId);
+    this.raisedHands.set(roomId, roomRaisedHands);
+    this.io.to(roomId).emit("hand-raised", { userId });
+  }
+  }
+
+  private handleLowerHand(
+    socket: Socket,
+    { roomId, userId }: { roomId: string; userId: string }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user || user.userId !== userId) {
+      socket.emit("error", { message: "Invalid user" });
+      return;
+    }
+
+    const roomRaisedHands = this.raisedHands.get(roomId);
+    if (roomRaisedHands && roomRaisedHands.has(userId)) {
+    roomRaisedHands.delete(userId);
+    this.raisedHands.set(roomId, roomRaisedHands);
+    this.io.to(roomId).emit("hand-lowered", { userId });
+  }
+  }
+
+  private handleFetchRaisedHands(
+    socket: Socket,
+    { roomId }: { roomId: string }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user) return;
+
+    const roomRaisedHands = this.raisedHands.get(roomId) || new Set();
+    socket.emit("raised-hands-fetched", Array.from(roomRaisedHands));
   }
 }

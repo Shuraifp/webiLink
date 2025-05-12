@@ -54,6 +54,9 @@ export enum MeetingActionType {
   SET_TIMER = "SET_TIMER",
   UPDATE_TIMER = "UPDATE_TIMER",
   RESET_TIMER = "RESET_TIMER",
+  RAISE_HAND = "RAISE_HAND",
+  LOWER_HAND = "LOWER_HAND",
+  SET_RAISED_HANDS = "SET_RAISED_HANDS",
 }
 
 export type MeetingAction =
@@ -110,7 +113,10 @@ export type MeetingAction =
       type: MeetingActionType.UPDATE_TIMER;
       payload: { timeLeft: number; isRunning: boolean };
     }
-  | { type: MeetingActionType.RESET_TIMER; payload: { duration: number } };
+  | { type: MeetingActionType.RESET_TIMER; payload: { duration: number } }
+  | { type: MeetingActionType.RAISE_HAND; payload: string }
+  | { type: MeetingActionType.LOWER_HAND; payload: string }
+  | { type: MeetingActionType.SET_RAISED_HANDS; payload: string[] };
 
 export interface MeetingState {
   roomId: string;
@@ -131,6 +137,7 @@ export interface MeetingState {
   isQAEnabled: boolean;
   questions: Question[];
   timer: TimerState;
+  raisedHands: string[];
 }
 
 export const initialState: MeetingState = {
@@ -152,6 +159,7 @@ export const initialState: MeetingState = {
   isQAEnabled: false,
   questions: [],
   timer: { isRunning: false, duration: 0, timeLeft: 0 },
+  raisedHands: [],
 };
 
 const meetingReducer = (
@@ -289,6 +297,23 @@ const meetingReducer = (
           duration: action.payload.duration,
           timeLeft: action.payload.duration,
         },
+      };
+    case MeetingActionType.RAISE_HAND:
+      return {
+        ...state,
+        raisedHands: state.raisedHands.includes(action.payload)
+          ? state.raisedHands
+          : [...state.raisedHands, action.payload],
+      };
+    case MeetingActionType.LOWER_HAND:
+      return {
+        ...state,
+        raisedHands: state.raisedHands.filter((id) => id !== action.payload),
+      };
+    case MeetingActionType.SET_RAISED_HANDS:
+      return {
+        ...state,
+        raisedHands: [...new Set(action.payload)],
       };
     default:
       return state;
