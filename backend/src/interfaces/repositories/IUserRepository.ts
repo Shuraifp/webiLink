@@ -9,4 +9,6 @@ export interface IUserRepository extends IBaseRepository<IUser> {
   findByResetToken(token:string):Promise<IUser | null>;
   blockUser(id:string): Promise<boolean>;
   unblockUser(id:string): Promise<boolean>;
+  searchUsers(search: string): Promise<string[]>;
+  countDocuments(query: any): Promise<number>;
 }

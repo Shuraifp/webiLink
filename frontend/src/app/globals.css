@@ -72,3 +72,15 @@ body {
     }
   }
 }
+
+@keyframes pulse {
+  0% {
+    border-color: #FFD700;
+  }
+  50% {
+    border-color: #FFA500;
+  }
+  100% {
+    border-color: #FFD700;
+  }
+}

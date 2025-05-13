@@ -114,9 +114,18 @@ export type MeetingAction =
       payload: { timeLeft: number; isRunning: boolean };
     }
   | { type: MeetingActionType.RESET_TIMER; payload: { duration: number } }
-  | { type: MeetingActionType.RAISE_HAND; payload: string }
-  | { type: MeetingActionType.LOWER_HAND; payload: string }
-  | { type: MeetingActionType.SET_RAISED_HANDS; payload: string[] };
+  | {
+      type: MeetingActionType.RAISE_HAND;
+      payload: { userId: string; username: string };
+    }
+  | {
+      type: MeetingActionType.LOWER_HAND;
+      payload: { userId: string; username: string };
+    }
+  | {
+      type: MeetingActionType.SET_RAISED_HANDS;
+      payload: { userId: string; username: string }[];
+    };
 
 export interface MeetingState {
   roomId: string;
@@ -137,7 +146,7 @@ export interface MeetingState {
   isQAEnabled: boolean;
   questions: Question[];
   timer: TimerState;
-  raisedHands: string[];
+  raisedHands: { userId: string; username: string }[];
 }
 
 export const initialState: MeetingState = {
@@ -301,19 +310,26 @@ const meetingReducer = (
     case MeetingActionType.RAISE_HAND:
       return {
         ...state,
-        raisedHands: state.raisedHands.includes(action.payload)
+        raisedHands: state.raisedHands.some(
+          (hand) => hand.userId === action.payload.userId
+        )
           ? state.raisedHands
           : [...state.raisedHands, action.payload],
       };
     case MeetingActionType.LOWER_HAND:
       return {
         ...state,
-        raisedHands: state.raisedHands.filter((id) => id !== action.payload),
+        raisedHands: state.raisedHands.filter(
+          (item) => item.userId !== action.payload.userId
+        ),
       };
     case MeetingActionType.SET_RAISED_HANDS:
+      const uniqueRaisedHands = Array.from(
+        new Map(action.payload.map((hand) => [hand.userId, hand])).values()
+      );
       return {
         ...state,
-        raisedHands: [...new Set(action.payload)],
+        raisedHands: uniqueRaisedHands,
       };
     default:
       return state;

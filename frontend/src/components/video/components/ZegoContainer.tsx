@@ -23,7 +23,7 @@ export default function MeetingComponent({
   const whiteboardButtonRef = useRef<HTMLButtonElement>(null);
   const raiseHandButtonRef = useRef<HTMLButtonElement>(null);
   const lastWhiteboardVisibleState = useRef(true);
-  const lastHandRaisedState = useRef(false);
+  const lastHandRaisedState = useRef(true);
 
   const debounce = <T extends (...args: unknown[]) => unknown>(
     func: T,
@@ -37,33 +37,51 @@ export default function MeetingComponent({
     };
   };
 
-  const lowerHand = () => {
-    socketRef.current?.emit("lower-hand", {
-      roomId: state.roomId,
-      userId: state.currentUserId,
-    });
-  };
-
-  const raiseHand = () => {
-    socketRef.current?.emit("raise-hand", {
-      roomId: state.roomId,
-      userId: state.currentUserId,
-    });
-  };
-
-  const toggleHand = () => {
-    if (state.raisedHands.includes(state.currentUserId)) {
-    console.log("lower");
-    lowerHand();
-  } else {
-    console.log("raise");
-    raiseHand();
-  }
-  };
+  const toggleHandRef = useRef(() => {
+    const currentIsHandRaised = state.raisedHands.some(
+      (hand) => hand.userId === state.currentUserId
+    );
+    if (currentIsHandRaised) {
+      socketRef.current?.emit("lower-hand", {
+        roomId: state.roomId,
+        userId: state.currentUserId,
+        username: state.currentUsername,
+      });
+    } else {
+      socketRef.current?.emit("raise-hand", {
+        roomId: state.roomId,
+        userId: state.currentUserId,
+        username: state.currentUsername,
+      });
+    }
+  });
 
   useEffect(() => {
-    console.log("raisedHands updated:", state.raisedHands);
-  }, [state.raisedHands]);
+    toggleHandRef.current = () => {
+      const currentIsHandRaised = state.raisedHands.some(
+        (hand) => hand.userId === state.currentUserId
+      );
+      if (currentIsHandRaised) {
+        socketRef.current?.emit("lower-hand", {
+          roomId: state.roomId,
+          userId: state.currentUserId,
+          username: state.currentUsername,
+        });
+      } else {
+        socketRef.current?.emit("raise-hand", {
+          roomId: state.roomId,
+          userId: state.currentUserId,
+          username: state.currentUsername,
+        });
+      }
+    };
+  }, [
+    state.raisedHands,
+    state.currentUserId,
+    state.roomId,
+    socketRef,
+    state.currentUsername,
+  ]);
 
   useEffect(() => {
     const injectLayout = () => {
@@ -128,11 +146,18 @@ export default function MeetingComponent({
           !footerMiddle.contains(raiseHandButtonRef.current)
         ) {
           if (raiseHandButtonRef.current) {
-            raiseHandButtonRef.current.removeEventListener("click", () => {});
+            const oldButton = raiseHandButtonRef.current;
+            const newButton = oldButton.cloneNode(true) as HTMLButtonElement;
+            if (oldButton.parentNode) {
+              oldButton.parentNode.replaceChild(newButton, oldButton);
+            }
+            raiseHandButtonRef.current = newButton;
+          } else {
+            raiseHandButtonRef.current = document.createElement(
+              "button"
+            ) as HTMLButtonElement;
           }
-          raiseHandButtonRef.current = document.createElement(
-            "button"
-          ) as HTMLButtonElement;
+
           raiseHandButtonRef.current.id = "zegoRoomRaiseHandButton";
           raiseHandButtonRef.current.style.backgroundColor = "#333445";
           raiseHandButtonRef.current.style.border = "none";
@@ -144,9 +169,11 @@ export default function MeetingComponent({
           raiseHandButtonRef.current.style.display = "flex";
           raiseHandButtonRef.current.style.alignItems = "center";
           raiseHandButtonRef.current.style.justifyContent = "center";
+
           raiseHandButtonRef.current.addEventListener("click", () => {
-            toggleHand();
+            toggleHandRef.current();
           });
+
           footerMiddle.insertBefore(
             raiseHandButtonRef.current,
             footerMiddle.children[3]
@@ -158,35 +185,58 @@ export default function MeetingComponent({
           lastWhiteboardVisibleState.current !== state.isWhiteboardVisible
         ) {
           const baseSvg = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="25" height="20" fill="white" viewBox="0 0 24 24">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h12c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1z"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             ${
-              !state.isWhiteboardVisible
-                ? '<line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2"/>'
-                : ""
+              state.isWhiteboardVisible
+                ? `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                   <line x1="3" y1="9" x2="21" y2="9"></line>
+                   <line x1="9" y1="21" x2="9" y2="9"></line>`
+                : `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                   <line x1="3" y1="9" x2="21" y2="9"></line>
+                   <line x1="9" y1="21" x2="9" y2="9"></line>
+                   <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2"></line>`
             }
           </svg>
+
         `;
           whiteboardButtonRef.current.innerHTML = baseSvg;
           lastWhiteboardVisibleState.current = state.isWhiteboardVisible;
         }
-
         if (
           raiseHandButtonRef.current &&
-          lastHandRaisedState.current !== state.raisedHands.includes(state.currentUserId)
+          lastHandRaisedState.current !==
+            state.raisedHands.some(
+              (hand) => hand.userId === state.currentUserId
+            )
         ) {
           const handSvg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="${
-              state.raisedHands.includes(state.currentUserId) ? "yellow" : "white"
-            }" viewBox="0 0 24 24">
-              <path d="M21 9c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2s-2 .9-2 2v2h-1V4c0-1.1-.9-2-2-2s-2 .9-2 2v3H9V5c0-1.1-.9-2-2-2S5 3.9 5 5v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9h-1zm-2 9H5v-7h14v7z"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+              state.raisedHands.some(
+                (hand) => hand.userId === state.currentUserId
+              )
+                ? "#FFD700"
+                : "white"
+            }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 11.5V6.5a2 2 0 0 0-4 0v5"></path>
+              <path d="M13 11.5V4.5a2 2 0 0 0-4 0v7"></path>
+              <path d="M9 11.5v-1a2 2 0 0 0-4 0v1"></path>
+              <path d="M19 11v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2"></path>
+              <path d="M9 17v1"></path>
+              <path d="M12 17v2"></path>
+              <path d="M15 17v3"></path>
             </svg>
+ 
           `;
           raiseHandButtonRef.current.innerHTML = handSvg;
-          raiseHandButtonRef.current.style.backgroundColor = state.raisedHands.includes(state.currentUserId)
-            ? "#555566"
-            : "#333445";
-          lastHandRaisedState.current = state.raisedHands.includes(state.currentUserId);
+          raiseHandButtonRef.current.style.backgroundColor =
+            state.raisedHands.some(
+              (hand) => hand.userId === state.currentUserId
+            )
+              ? "#555566"
+              : "#333445";
+          lastHandRaisedState.current = state.raisedHands.some(
+            (hand) => hand.userId === state.currentUserId
+          );
         }
 
         if (!whiteboardPlaceholderRef.current) {
@@ -290,7 +340,6 @@ export default function MeetingComponent({
       });
     }
 
-    // injectLayout();
     debouncedInjectLayout();
 
     return () => observer.disconnect();
@@ -302,7 +351,111 @@ export default function MeetingComponent({
     dispatch,
     state.raisedHands,
     socketRef,
+    state.currentUserId,
+    state.roomId,
   ]);
+
+
+  useEffect(() => {
+    const getStreamBoxes = (streamParent: HTMLElement) => {
+      const wrapper = streamParent.querySelector(".IOc1l1j0UQkG1pNh5vE");
+      if (wrapper) {
+        return Array.from(wrapper.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")) as HTMLElement[];
+      }
+      return Array.from(streamParent.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")) as HTMLElement[];
+    };
+
+    const getUserNameFromStreamBox = (streamBox: HTMLElement) => {
+      const nameElement = streamBox.querySelector(
+        "#ZegoVideoPlayerName p"
+      );
+      return nameElement?.textContent?.trim() || null;
+    };
+
+    const getUserIdFromName = (userName: string) => {
+      const user = state.users?.find((u) => u.username === userName);
+      return user?.userId || null;
+    };
+
+    const updateStreamBoxes = () => {
+      if (!meetingContainerRef.current) return;
+
+      const streamParent = meetingContainerRef.current.querySelector(
+        ".lRNsiz_pTf7YmA5QMh4z "
+      ) as HTMLElement | null;
+      if (!streamParent) return;
+
+      const streamBoxes = getStreamBoxes(streamParent);
+
+      streamBoxes.forEach((streamBox) => {
+        const userName = getUserNameFromStreamBox(streamBox);
+        if (!userName) {
+          console.log("Could not determine user name for stream box:", streamBox);
+          return;
+        }
+
+        const userId = getUserIdFromName(userName);
+        if (!userId) {
+          console.log(`Could not map user name "${userName}" to a user ID`);
+          return;
+        }
+
+        const isHandRaised = state.raisedHands.some(
+          (hand) => hand.userId === userId
+        );
+        if (isHandRaised) {
+          streamBox.style.border = "3px solid #FFD700";
+          streamBox.style.position = "relative";
+          streamBox.style.animation = "pulse 2s infinite";
+
+          if (!streamBox.querySelector(".hand-raised-indicator")) {
+            const indicator = document.createElement("div");
+            indicator.className = "hand-raised-indicator";
+            indicator.style.position = "absolute";
+            indicator.style.top = "10px";
+            indicator.style.left = "10px";
+            indicator.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 11.5V6.5a2 2 0 0 0-4 0v5"></path>
+                <path d="M13 11.5V4.5a2 2 0 0 0-4 0v7"></path>
+                <path d="M9 11.5v-1a2 2 0 0 0-4 0v1"></path>
+                <path d="M19 11v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2"></path>
+                <path d="M9 17v1"></path>
+                <path d="M12 17v2"></path>
+                <path d="M15 17v3"></path>
+              </svg>
+            `;
+            streamBox.appendChild(indicator);
+          }
+        } else {
+          streamBox.style.border = "none";
+          const indicator = streamBox.querySelector(".hand-raised-indicator");
+          if (indicator) {
+            indicator.remove();
+          }
+        }
+      });
+    };
+
+    const debouncedUpdateStreamBoxes = debounce(updateStreamBoxes, 50);
+
+    const observer = new MutationObserver(() => {
+      console.log("MutationObserver triggered, updating stream boxes");
+      debouncedUpdateStreamBoxes();
+    });
+
+    if (meetingContainerRef.current) {
+      observer.observe(meetingContainerRef.current, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    debouncedUpdateStreamBoxes();
+
+    return () => observer.disconnect();
+  }, [state.raisedHands, state.users, meetingContainerRef]);
+
 
   return (
     <div

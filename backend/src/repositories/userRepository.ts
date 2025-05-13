@@ -69,4 +69,20 @@ export class UserRepository
     );
     return updatedUser !== null;
   }
+
+  async searchUsers(search: string): Promise<string[]> {
+    const users = await this._userModel
+      .find({
+        $or: [
+          { username: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      })
+      .select("_id");
+    return users.map((user) => user._id.toString());
+  }
+
+  async countDocuments(query: any): Promise<number> {
+    return await this._userModel.countDocuments(query);
+  }
 }

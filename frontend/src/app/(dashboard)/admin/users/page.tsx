@@ -126,7 +126,7 @@ export default function UserManagementPage() {
     <div className="flex min-h-screen bg-gray-100">
     <Toaster />
       <div className="flex-1 flex flex-col">
-        <header className="bg-white shadow p-4 flex items-center justify-between">
+        <div className="bg-white shadow p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800">
             User Management
           </h2>
@@ -143,7 +143,7 @@ export default function UserManagementPage() {
             </div>
             <LogoutButton />
           </div>
-        </header>
+        </div>
 
         <main className="flex-1 p-8">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">

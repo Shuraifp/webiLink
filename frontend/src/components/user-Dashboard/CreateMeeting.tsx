@@ -80,7 +80,7 @@ export default function CreateMeeting({
             Meeting type
           </label>
           <div className="space-y-2">
-            <label className="flex items-center">
+            {/* <label className="flex items-center">
               <input
                 type="radio"
                 name="meetingType"
@@ -93,7 +93,7 @@ export default function CreateMeeting({
               <span className="ml-2 text-gray-600 text-sm">
                 Pick a date and meet using a temporary link.
               </span>
-            </label>
+            </label> */}
             {meetingType === "one-time" && (
               <div className="ml-6 space-y-2">
                 <div>

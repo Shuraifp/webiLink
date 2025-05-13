@@ -429,7 +429,8 @@ export class SocketService {
     if (roomRaisedHands) {
       roomRaisedHands.delete(userId);
       this.raisedHands.set(roomId, roomRaisedHands);
-      this.io.to(roomId).emit("hand-lowered", { userId });
+      const username = this.users.get(socket.id)?.username
+      this.io.to(roomId).emit("hand-lowered", { userId, username });
     }
 
     this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
@@ -463,7 +464,7 @@ export class SocketService {
       if (roomRaisedHands) {
         roomRaisedHands.delete(user.userId!);
         this.raisedHands.set(roomId, roomRaisedHands);
-        this.io.to(roomId).emit("hand-lowered", { userId: user.userId });
+        this.io.to(roomId).emit("hand-lowered", { userId: user.userId, username: user.username });
       }
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
@@ -1026,7 +1027,7 @@ export class SocketService {
     if (!roomRaisedHands.has(userId)) {
     roomRaisedHands.add(userId);
     this.raisedHands.set(roomId, roomRaisedHands);
-    this.io.to(roomId).emit("hand-raised", { userId });
+    this.io.to(roomId).emit("hand-raised", { userId, username: user.username });
   }
   }
 
@@ -1044,7 +1045,7 @@ export class SocketService {
     if (roomRaisedHands && roomRaisedHands.has(userId)) {
     roomRaisedHands.delete(userId);
     this.raisedHands.set(roomId, roomRaisedHands);
-    this.io.to(roomId).emit("hand-lowered", { userId });
+    this.io.to(roomId).emit("hand-lowered", { userId, username: user.username });
   }
   }
 
@@ -1056,6 +1057,12 @@ export class SocketService {
     if (!user) return;
 
     const roomRaisedHands = this.raisedHands.get(roomId) || new Set();
-    socket.emit("raised-hands-fetched", Array.from(roomRaisedHands));
+    const raisedHandsWithUsernames = Array.from(roomRaisedHands).map((userId) => {
+    const user = Array.from(this.users.entries()).find(
+      ([, u]) => u.userId === userId
+    )?.[1];
+    return { userId, username: user?.username || "Unknown" };
+  });
+    socket.emit("raised-hands-fetched", raisedHandsWithUsernames);
   }
 }
