@@ -1,6 +1,6 @@
 "use client";
 
-import { User, MessageCircle, MessageSquare } from "lucide-react";
+import { User2, MessageCircle, MessageSquare } from "lucide-react";
 import { useReducedState } from "@/hooks/useReducedState";
 import { MeetingActionType, PanelType } from "@/lib/MeetingContext";
 import BreakoutRoomManager from "./BreakoutRoomManager";
@@ -65,7 +65,7 @@ const MeetingNavbar = ({ socketRef }: Props) => {
             togglePanel(PanelType.USERS);
           }}
         >
-          <User size={20} />
+          <User2 size={20} />
         </button>
         <button
           className={`text-gray-300 hover:text-white cursor-pointer ${

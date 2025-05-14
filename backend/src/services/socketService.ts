@@ -19,7 +19,7 @@ import logger from "../utils/logger";
 export class SocketService {
   private io: Server;
   private roomService: IRoomService;
-  private users: Map<string, Partial<UserData>> = new Map();
+  private users: Map<string, UserData> = new Map();
   private hosts: Map<string, string> = new Map();
   private breakoutRooms: Map<string, BreakoutRoom[]> = new Map();
   private polls: Map<string, Poll[]> = new Map();
@@ -196,29 +196,45 @@ export class SocketService {
     socket: Socket,
     { roomId, userId, username, avatar, isMuted }: UserData
   ) {
+    if(!roomId) return
     try {
-      const room = await this.roomService.getRoom(roomId);
+      const room = await this.roomService.getRoom(roomId!);
       if (!room) {
         socket.emit("error", { message: "Room not found" });
         return;
       }
       const isHost = room.userId.toString() === userId;
-      socket.join(roomId);
+      socket.join(roomId!);
 
-      if (!isHost && !this.hosts.has(roomId)) {
+      if (!isHost && !this.hosts.has(roomId!)) {
         socket.emit("waiting-for-host");
         logger.info("Waiting for host:", roomId, username);
         return;
       }
 
-      this.users.set(socket.id, { userId, username, avatar, isMuted });
       logger.info("User joined room:", username);
       if (isHost) {
-        this.hosts.set(roomId, socket.id);
-        socket.to(roomId).emit("host-joined");
+        this.hosts.set(roomId!, socket.id);
+        this.users.set(socket.id, {
+          userId,
+          username,
+          avatar,
+          isMuted,
+          role: Role.HOST,
+          roomId,
+        });
+        socket.to(roomId!).emit("host-joined");
         logger.info("Host joined", socket.id, roomId);
       } else {
-        socket.to(roomId).emit("user-connected", {
+        this.users.set(socket.id, {
+          userId,
+          username,
+          avatar,
+          isMuted,
+          role: Role.JOINEE,
+          roomId,
+        });
+        socket.to(roomId!).emit("user-connected", {
           userId,
           username,
           avatar,
@@ -246,13 +262,12 @@ export class SocketService {
   }
 
   private getRoomUsers(roomId: string): Partial<UserData>[] {
-    return Array.from(this.users.entries())
-      .filter(([socketId]) => {
-        const socket = this.io.sockets.sockets.get(socketId);
-        return socket?.rooms.has(roomId);
-      })
-      .map(([, user]) => user);
-  }
+  const list = Array.from(this.users.entries())
+    .filter(([, user]) => user.roomId === roomId)
+    .map(([, user]) => user);
+  console.log("Room users:", list);
+  return list;
+}
 
   private handleCreateBreakoutRooms(
     socket: Socket,
@@ -429,7 +444,7 @@ export class SocketService {
     if (roomRaisedHands) {
       roomRaisedHands.delete(userId);
       this.raisedHands.set(roomId, roomRaisedHands);
-      const username = this.users.get(socket.id)?.username
+      const username = this.users.get(socket.id)?.username;
       this.io.to(roomId).emit("hand-lowered", { userId, username });
     }
 
@@ -445,7 +460,7 @@ export class SocketService {
     const user = this.users.get(socket.id);
     if (!user) return;
     logger.info(`User disconnected: ${socket.id} ${user.userId}`);
-    const roomId = socket.rooms.values().next().value;
+    const roomId = user.roomId
     if (roomId) {
       socket.to(roomId).emit("user-disconnected", user.userId);
       if (this.hosts.get(roomId) === socket.id) {
@@ -464,8 +479,15 @@ export class SocketService {
       if (roomRaisedHands) {
         roomRaisedHands.delete(user.userId!);
         this.raisedHands.set(roomId, roomRaisedHands);
-        this.io.to(roomId).emit("hand-lowered", { userId: user.userId, username: user.username });
+        this.io
+          .to(roomId)
+          .emit("hand-lowered", {
+            userId: user.userId,
+            username: user.username,
+          });
       }
+
+      this.users.delete(socket.id);
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
@@ -1025,10 +1047,12 @@ export class SocketService {
 
     const roomRaisedHands = this.raisedHands.get(roomId)!;
     if (!roomRaisedHands.has(userId)) {
-    roomRaisedHands.add(userId);
-    this.raisedHands.set(roomId, roomRaisedHands);
-    this.io.to(roomId).emit("hand-raised", { userId, username: user.username });
-  }
+      roomRaisedHands.add(userId);
+      this.raisedHands.set(roomId, roomRaisedHands);
+      this.io
+        .to(roomId)
+        .emit("hand-raised", { userId, username: user.username });
+    }
   }
 
   private handleLowerHand(
@@ -1043,10 +1067,12 @@ export class SocketService {
 
     const roomRaisedHands = this.raisedHands.get(roomId);
     if (roomRaisedHands && roomRaisedHands.has(userId)) {
-    roomRaisedHands.delete(userId);
-    this.raisedHands.set(roomId, roomRaisedHands);
-    this.io.to(roomId).emit("hand-lowered", { userId, username: user.username });
-  }
+      roomRaisedHands.delete(userId);
+      this.raisedHands.set(roomId, roomRaisedHands);
+      this.io
+        .to(roomId)
+        .emit("hand-lowered", { userId, username: user.username });
+    }
   }
 
   private handleFetchRaisedHands(
@@ -1057,12 +1083,14 @@ export class SocketService {
     if (!user) return;
 
     const roomRaisedHands = this.raisedHands.get(roomId) || new Set();
-    const raisedHandsWithUsernames = Array.from(roomRaisedHands).map((userId) => {
-    const user = Array.from(this.users.entries()).find(
-      ([, u]) => u.userId === userId
-    )?.[1];
-    return { userId, username: user?.username || "Unknown" };
-  });
+    const raisedHandsWithUsernames = Array.from(roomRaisedHands).map(
+      (userId) => {
+        const user = Array.from(this.users.entries()).find(
+          ([, u]) => u.userId === userId
+        )?.[1];
+        return { userId, username: user?.username || "Unknown" };
+      }
+    );
     socket.emit("raised-hands-fetched", raisedHandsWithUsernames);
   }
 }

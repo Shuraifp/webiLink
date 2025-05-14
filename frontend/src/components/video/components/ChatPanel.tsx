@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
 import { ChatMessage } from "@/types/chatRoom";
-import { CornerDownRight, CornerDownLeft, X } from "lucide-react";
+import { CornerDownRight, CornerDownLeft, X, Search } from "lucide-react";
 import { MeetingActionType } from "@/lib/MeetingContext";
 
 interface Props {
@@ -14,9 +14,11 @@ interface Props {
 export default function ChatPanel({ socketRef }: Props) {
   const { state, dispatch } = useReducedState();
   const [input, setInput] = useState("");
-  const [selectedRecipient, setSelectedRecipient] =
-    useState<string>("everyone");
+  const [selectedRecipient, setSelectedRecipient] = useState<string>("everyone");
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const currentBreakoutRoom = state.breakoutRooms.find((room) =>
     room.participants.includes(state.currentUserId)
@@ -25,6 +27,20 @@ export default function ChatPanel({ socketRef }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   const sendMessage = () => {
     if (!input.trim() || !socketRef) return;
@@ -74,21 +90,32 @@ export default function ChatPanel({ socketRef }: Props) {
     );
   };
 
+  const getSelectedRecipientName = () => {
+    if (selectedRecipient === "everyone") return "Everyone";
+    const user = state.users.find(u => u.userId === selectedRecipient);
+    return user ? user.username : "Everyone";
+  };
+
+  // Filter recipients based on search
+  const filteredRecipients = getAvailableRecipients().filter(user => 
+    user.username.toLowerCase().includes(recipientSearch.toLowerCase())
+  );
+
   return (
     <div className="flex flex-col h-full">
-        <div className="p-4 flex justify-between border-b border-gray-700">
-          <h2 className="text-lg font-semibold">
-            Chat {currentBreakoutRoom ? `- ${currentBreakoutRoom.name}` : ""}
-          </h2>
-          <button
-            className="text-gray-600 hover:text-gray-900 focus:outline-none cursor-pointer"
-            onClick={() => {
-              dispatch({ type: MeetingActionType.CLOSE_SIDEBAR });
-            }}
-          >
-            <X className="w-6 h-6 text-white" />
-          </button>
-        </div>
+      <div className="p-4 flex justify-between border-b border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-300">
+          Chat {currentBreakoutRoom ? `- ${currentBreakoutRoom.name}` : ""}
+        </h2>
+        <button
+          className="text-gray-600 hover:text-gray-300 focus:outline-none cursor-pointer"
+          onClick={() => {
+            dispatch({ type: MeetingActionType.CLOSE_SIDEBAR });
+          }}
+        >
+          <X className="w-6 h-6 text-white" />
+        </button>
+      </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
         {state.messages.map((msg) => {
           const label = getMessageLabel(msg);
@@ -136,20 +163,68 @@ export default function ChatPanel({ socketRef }: Props) {
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t border-gray-700">
-        <div className="flex gap-2 mb-2">
-          <select
-            value={selectedRecipient}
-            onChange={(e) => setSelectedRecipient(e.target.value)}
-            className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
+        <div className="flex gap-2 mb-2 relative" ref={dropdownRef}>
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none text-left"
           >
-            <option value="everyone">To Everyone</option>
-            {getAvailableRecipients().map((user) => (
-              <option key={user.userId} value={user.userId}>
-                To {user.username}
-              </option>
-            ))}
-          </select>
+            To: {getSelectedRecipientName()}
+          </button>
+          
+          {dropdownOpen && (
+            <div className="absolute bottom-full left-0 w-full mb-1 bg-gray-800 rounded-lg shadow-lg z-10 overflow-hidden">
+              {/* Search bar */}
+              <div className="p-2 border-b border-gray-700">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="bg-gray-700 text-white text-sm rounded-lg block w-full pl-10 p-2 focus:outline-none"
+                    placeholder="Search for recipients"
+                    value={recipientSearch}
+                    onChange={(e) => setRecipientSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              
+              {/* Recipients list */}
+              <div className="max-h-48 overflow-y-auto">
+                <div 
+                  className="p-2 hover:bg-gray-700 cursor-pointer"
+                  onClick={() => {
+                    setSelectedRecipient("everyone");
+                    setDropdownOpen(false);
+                  }}
+                >
+                  Everyone
+                </div>
+                
+                {filteredRecipients.map((user) => (
+                  <div
+                    key={user.userId}
+                    className="p-2 hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setSelectedRecipient(user.userId!);
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    {user.username}
+                  </div>
+                ))}
+                
+                {filteredRecipients.length === 0 && recipientSearch && (
+                  <div className="p-2 text-gray-400 text-center">
+                    No matches found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+        
         <div className="flex gap-2">
           <input
             type="text"

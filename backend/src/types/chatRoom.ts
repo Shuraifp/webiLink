@@ -12,9 +12,10 @@ export interface SignalingData {
 export interface UserData {
   userId: string;
   username: string;
-  avatar: string;
-  roomId: string;
-  isMuted: boolean;
+  avatar?: string;
+  role: string;
+  isMuted?: boolean;
+  roomId?: string;
 }
 
 export interface VideoStream {

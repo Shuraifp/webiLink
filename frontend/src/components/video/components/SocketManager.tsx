@@ -36,6 +36,7 @@ export default function SocketManager({ socketRef }: Props) {
       socketRef.onAny(anyHandler);
       
       const userListHandler = (userList: UserData[]) => {
+        console.log(userList)
         dispatch({
           type: MeetingActionType.SET_USERS,
           payload: userList,
