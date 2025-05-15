@@ -11,6 +11,8 @@ import { MeetingActionType } from "@/lib/MeetingContext";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { userApiWithAuth } from "@/lib/api/axios";
 
 function randomID(len: number) {
   let result = "";
@@ -37,6 +39,25 @@ export default function MeetingRoom({ user }: { user: UserData }) {
   useEffect(() => {
     dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
   }, [roomId, dispatch]);
+
+  useEffect(() => {
+    const checkingSubscriptionStatus = async () => {
+      try {
+        const res = await userApiWithAuth.get("/users/isPremium");
+        if (res.data.data.isPremiumUser) {
+          dispatch({type: MeetingActionType.SET_ISPREMIUM, payload: res.data.data.isPremiumUser})
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          toast.error(err?.response?.data.message);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+    };
+  }
+
+    checkingSubscriptionStatus();
+  }, [dispatch]);
 
   useEffect(() => {
     const currentSocket = socket.current;

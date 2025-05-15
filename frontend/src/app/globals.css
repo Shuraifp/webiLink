@@ -73,6 +73,18 @@ body {
   }
 }
 
+@keyframes recordingPulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @keyframes pulse {
   0% {
     border-color: #FFD700;

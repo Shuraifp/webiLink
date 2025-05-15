@@ -1,5 +1,5 @@
 import { IUserService } from "../interfaces/services/IUserService";
-import { ResponseUser } from "../types/type";
+import { ResponseUser } from "../types/responses";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { NotFoundError, InternalServerError } from "../utils/errors";
 import { IUser } from "../models/userModel";
@@ -50,5 +50,11 @@ export class UserService implements IUserService {
     const user = await this._userRepository.findByEmail(email);
     if (!user) throw new NotFoundError("User not found");
     return this.toResponseUser(user);
+  }
+
+  async isPremiumUser(userId: string): Promise<boolean> {
+    const user = await this._userRepository.findById(userId);
+    if (!user) throw new NotFoundError("User not found");
+    return user.isPremium
   }
 }

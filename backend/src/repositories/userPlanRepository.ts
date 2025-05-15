@@ -2,14 +2,20 @@ import { Model, Types } from "mongoose";
 import { BaseRepository } from "./baseRepository";
 import { IUserPlan } from "../models/UserPlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
+import { InternalServerError } from "../utils/errors";
 
-export class UserPlanRepository extends BaseRepository<IUserPlan> implements IUserPlanRepository {
+export class UserPlanRepository
+  extends BaseRepository<IUserPlan>
+  implements IUserPlanRepository
+{
   constructor(private userPlanModel: Model<IUserPlan>) {
     super(userPlanModel);
   }
 
   async findUserPlan(userId: string): Promise<IUserPlan | null> {
-    return await this.userPlanModel.findOne({ userId: new Types.ObjectId(userId) }).exec();
+    return await this.userPlanModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .exec();
   }
 
   async listUserPlans(query: any, page: number, limit: number) {
@@ -27,5 +33,44 @@ export class UserPlanRepository extends BaseRepository<IUserPlan> implements IUs
 
   async countDocuments(query: any): Promise<number> {
     return await this.userPlanModel.countDocuments(query);
+  }
+
+  async getHistory(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    data: IUserPlan[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      const skip = (page - 1) * limit;
+      const [data, totalItems] = await Promise.all([
+        this.userPlanModel
+          .find({ userId: new Types.ObjectId(userId) })
+          .populate({
+            path: "planId",
+            select: "name price billingCycle features",
+          })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean()
+          .exec(),
+        this.userPlanModel.countDocuments({
+          userId: new Types.ObjectId(userId),
+        }),
+      ]);
+      return {
+        data,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      };
+    } catch (error) {
+      throw new InternalServerError(
+        `Failed to fetch subscription history: ${(error as Error).message}`
+      );
+    }
   }
 }

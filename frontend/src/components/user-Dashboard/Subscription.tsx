@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import { getUserPlan, cancelSubscription } from "@/lib/api/user/planApi";
+import {
+  getUserPlan,
+  cancelSubscription,
+  getSubscriptionHistory,
+} from "@/lib/api/user/planApi";
 import { Plan, IUserPlan, BillingInterval } from "@/types/plan";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -12,13 +16,31 @@ interface UserPlanData {
   plan: Plan;
 }
 
+interface SubscriptionHistory {
+  _id: string;
+  planId: {
+    name: string;
+    price: number;
+    billingCycle: { interval: BillingInterval; frequency: number };
+  };
+  status: string;
+  currentPeriodStart: string;
+  currentPeriodEnd?: string | null;
+  createdAt: string;
+  cancelAtPeriodEnd?: boolean;
+}
+
 const Subscription = ({
   onSectionChange,
 }: {
   onSectionChange: Dispatch<SetStateAction<string>>;
 }) => {
   const [userPlanData, setUserPlanData] = useState<UserPlanData | null>(null);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<
+    SubscriptionHistory[]
+  >([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,10 +48,14 @@ const Subscription = ({
   const [postConfirmAction, setPostConfirmAction] = useState<
     (() => void) | null
   >(null);
-  console.log(userPlanData);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
   useEffect(() => {
     fetchUserPlan();
-  }, []);
+    fetchSubscriptionHistory();
+  }, [page]);
 
   const fetchUserPlan = async () => {
     try {
@@ -38,7 +64,7 @@ const Subscription = ({
       setUserPlanData(response.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        // setError(err.response?.data.message)
+        // setError(err.response?.data.message);
       } else {
         toast.error("An unexpected error occurred.");
       }
@@ -47,18 +73,39 @@ const Subscription = ({
     }
   };
 
+  const fetchSubscriptionHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const response = await getSubscriptionHistory(page, limit);
+      setSubscriptionHistory(response.data.data);
+      setTotalPages(response.data.data.totalPages);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        toast.error(
+          err.response?.data.message || "Failed to fetch subscription history"
+        );
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const handleCancelSubscription = async () => {
-    if (!userPlanData?.userPlan.stripeSubscriptionId && !userPlanData?.userPlan.stripePaymentIntentId) {
+    if (
+      !userPlanData?.userPlan.stripeSubscriptionId &&
+      !userPlanData?.userPlan.stripePaymentIntentId
+    ) {
       toast.error("No recurring subscription to cancel");
       return;
     }
 
-    const msg = userPlanData.plan.billingCycle.interval === BillingInterval.LIFETIME ? 
-    "Are you sure you want to cancel your Lifetime access?" :
-    "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period." 
-    confirmAction(msg,
-      executeCancelSubscription
-    );
+    const msg =
+      userPlanData.plan.billingCycle.interval === BillingInterval.LIFETIME
+        ? "Are you sure you want to cancel your Lifetime access?"
+        : "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.";
+    confirmAction(msg, executeCancelSubscription);
   };
 
   const executeCancelSubscription = async () => {
@@ -72,6 +119,7 @@ const Subscription = ({
       setError(null);
       toast.success("Subscription canceled successfully");
       setIsModalOpen(false);
+      fetchSubscriptionHistory();
     } catch (err) {
       if (axios.isAxiosError(err)) {
         toast.error(err?.response?.data.message);
@@ -128,6 +176,12 @@ const Subscription = ({
     }${plan.billingCycle.frequency > 1 ? "s" : ""}`;
   };
 
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
+
   const formatStatus = (userPlan: IUserPlan) => {
     if (userPlan.cancelAtPeriodEnd) {
       return `Active until ${new Date(
@@ -135,6 +189,21 @@ const Subscription = ({
       ).toLocaleDateString()}`;
     }
     return userPlan.status.charAt(0).toUpperCase() + userPlan.status.slice(1);
+  };
+
+  const formatHistoryBillingCycle = (history: SubscriptionHistory) => {
+    if (history.planId.price === 0) {
+      return "Free plan";
+    }
+    if (
+      history.planId.billingCycle.interval === BillingInterval.LIFETIME ||
+      !history.currentPeriodEnd
+    ) {
+      return "One-time payment (Lifetime access)";
+    }
+    return `Billed every ${history.planId.billingCycle.frequency} ${
+      history.planId.billingCycle.interval
+    }${history.planId.billingCycle.frequency > 1 ? "s" : ""}`;
   };
 
   if (loading) {
@@ -159,8 +228,8 @@ const Subscription = ({
         onConfirm={postConfirmAction || (() => {})}
         loading={cancelLoading}
       />
-      <h2 className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
-        My Subscription
+      <h2 className="text-xl raleway font-semibold mt-4 mb-2 ml-1 text-gray-600">
+        My Current Subscription
       </h2>
       {userPlanData ? (
         <div className="bg-white shadow-lg rounded-xl mt-4 p-6 bg-opacity-90">
@@ -238,6 +307,119 @@ const Subscription = ({
           </div>
         </div>
       )}
+
+      {/* Subscription History Section  */}
+      <h2 className="text-xl raleway font-semibold my-4 ml-1 text-gray-600">
+        Subscription History
+      </h2>
+      {historyLoading ? (
+        <div className="flex flex-col items-center justify-center h-40">
+          <div className="w-12 h-12 border-4 border-t-transparent border-b-transparent border-yellow-400 rounded-full animate-spin" />
+          <p className="mt-4 text-gray-600">Loading subscription history...</p>
+        </div>
+      ) : subscriptionHistory?.length > 0 ? (
+        <div className="bg-white shadow-lg rounded-xl mt-4 p-6 bg-opacity-90">
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="px-4 py-2 text-left text-gray-600">Plan</th>
+                  <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                  <th className="px-4 py-2 text-left text-gray-600">Price</th>
+                  <th className="px-4 py-2 text-left text-gray-600">
+                    Billing Cycle
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600">
+                    Start Date
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600">
+                    End Date
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600">
+                    Created At
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscriptionHistory.map((history) => (
+                  <tr key={history._id} className="border-b border-gray-100">
+                    <td className="px-4 py-2 text-gray-800">
+                      {history.planId.name}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {history.status === "canceled"
+                        ? "Canceled"
+                        : history.cancelAtPeriodEnd
+                        ? `Active until ${new Date(
+                            history.currentPeriodEnd!
+                          ).toLocaleDateString()}`
+                        : history.status.charAt(0).toUpperCase() +
+                          history.status.slice(1)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      ₹{history.planId.price.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {formatHistoryBillingCycle(history)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {new Date(
+                        history.currentPeriodStart
+                      ).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {history.currentPeriodEnd
+                        ? new Date(
+                            history.currentPeriodEnd
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {new Date(history.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-gray-600 text-sm">
+              Page {page} of {totalPages} (Total: {subscriptionHistory?.length}{" "}
+              records)
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                  page === 1
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === totalPages}
+                className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                  page === totalPages
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center text-gray-600 py-6">
+          No subscription history available.
+        </div>
+      )}
+
       {error && <div className="mt-4 text-center text-red-500">{error}</div>}
     </>
   );

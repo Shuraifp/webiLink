@@ -1,13 +1,11 @@
-// backend/controllers/planController.js
 import { NextFunction, Request, Response } from "express";
-import { IPlanController } from "../interfaces/controllers/IPlanController";
 import { IPlanService } from "../interfaces/services/IPlanService";
 import { NotFoundError } from "../utils/errors";
 import { HttpStatus, successResponse } from "../types/type";
 import stripe, { Stripe } from "stripe";
 import { IPlan } from "../models/PlanModel";
 
-export class PlanController implements IPlanController {
+export class PlanController {
   constructor(private _planService: IPlanService) {}
 
   async fetchActivePlans(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -131,6 +129,18 @@ export class PlanController implements IPlanController {
       const userId = req.user!._id;
       await this._planService.cancelSubscription(userId);
       res.status(HttpStatus.OK).json(successResponse("Subscription canceled", null));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!._id; 
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const history = await this._planService.getHistory(userId,page,limit);
+      res.status(HttpStatus.OK).json(successResponse("Subscription history fetched successfully", history));
     } catch (error) {
       next(error);
     }

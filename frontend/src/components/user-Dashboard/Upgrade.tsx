@@ -16,7 +16,7 @@ export default function Upgrade() {
     fetchUserPlan();
     fetchPlans();
   }, []);
-  console.log(userPlan);
+
   const fetchUserPlan = async () => {
     try {
       const response = await getUserPlan();
@@ -166,7 +166,7 @@ export default function Upgrade() {
                 ref={planRef}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                className={`bg-gray-50 flex justify-between items-center p-4 rounded transition-all duration-300 ${
+                className={`bg-gray-50 text-wrap flex gap-2 flex-wrap justify-between items-center p-4 rounded transition-all duration-300 ${
                   hoverDirection === "left"
                     ? " translate-x-[-2px]"
                     : hoverDirection === "right"
@@ -179,7 +179,7 @@ export default function Upgrade() {
                 }`}
               >
                 <p>{pl.name}</p>
-                <p className="text-gray-600 text-2xl font-semibold">
+                <p className="text-gray-600 lg:text-2xl font-semibold">
                   {pl.price.toFixed(2)}
                 </p>
               </div>

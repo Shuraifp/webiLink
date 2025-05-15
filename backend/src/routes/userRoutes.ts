@@ -22,6 +22,7 @@ const router = Router()
 router.get('/me', isValidUser, userController.getUser.bind(userController))
 router.patch('/profile', isValidUser, userController.updateProfile.bind(userController))
 router.patch('/change-password', isValidUser, userController.changePassword.bind(userController))
+router.get('/isPremium', isValidUser, userController.checkPremium.bind(userController))
 
 
 export default router;

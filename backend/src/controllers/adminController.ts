@@ -14,7 +14,10 @@ export class AdminController implements IAdminController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const users = await this._adminService.listUsers();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const users = await this._adminService.listUsers(page, limit);
       res
         .status(HttpStatus.OK)
         .json(successResponse("Users fetched successfully", users));

@@ -38,6 +38,7 @@ export enum MeetingActionType {
   SET_USERS = "SET_USERS",
   ADD_USER = "ADD_USER",
   REMOVE_USER = "REMOVE_USER",
+  SET_ISPREMIUM = "SET_ISPREMIUM",
   UPDATE_BREAKOUT_ROOMS = "UPDATE_BREAKOUT_ROOMS",
   TOGGLE_WHITEBOARD = "TOGGLE_WHITEBOARD",
   SET_POLLS = "SET_POLLS",
@@ -90,6 +91,7 @@ export type MeetingAction =
         mainRoomParticipants: string[];
       };
     }
+  | { type: MeetingActionType.SET_ISPREMIUM; payload?: boolean }
   | { type: MeetingActionType.TOGGLE_WHITEBOARD; payload?: boolean }
   | { type: MeetingActionType.SET_POLLS; payload: Poll[] }
   | { type: MeetingActionType.ADD_POLL; payload: Poll }
@@ -137,6 +139,7 @@ export interface MeetingState {
   currentUsername: string;
   currentUserAvatar: string;
   currentUserRole: Role.HOST | Role.JOINEE;
+  isPremiumUser: boolean;
   users: UserData[];
   breakoutRooms: BreakoutRoom[];
   mainRoomParticipants: string[];
@@ -159,6 +162,7 @@ export const initialState: MeetingState = {
   currentUsername: "",
   currentUserAvatar: "",
   currentUserRole: Role.JOINEE,
+  isPremiumUser: false,
   users: [],
   breakoutRooms: [],
   mainRoomParticipants: [],
@@ -237,6 +241,11 @@ const meetingReducer = (
         ...state,
         breakoutRooms: action.payload.breakoutRooms,
         mainRoomParticipants: action.payload.mainRoomParticipants,
+      };
+    case MeetingActionType.SET_ISPREMIUM:
+      return {
+        ...state,
+        isPremiumUser: action.payload!,
       };
     case MeetingActionType.TOGGLE_WHITEBOARD:
       return {

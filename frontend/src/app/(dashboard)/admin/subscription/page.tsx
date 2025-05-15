@@ -25,7 +25,6 @@ export default function SubscriptionManagementPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [totalItems, setTotalItems] = useState<number>(0);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -36,11 +35,11 @@ export default function SubscriptionManagementPage() {
           page: currentPage,
           limit: itemsPerPage,
           search: searchQuery,
-          status: statusFilter === "all" ? undefined : statusFilter as PlanStatus,
+          status:
+            statusFilter === "all" ? undefined : (statusFilter as PlanStatus),
         });
         setSubscriptions(response.data);
         setTotalPages(response.totalPages);
-        setTotalItems(response.totalItems);
       } catch (err) {
         if (axios.isAxiosError(err)) {
           toast.error(err?.response?.data.message);
@@ -53,29 +52,6 @@ export default function SubscriptionManagementPage() {
     };
     loadSubscriptions();
   }, [currentPage, searchQuery, statusFilter]);
-
-  // const handleCancelSubscription = async (subscriptionId: string) => {
-  //   try {
-  //     await cancelSubscription(subscriptionId);
-  //     setSubscriptions((prev) =>
-  //       prev.map((sub) =>
-  //         sub.userPlan._id.toString() === subscriptionId
-  //           ? {
-  //               ...sub,
-  //               userPlan: { ...sub.userPlan, status: PlanStatus.CANCELED },
-  //             }
-  //           : sub
-  //       )
-  //     );
-  //     toast.success("Subscription canceled successfully");
-  //   } catch (err) {
-  //     if (axios.isAxiosError(err)) {
-  //       toast.error(err?.response?.data.message);
-  //     } else {
-  //       toast.error("An unexpected error occurred while canceling subscription.");
-  //     }
-  //   }
-  // };
 
   const formatDate = (date: Date | null) => {
     if (!date) return "N/A";
@@ -92,7 +68,9 @@ export default function SubscriptionManagementPage() {
     <>
       <Toaster />
       <header className="bg-white shadow p-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-800">Subscription Management</h2>
+        <h2 className="text-xl font-semibold text-gray-800">
+          Subscription Management
+        </h2>
         <div className="flex items-center gap-4">
           <div className="relative">
             <input
@@ -144,9 +122,9 @@ export default function SubscriptionManagementPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   End Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -164,7 +142,10 @@ export default function SubscriptionManagementPage() {
                 </tr>
               ) : (
                 subscriptions.map((sub) => (
-                  <tr key={sub.userPlan._id.toString()} className="hover:bg-gray-50">
+                  <tr
+                    key={sub.userPlan._id.toString()}
+                    className="hover:bg-gray-50"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {sub.user.username} ({sub.user.email})
                     </td>
@@ -209,42 +190,36 @@ export default function SubscriptionManagementPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-700">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} subscriptions
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border rounded-md disabled:opacity-50"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 border rounded-md ${
-                    currentPage === page ? "bg-blue-600 text-white" : ""
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border rounded-md disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+        <div className="flex justify-between items-center mt-4">
+          <div className="text-gray-600 text-sm">
+            Page {currentPage} of {totalPages} (Total: {subscriptions.length}{" "}
+            records)
           </div>
-        )}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                currentPage === 1
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-yellow-500 hover:bg-yellow-600"
+              }`}
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                currentPage === totalPages
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-yellow-500 hover:bg-yellow-600"
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </main>
     </>
   );

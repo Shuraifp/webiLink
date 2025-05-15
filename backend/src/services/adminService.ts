@@ -19,10 +19,26 @@ export class AdminService implements IAdminService {
     private _userPlanRepository: IUserPlanRepository
   ) {}
 
-  async listUsers(): Promise<IUser[]> {
-    let users = await this._userRepository.findAll();
-    if (!users) throw new NotFoundError("No users found");
-    return users;
+  async listUsers(page: number = 1, limit: number = 10): Promise<{
+    data: IUser[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      if (page < 1 || limit < 1) {
+        throw new InternalServerError("Page and limit must be positive numbers");
+      }
+
+      const result = await this._userRepository.listUsers(page, limit);
+      if (!result.data || result.data.length === 0) {
+        return { data: [], totalItems: 0, totalPages: 0 };
+      }
+      return result;
+    } catch (error) {
+      throw error instanceof InternalServerError
+        ? error
+        : new InternalServerError("Failed to fetch users");
+    }
   }
 
   async blockUser(userId: string): Promise<IUser> {

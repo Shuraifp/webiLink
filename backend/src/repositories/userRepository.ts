@@ -85,4 +85,35 @@ export class UserRepository
   async countDocuments(query: any): Promise<number> {
     return await this._userModel.countDocuments(query);
   }
+
+  async listUsers(page: number = 1, limit: number = 10): Promise<{
+    data: IUser[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      if (page < 1 || limit < 1) {
+        throw new Error("Page and limit must be positive numbers");
+      }
+
+      const skip = (page - 1) * limit;
+      const [data, totalItems] = await Promise.all([
+        this._userModel
+          .find({})
+          .skip(skip)
+          .limit(limit)
+          .lean()
+          .exec(),
+        this._userModel.countDocuments({}),
+      ]);
+
+      return {
+        data,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch users: ${(error as Error).message}`);
+    }
+  }
 }

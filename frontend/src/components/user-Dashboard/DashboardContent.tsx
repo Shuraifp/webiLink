@@ -6,17 +6,27 @@ import Rooms from "@/components/user-Dashboard/Rooms";
 import CreateMeeting from "@/components/user-Dashboard/CreateMeeting";
 import Settings from "@/components/user-Dashboard/Settings";
 import Subscription from "@/components/user-Dashboard/Subscription";
-import WhatsNew from "@/components/user-Dashboard/What'sNew";
 import Upgrade from "@/components/user-Dashboard/Upgrade";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserData } from "@/types/type";
 import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import Profile from "./Profile";
+import Recordings from "./Recordings";
 
 interface DashboardContentProps {
   user: UserData;
 }
+
+// interface SidebarSections {
+//   Rooms : 'rooms';
+//   Profile: 'profile';
+//   Create_Meeting: 'create-meeting';
+//   Settings: 'settings';
+//   Subscription: 'subscription';
+//   Recordings: 'recordings';
+//   Upgrade: 'upgrade';
+// }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const searchParams = useSearchParams();
@@ -40,12 +50,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           />
         );
       case "profile":
-        return (
-          <Profile
-          // onSectionChange={setSelectedSection}
-          // prevSection={prevSection}
-          />
-        );
+        return <Profile />;
       case "rooms":
         return (
           <Rooms
@@ -59,8 +64,8 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         return <Settings />;
       case "subscription":
         return <Subscription onSectionChange={setSelectedSection} />;
-      case "whats-new":
-        return <WhatsNew />;
+      case "recordings":
+        return <Recordings onSectionChanges={setSelectedSection} />;
       case "upgrade":
         return <Upgrade />;
       default:
@@ -90,9 +95,13 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
             <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
               {selectedSection === "profile"
                 ? "Profile"
+                : selectedSection === "recordings"
+                ? "Recordings"
                 : `Wellcome, ${user.username}`}
             </h2>
-            {selectedSection !== "profile" && <p className="border-b-1 border-gray-400 border-dashed"></p>}
+            {selectedSection !== "profile" && (
+              <p className="border-b-1 border-gray-400 border-dashed"></p>
+            )}
             {renderContent()}
           </main>
         </div>

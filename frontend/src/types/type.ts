@@ -60,8 +60,3 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
-export enum UserStatus {
-    Active = "active",
-    Blocked = "blocked",
-    Archived = "archived",
-  }

@@ -26,6 +26,24 @@ export class UserController {
     }
   }
 
+  async checkPremium(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user?._id as string;
+      const isPremiumUser = await this._userService.isPremiumUser(userId);
+      res
+        .status(HttpStatus.OK)
+        .json(
+          successResponse("checked for user subscription status", {isPremiumUser})
+        );
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateProfile(
     req: Request,
     res: Response,

@@ -273,9 +273,10 @@ export class PlanService implements IPlanService {
       const user = await this._userRepository.findById(userId);
       if (!user) throw new NotFoundError("User not found");
 
-      const existingUserPlan = await this._userPlanRepository.findUserPlan(
-        userId
-      );
+      const existingUserPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
       if (existingUserPlan && existingUserPlan.status === PlanStatus.ACTIVE) {
         if (existingUserPlan.planId.toString() === planId) {
           throw new BadRequestError(
@@ -283,13 +284,22 @@ export class PlanService implements IPlanService {
           );
         }
 
-        if (existingUserPlan.stripeSubscriptionId && !existingUserPlan.cancelAtPeriodEnd) {
-          await stripe.subscriptions.update(
-            existingUserPlan.stripeSubscriptionId,
-            {
-              cancel_at_period_end: true,
-            }
-          );
+        if (existingUserPlan.stripeSubscriptionId) {
+          if (!existingUserPlan.cancelAtPeriodEnd) {
+            await stripe.subscriptions.update(
+              existingUserPlan.stripeSubscriptionId,
+              {
+                cancel_at_period_end: true,
+              }
+            );
+          } else {
+            await this._userPlanRepository.update(
+              existingUserPlan._id.toString(),
+              {
+                status: PlanStatus.CANCELED,
+              }
+            );
+          }
         }
       }
 
@@ -448,14 +458,16 @@ export class PlanService implements IPlanService {
           plan.price > 0;
       }
 
-      const existingUserPlan = await this._userPlanRepository.findUserPlan(
-        userId
-      );
+      const existingUserPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
       if (existingUserPlan) {
-        await this._userPlanRepository.update(
-          String(existingUserPlan._id),
-          userPlanData
-        );
+        await this._userPlanRepository.update(String(existingUserPlan._id), {
+          status: PlanStatus.CANCELED,
+          cancelAtPeriodEnd: true,
+        });
+        await this._userPlanRepository.create(userPlanData);
       } else {
         await this._userPlanRepository.create(userPlanData);
       }
@@ -556,10 +568,10 @@ export class PlanService implements IPlanService {
     userId: string
   ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
     try {
-      const userPlan = await this._userPlanRepository.findUserPlan(userId);
+      const userPlan = await this._userPlanRepository.findByQuery({ userId, status : PlanStatus.ACTIVE });
       if (!userPlan) {
         // throw new NotFoundError("No active plan found for user");
-        return null
+        return null;
       }
 
       const plan = await this._planRepository.findById(
@@ -579,7 +591,10 @@ export class PlanService implements IPlanService {
 
   async cancelSubscription(userId: string): Promise<void> {
     try {
-      const userPlan = await this._userPlanRepository.findUserPlan(userId);
+      const userPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
       if (!userPlan) {
         throw new NotFoundError("No active plan found for user");
       }
@@ -603,6 +618,28 @@ export class PlanService implements IPlanService {
       throw error instanceof BadRequestError || error instanceof NotFoundError
         ? error
         : new InternalServerError("Failed to cancel subscription");
+    }
+  }
+
+  async getHistory(userId: string, page: number = 1, limit: number = 10): Promise<{
+    data: IUserPlan[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestError("Invalid user ID");
+      }
+      if (page < 1 || limit < 1) {
+        throw new BadRequestError("Page and limit must be positive numbers");
+      }
+
+      const history = await this._userPlanRepository.getHistory(userId, page, limit);
+      return history;
+    } catch (error) {
+      throw error instanceof BadRequestError
+        ? error
+        : new InternalServerError("Failed to fetch subscription history");
     }
   }
 }

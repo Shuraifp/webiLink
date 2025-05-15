@@ -13,6 +13,7 @@ import userRoutes from './routes/userRoutes';
 import planRoutes from './routes/planRoutes';
 import roomRoutes from './routes/roomRoutes';
 import chatRoomRoutes from './routes/chatRoomRoutes';
+import recordingsRouter from './routes/recordings';
 import { PlanController } from "./controllers/planController"; 
 import { PlanService } from "./services/planService"; 
 import { PlanRepository } from "./repositories/planRepository";
@@ -60,6 +61,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use("/api/recordings", recordingsRouter);
 
 app.use(errorHandler);
 

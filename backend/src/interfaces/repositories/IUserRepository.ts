@@ -11,4 +11,9 @@ export interface IUserRepository extends IBaseRepository<IUser> {
   unblockUser(id:string): Promise<boolean>;
   searchUsers(search: string): Promise<string[]>;
   countDocuments(query: any): Promise<number>;
+  listUsers(page: number, limit: number): Promise<{
+    data: IUser[];
+    totalItems: number;
+    totalPages: number;
+  }>;
 }

@@ -22,6 +22,7 @@ export default function AdminDashboardPage() {
       try {
         setLoading(true);
         const response = await fetchDashboardStats();
+        console.log(response)
         setStats(response);
       } catch (err) {
         console.log(err)

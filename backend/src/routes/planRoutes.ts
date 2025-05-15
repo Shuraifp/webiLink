@@ -24,8 +24,8 @@ const adminController = new AdminController(adminService)
 const router = Router();
 
 router.get("/", planController.fetchActivePlans.bind(planController));
-router.get("/:id",)
 router.get("/user-plan", authenticateJWT(UserRole.USER), planController.getUserPlan.bind(planController));
+router.get('/history', authenticateJWT(UserRole.USER), planController.getHistory.bind(planController))
 router.post("/create-subscription", authenticateJWT(UserRole.USER), planController.makeSubscription.bind(planController));
 router.post("/cancel-subscription", authenticateJWT(UserRole.USER), planController.cancelSubscription.bind(planController));
 

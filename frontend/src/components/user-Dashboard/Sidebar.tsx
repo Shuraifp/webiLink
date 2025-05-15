@@ -9,6 +9,7 @@ import {
   Rocket,
   User,
   LogOut,
+  Video,
 } from "lucide-react";
 import { useState, useRef, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
@@ -97,6 +98,17 @@ const Sidebar: React.FC<{
             <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
               <Building size={24} />
               Rooms
+            </button>
+          </li>
+          <li
+            onClick={() => {
+              handleSectionChange("recordings");
+            }}
+            className={getStyle("recordings")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <Video size={24} />
+              Recordings
             </button>
           </li>
           <li

@@ -10,16 +10,15 @@ import {
   restoreUser,
   softDeleteUser,
 } from "@/lib/api/admin/adminApi";
-import { UserStatus } from "@/types/type";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 
-
-type User = {
+export type User = {
   _id: string;
   username: string;
   email: string;
-  status: UserStatus | "active";
+  isArchived: boolean;
+  isBlocked: boolean;
 };
 
 export default function UserManagementPage() {
@@ -27,17 +26,21 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoading(true);
-        const response: User[] = await fetchUsers();
-        const fetchedUsers = Array.isArray(response) ? response : [];
-        setUsers(fetchedUsers);
+        const response = await fetchUsers(page, limit);
+        console.log(response)
+        setUsers(response.data.data);
+        setTotalPages(response.data.totalPages);
       } catch (err) {
         if (axios.isAxiosError(err)) {
-          toast.error(err?.response?.data.message)
+          toast.error(err?.response?.data.message);
           setError(err?.response?.data.message);
         } else {
           setError("An unexpected error occurred.");
@@ -48,7 +51,14 @@ export default function UserManagementPage() {
       }
     };
     loadUsers();
-  }, []);
+  }, [limit,page]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
+
 
   const filteredUsers = users?.filter(
     (user) =>
@@ -64,12 +74,12 @@ export default function UserManagementPage() {
       await blockUser(userId);
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user._id === userId ? { ...user, status: UserStatus.Blocked } : user
+          user._id === userId ? { ...user, isBlocked: true } : user
         )
       );
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        toast.error(err?.response?.data.message)
+        toast.error(err?.response?.data.message);
       } else {
         toast.error("An unexpected error occurred while blocking user.");
       }
@@ -81,7 +91,7 @@ export default function UserManagementPage() {
       await unblockUser(userId);
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user._id === userId ? { ...user, status: UserStatus.Active } : user
+          user._id === userId ? { ...user, isBlocked: false } : user
         )
       );
     } catch (err) {
@@ -94,12 +104,12 @@ export default function UserManagementPage() {
       await softDeleteUser(userId);
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user._id === userId ? { ...user, status: UserStatus.Archived } : user
+          user._id === userId ? { ...user, isArchived: true } : user
         )
       );
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        toast.error(err?.response?.data.message)
+        toast.error(err?.response?.data.message);
       } else {
         toast.error("error occurred while archiving user.");
       }
@@ -111,12 +121,12 @@ export default function UserManagementPage() {
       await restoreUser(userId);
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user._id === userId ? { ...user, status: UserStatus.Active } : user
+          user._id === userId ? { ...user, isArchived: false } : user
         )
       );
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        toast.error(err?.response?.data.message)
+        toast.error(err?.response?.data.message);
       } else {
         toast.error("An unexpected error occurred while restoring user.");
       }
@@ -124,7 +134,7 @@ export default function UserManagementPage() {
   };
   return (
     <div className="flex min-h-screen bg-gray-100">
-    <Toaster />
+      <Toaster />
       <div className="flex-1 flex flex-col">
         <div className="bg-white shadow p-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800">
@@ -171,7 +181,7 @@ export default function UserManagementPage() {
                 {filteredUsers.map((user, ind) => (
                   <tr key={ind + 1} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {ind+1}
+                      {ind + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.username}
@@ -182,20 +192,25 @@ export default function UserManagementPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.status === UserStatus.Active
-                            ? "bg-green-100 text-green-800"
-                            : user.status === UserStatus.Blocked
+                          user.isBlocked
                             ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
+                            : user.isArchived
+                            ?  "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
                         }`}
                       >
-                        {user.status.charAt(0).toUpperCase() +
-                          user.status.slice(1)}
+                        {
+                          user.isBlocked
+                            ? "Blocked"
+                            : user.isArchived
+                            ?  "Archived"
+                            : "Active"
+                        }
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex gap-2">
-                        {user.status === UserStatus.Archived ? (
+                        {user.isArchived ? (
                           <button
                             onClick={() => handleRestoreUser(user._id)}
                             className="text-blue-600 hover:text-blue-800 hover:cursor-pointer"
@@ -207,22 +222,22 @@ export default function UserManagementPage() {
                           <>
                             <button
                               onClick={() =>
-                                user.status === UserStatus.Active
+                                !user.isBlocked
                                   ? handleBlockUser(user._id)
                                   : handleUnblockUser(user._id)
                               }
                               className={`${
-                                user.status !== UserStatus.Blocked
+                                !user.isBlocked
                                   ? "text-orange-600 hover:text-orange-800"
                                   : "text-green-600 hover:text-green-800"
                               } hover:cursor-pointer`}
                               title={
-                                user.status !== UserStatus.Blocked
+                                !user.isBlocked
                                   ? "Block user"
                                   : "Unblock user"
                               }
                             >
-                              {user.status !== UserStatus.Blocked ? (
+                              { !user.isBlocked ? (
                                 <Lock className="w-5 h-5" />
                               ) : (
                                 <Unlock className="w-5 h-5" />
@@ -251,7 +266,38 @@ export default function UserManagementPage() {
               No users found matching your criteria
             </div>
           )}
-        </main>
+
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-gray-600 text-sm">
+              Page {page} of {totalPages} (Total: {users.length}{" "}
+              records)
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                  page === 1
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === totalPages}
+                className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+                  page === totalPages
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </main> 
       </div>
     </div>
   );

@@ -1,25 +1,9 @@
 import { adminApiWithAuth } from "../axios";
-import { UserStatus } from "@/types/type";
 
-export const fetchUsers = async () => {
+export const fetchUsers = async (page:number,limit:number) => {
   try {
-    const res = await adminApiWithAuth.get("/admin/users");
-    return res.data.data.map(
-      (user: {
-        _id: string;
-        username: string;
-        email: string;
-        isBlocked: boolean;
-        isArchived: boolean;
-      }) => ({
-        ...user,
-        status: user.isBlocked
-          ? UserStatus.Blocked
-          : user.isArchived
-          ? UserStatus.Archived
-          : UserStatus.Active,
-      })
-    );
+    const res = await adminApiWithAuth.get("/admin/users", {params:{page,limit}});
+    return res.data
   } catch (err) {
     throw err;
   }

@@ -4,7 +4,11 @@ import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
 
 
 export interface IAdminService {
-  listUsers(): Promise<IUser[]>;
+  listUsers(page: number, limit: number): Promise<{
+    data: IUser[];
+    totalItems: number;
+    totalPages: number;
+  }>;
   blockUser(userId: string): Promise<IUser>;
   unblockUser(userId: string): Promise<IUser>;
   softDeleteUser(userId: string): Promise<IUser>;

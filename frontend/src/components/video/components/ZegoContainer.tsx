@@ -7,6 +7,7 @@ import { MeetingActionType } from "@/lib/MeetingContext";
 import Whiteboard from "./Whiteboard";
 import { createPortal } from "react-dom";
 import { Socket } from "socket.io-client";
+import useRecording from "@/hooks/useRecording";
 
 export default function MeetingComponent({
   navbarHeight,
@@ -22,8 +23,23 @@ export default function MeetingComponent({
   const whiteboardPlaceholderRef = useRef<HTMLDivElement>(null);
   const whiteboardButtonRef = useRef<HTMLButtonElement>(null);
   const raiseHandButtonRef = useRef<HTMLButtonElement>(null);
+  const recordButtonRef = useRef<HTMLButtonElement>(null);
   const lastWhiteboardVisibleState = useRef(true);
   const lastHandRaisedState = useRef(true);
+  const lastRecordingState = useRef<boolean>(true);
+
+  const {
+    isRecording,
+    recordingTime,
+    startRecording,
+    stopRecording,
+    formatTime,
+  } = useRecording({
+    socketRef,
+    roomId: state.roomId,
+    currentUserId: state.currentUserId,
+    currentUsername: state.currentUsername,
+  });
 
   const debounce = <T extends (...args: unknown[]) => unknown>(
     func: T,
@@ -181,6 +197,44 @@ export default function MeetingComponent({
         }
 
         if (
+          (!recordButtonRef.current ||
+          !footerMiddle.contains(recordButtonRef.current)) && state.isPremiumUser
+        ) {
+          if (recordButtonRef.current) {
+            recordButtonRef.current.removeEventListener("click", () => {});
+          }
+          recordButtonRef.current = document.createElement(
+            "button"
+          ) as HTMLButtonElement;
+          recordButtonRef.current.id = "zegoRoomRecordButton";
+          recordButtonRef.current.style.backgroundColor = "#333445";
+          recordButtonRef.current.style.border = "none";
+          recordButtonRef.current.style.borderRadius = "20%";
+          recordButtonRef.current.style.width = "40px";
+          recordButtonRef.current.style.height = "40px";
+          recordButtonRef.current.style.margin = "0 5px";
+          recordButtonRef.current.style.cursor = "pointer";
+          recordButtonRef.current.style.display = "flex";
+          recordButtonRef.current.style.alignItems = "center";
+          recordButtonRef.current.style.justifyContent = "center";
+          recordButtonRef.current.style.position = "relative";
+
+          recordButtonRef.current.addEventListener("click", () => {
+            if (isRecording) {
+              stopRecording();
+            } else {
+              startRecording();
+            }
+          });
+
+          footerMiddle.insertBefore(
+            recordButtonRef.current,
+            footerMiddle.children[4] || footerMiddle.lastChild 
+          );
+        }
+
+
+        if (
           whiteboardButtonRef.current &&
           lastWhiteboardVisibleState.current !== state.isWhiteboardVisible
         ) {
@@ -237,6 +291,71 @@ export default function MeetingComponent({
           lastHandRaisedState.current = state.raisedHands.some(
             (hand) => hand.userId === state.currentUserId
           );
+        }
+
+        if (
+          recordButtonRef.current &&
+          lastRecordingState.current !== isRecording
+        ) {
+          const recordSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+              isRecording ? "#FF0000" : "white"
+            }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ${
+                isRecording
+                  ? `<rect x="6" y="6" width="12" height="12" />` 
+                  : `<circle cx="12" cy="12" r="10" />`
+              }
+            </svg>
+          `;
+          recordButtonRef.current.innerHTML = recordSvg;
+          recordButtonRef.current.style.backgroundColor = isRecording
+            ? "#555566"
+            : "#333445";
+
+          if (isRecording) {
+            const indicator = document.createElement("div");
+            indicator.className = "recording-indicator";
+            indicator.style.position = "absolute";
+            indicator.style.top = "-5px";
+            indicator.style.right = "-5px";
+            indicator.style.width = "10px";
+            indicator.style.height = "10px";
+            indicator.style.backgroundColor = "#FF0000";
+            indicator.style.borderRadius = "50%";
+            indicator.style.animation = "pulse 1s infinite";
+
+            const timer = document.createElement("span");
+            timer.className = "recording-timer";
+            timer.style.position = "absolute";
+            timer.style.bottom = "-20px";
+            timer.style.fontSize = "12px";
+            timer.style.color = "#FF0000";
+            timer.textContent = formatTime(recordingTime);
+
+            recordButtonRef.current.appendChild(indicator);
+            recordButtonRef.current.appendChild(timer);
+          } else {
+            const indicator = recordButtonRef.current.querySelector(
+              ".recording-indicator"
+            );
+            const timer = recordButtonRef.current.querySelector(
+              ".recording-timer"
+            );
+            if (indicator) indicator.remove();
+            if (timer) timer.remove();
+          }
+
+          lastRecordingState.current = isRecording;
+        }
+
+        if (isRecording && recordButtonRef.current) {
+          const timer = recordButtonRef.current.querySelector(
+            ".recording-timer"
+          ) as HTMLSpanElement;
+          if (timer) {
+            timer.textContent = formatTime(recordingTime);
+          }
         }
 
         if (!whiteboardPlaceholderRef.current) {
@@ -355,20 +474,21 @@ export default function MeetingComponent({
     state.roomId,
   ]);
 
-
   useEffect(() => {
     const getStreamBoxes = (streamParent: HTMLElement) => {
       const wrapper = streamParent.querySelector(".IOc1l1j0UQkG1pNh5vE");
       if (wrapper) {
-        return Array.from(wrapper.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")) as HTMLElement[];
+        return Array.from(
+          wrapper.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")
+        ) as HTMLElement[];
       }
-      return Array.from(streamParent.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")) as HTMLElement[];
+      return Array.from(
+        streamParent.querySelectorAll(".Xfk1RtGH65gHx0iQ5uPA")
+      ) as HTMLElement[];
     };
 
     const getUserNameFromStreamBox = (streamBox: HTMLElement) => {
-      const nameElement = streamBox.querySelector(
-        "#ZegoVideoPlayerName p"
-      );
+      const nameElement = streamBox.querySelector("#ZegoVideoPlayerName p");
       return nameElement?.textContent?.trim() || null;
     };
 
@@ -390,7 +510,10 @@ export default function MeetingComponent({
       streamBoxes.forEach((streamBox) => {
         const userName = getUserNameFromStreamBox(streamBox);
         if (!userName) {
-          console.log("Could not determine user name for stream box:", streamBox);
+          console.log(
+            "Could not determine user name for stream box:",
+            streamBox
+          );
           return;
         }
 
@@ -455,7 +578,6 @@ export default function MeetingComponent({
 
     return () => observer.disconnect();
   }, [state.raisedHands, state.users, meetingContainerRef]);
-
 
   return (
     <div

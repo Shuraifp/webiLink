@@ -37,6 +37,15 @@ export const getUserPlan = async () => {
   }
 };
 
+export const getSubscriptionHistory = async (page:number,limit:number) => {
+  try {
+    const response = await userApiWithAuth.get(`/plans/history`, {params: {page,limit}});
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const cancelSubscription = async () => {
   try {
     const response = await userApiWithAuth.post(
