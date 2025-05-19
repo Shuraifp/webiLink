@@ -1,6 +1,7 @@
 import { IPlan } from "../../models/PlanModel";
 import { IUser } from "../../models/userModel";
 import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
+import { DashboardStats } from "../../services/adminService";
 
 
 export interface IAdminService {
@@ -28,9 +29,6 @@ export interface IAdminService {
     totalItems: number;
     totalPages: number;
   }> 
-  getDashboardStats: () => Promise<{
-    users: number;
-    subscriptions: number;
-  }>;
+  getDashboardStats(): Promise<DashboardStats>
 }
 

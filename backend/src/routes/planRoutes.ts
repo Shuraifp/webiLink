@@ -11,23 +11,32 @@ import { authenticateJWT } from "../middlewares/authMiddleware";
 import { UserRole } from "../types/type";
 import { AdminService } from "../services/adminService";
 import { AdminController } from "../controllers/adminController";
+import { PaymentRepository } from "../repositories/paymentRepository";
+import PaymentModel from "../models/PaymentModel";
 
 const planRepository = new PlanRepository(PlanModel);
 const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
-const planService = new PlanService(planRepository, userPlanRepository, userRepository);
+const paymentRepository = new PaymentRepository(PaymentModel)
+const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository);
 const planController = new PlanController(planService);
 
-const adminService = new AdminService(userRepository, planRepository, userPlanRepository)
+const adminService = new AdminService(userRepository, planRepository, userPlanRepository, paymentRepository)
 const adminController = new AdminController(adminService)
 
 const router = Router();
 
 router.get("/", planController.fetchActivePlans.bind(planController));
 router.get("/user-plan", authenticateJWT(UserRole.USER), planController.getUserPlan.bind(planController));
+router.get("/pending-plan", authenticateJWT(UserRole.USER), planController.getPendingPlan.bind(planController));
 router.get('/history', authenticateJWT(UserRole.USER), planController.getHistory.bind(planController))
 router.post("/create-subscription", authenticateJWT(UserRole.USER), planController.makeSubscription.bind(planController));
-router.post("/cancel-subscription", authenticateJWT(UserRole.USER), planController.cancelSubscription.bind(planController));
+router.post("/cancel-subscription", authenticateJWT(UserRole.USER), planController.cancelActiveSubscription.bind(planController));
+router.post("/retry-payment", authenticateJWT(UserRole.USER), planController.retryPayment.bind(planController));
+
+// Refund-related routes
+router.post("/cancel-pending", authenticateJWT(UserRole.USER), planController.cancelPendingSubscription.bind(planController));
+// router.post("/refund", authenticateJWT(UserRole.USER), planController.cancelActiveSubscription.bind(planController));
 
 // Admin
 router.post('/', authenticateJWT(UserRole.ADMIN), planController.createPlan.bind(planController));

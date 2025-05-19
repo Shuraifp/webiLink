@@ -1,6 +1,6 @@
 import { Model, Types } from "mongoose";
 import { BaseRepository } from "./baseRepository";
-import { IUserPlan } from "../models/UserPlanModel";
+import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { InternalServerError } from "../utils/errors";
 
@@ -70,6 +70,43 @@ export class UserPlanRepository
     } catch (error) {
       throw new InternalServerError(
         `Failed to fetch subscription history: ${(error as Error).message}`
+      );
+    }
+  }
+
+  async getSubscriptionCounts(): Promise<
+    { planId: string; planName: string; count: number }[]
+  > {
+    try {
+      const result = await this.userPlanModel.aggregate([
+        { $match: { status: PlanStatus.ACTIVE } },
+        {
+          $group: {
+            _id: "$planId",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: "plans",
+            localField: "_id",
+            foreignField: "_id",
+            as: "plan",
+          },
+        },
+        { $unwind: "$plan" },
+        {
+          $project: {
+            planId: "$_id",
+            planName: "$plan.name",
+            count: 1,
+          },
+        },
+      ]);
+      return result;
+    } catch (error) {
+      throw new InternalServerError(
+        `Failed to fetch subscription counts: ${(error as Error).message}`
       );
     }
   }

@@ -13,9 +13,22 @@ import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import Profile from "./Profile";
 import Recordings from "./Recordings";
+import {
+  fetchNotifications,
+  markNotificationAsRead,
+} from "@/lib/api/user/notifications";
+import { Bell, X } from "lucide-react";
 
 interface DashboardContentProps {
   user: UserData;
+}
+
+interface Notification {
+  _id: string;
+  type: string;
+  message: string;
+  status: "unread" | "read";
+  metadata?: { paymentUrl?: string };
 }
 
 // interface SidebarSections {
@@ -33,12 +46,48 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const initialSection = searchParams.get("section") || "rooms";
   const [selectedSection, setSelectedSection] = useState(initialSection);
   const [prevSection, setPrevSection] = useState("");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("section")) {
       setSelectedSection(searchParams.get("section")!);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const data = await fetchNotifications();
+        setNotifications(data);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+    loadNotifications();
+  }, []);
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notificationId ? { ...n, status: "read" } : n
+        )
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleNotificationAction = (notification: Notification) => {
+    if (
+      notification.type === "payment_failed" &&
+      notification.metadata?.paymentUrl
+    ) {
+      window.location.href = notification.metadata.paymentUrl;
+    }
+  };
 
   const renderContent = () => {
     switch (selectedSection) {
@@ -91,18 +140,86 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           setPrevSection={setPrevSection}
         />
         <div className="flex-1 h-screen overflow-y-scroll">
-          <main className=" p-8 ">
-            <h2 className="text-3xl font-bold raleway text-gray-800 mb-6">
-              {selectedSection === "profile"
-                ? "Profile"
-                : selectedSection === "recordings"
-                ? "Recordings"
-                : `Wellcome, ${user.username}`}
-            </h2>
-            {selectedSection !== "profile" && (
-              <p className="border-b-1 border-gray-400 border-dashed"></p>
-            )}
-            {renderContent()}
+          <main className="">
+            <div className="p-8 pt-7 pb-5 flex items-center justify-between bg-gray-400 shadow-md">
+              <h2 className="text-3xl font-bold raleway items-center flex-1 text-gray-800">
+                {selectedSection === "profile"
+                  ? "Profile"
+                  : selectedSection === "recordings"
+                  ? "Recordings"
+                  : `Wellcome, ${user.username}`}
+              </h2>
+              <div className="relative flex">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 justify-end"
+                >
+                  <Bell size={24} className="text-gray-700" />
+                  {notifications.filter((n) => n.status === "unread").length >
+                    0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {
+                        notifications.filter((n) => n.status === "unread")
+                          .length
+                      }
+                    </span>
+                  )}
+                </button>
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg z-10">
+                    <div className="p-4 border-b flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Notifications</h3>
+                      <button onClick={() => setShowNotifications(false)}>
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <p className="p-4 text-gray-500">No notifications</p>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification._id}
+                            className={`p-4 border-b ${
+                              notification.status === "unread"
+                                ? "bg-gray-50"
+                                : ""
+                            }`}
+                          >
+                            <p className="text-sm">{notification.message}</p>
+                            {notification.type === "payment_failed" &&
+                              notification.metadata?.paymentUrl && (
+                                <button
+                                  onClick={() =>
+                                    handleNotificationAction(notification)
+                                  }
+                                  className="text-blue-500 text-sm mt-2"
+                                >
+                                  Fix Payment
+                                </button>
+                              )}
+                            {notification.status === "unread" && (
+                              <button
+                                onClick={() =>
+                                  handleMarkAsRead(notification._id)
+                                }
+                                className="text-gray-500 text-xs mt-2"
+                              >
+                                Mark as read
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {selectedSection !== "profile" && (
+                <p className="border-b-1 border-gray-400 border-dashed"></p>
+              )}
+            </div>
+            <div className="p-8 pt-4">{renderContent()}</div>
           </main>
         </div>
       </div>

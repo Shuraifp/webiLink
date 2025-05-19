@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
-import { IRoomController } from '../interfaces/controllers/IRoomController';
 import { HttpStatus, successResponse } from '../types/type';
 import { IRoomService } from '../interfaces/services/IRoomService';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import { Types } from 'mongoose';
 
 
-export class RoomController implements IRoomController {
+export class RoomController {
   constructor(
     private _roomService: IRoomService
   ) {}
@@ -28,7 +27,6 @@ export class RoomController implements IRoomController {
     try {
       const { name } = req.body;
       const userId = req.user?._id;
-      console.log(name)
       // const isPremiumUser = req.user?.isPremium || false;
       if(!name) throw new BadRequestError('room name is required');
       const room = await this._roomService.createRoom(userId!,name)

@@ -28,8 +28,8 @@ export default function PlanManagementPage() {
     description: "",
     price: 0,
     billingCycle: {
-      interval: BillingInterval.LIFETIME,
-      frequency: 0,
+      interval: BillingInterval.MONTH,
+      frequency: 1,
     },
     features: [],
     isArchived: false,
@@ -74,6 +74,9 @@ export default function PlanManagementPage() {
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if(newPlan.price===0){
+        delete newPlan.billingCycle
+      }
       const response = await createPlan(newPlan);
       setPlans([...plans, response.data]);
       setIsCreateModalOpen(false);
@@ -82,15 +85,15 @@ export default function PlanManagementPage() {
         description: "",
         price: 0,
         billingCycle: {
-          interval: BillingInterval.LIFETIME,
-          frequency: 0,
+          interval: BillingInterval.MONTH,
+          frequency: 1,
         },
         features: [],
         isArchived: false,
         stripeProductId: "",
         stripePriceId: "",
       });
-      toast.success("Plan was created successfully")
+      toast.success("Plan was created successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.message || "An error occurred");
@@ -107,7 +110,7 @@ export default function PlanManagementPage() {
       }
       const res = await archivePlan(id);
       setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
-      toast.success("Plan was archived successfully")
+      toast.success("Plan was archived successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.message || "An error occurred");
@@ -124,7 +127,7 @@ export default function PlanManagementPage() {
       }
       const res = await restorePlan(id);
       setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
-      toast.success("Plan was restored successfully")
+      toast.success("Plan was restored successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.message || "An error occurred");
@@ -137,6 +140,9 @@ export default function PlanManagementPage() {
   const handleEditPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if(newPlan.price===0){
+        delete newPlan.billingCycle
+      }
       const res = await editPlan(newPlan);
       setPlans(plans.map((plan) => (plan._id === newPlan._id ? res : plan)));
       setIsEditing(null);
@@ -146,15 +152,15 @@ export default function PlanManagementPage() {
         description: "",
         price: 0,
         billingCycle: {
-          interval: BillingInterval.LIFETIME,
-          frequency: 0,
+          interval: BillingInterval.MONTH,
+          frequency: 1,
         },
         features: [],
         isArchived: false,
         stripeProductId: "",
         stripePriceId: "",
       });
-      toast.success("Plan was updated successfully")
+      toast.success("Plan was updated successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.message || "An error occurred");
@@ -168,20 +174,12 @@ export default function PlanManagementPage() {
     billingCycle: Plan["billingCycle"],
     price: number
   ) => {
-    if (billingCycle.interval === "lifetime" && price > 0) {
-      return `Lifetime Access just by ${price}`;
-    } else if (price === 0) {
-      if (billingCycle.interval === "lifetime") {
-        return "free of cost. lifetime access";
-      } else {
-        return `explore freely for ${billingCycle.frequency} ${
-          billingCycle.interval
-        }${billingCycle.frequency > 1 ? "s" : ""}`;
-      }
+    if (price === 0) {
+      return "free of cost. lifetime access";
     }
 
-    return `Every ${billingCycle.frequency} ${billingCycle.interval}${
-      billingCycle.frequency > 1 ? "s" : ""
+    return `Every ${billingCycle?.frequency} ${billingCycle?.interval}${
+      billingCycle!.frequency > 1 ? "s" : ""
     }`;
   };
 
@@ -294,28 +292,24 @@ export default function PlanManagementPage() {
                     className="mt-1 p-2 w-full border rounded-md"
                   />
                 </div>
-                <div className="mb-4">
+               { newPlan.price > 0 && <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700">
                     Billing Cycle
                   </label>
                   <div className="flex gap-2">
                     <select
-                      value={newPlan.billingCycle.interval}
+                      value={newPlan.billingCycle?.interval}
                       onChange={(e) =>
                         setNewPlan({
                           ...newPlan,
                           billingCycle: {
                             interval: e.target.value as BillingInterval,
-                            frequency:
-                              e.target.value === BillingInterval.LIFETIME
-                                ? 0
-                                : newPlan.billingCycle.frequency,
+                            frequency: newPlan.billingCycle?.frequency || 1,
                           },
                         })
                       }
                       className="mt-1 p-2 w-1/2 border rounded-md"
                     >
-                      <option value="lifetime">Lifetime</option>
                       <option value="day">Day</option>
                       <option value="week">Week</option>
                       <option value="month">Month</option>
@@ -323,23 +317,22 @@ export default function PlanManagementPage() {
                     </select>
                     <input
                       type="number"
-                      disabled={newPlan.billingCycle.interval === "lifetime"}
-                      value={newPlan.billingCycle.frequency}
+                      value={newPlan.billingCycle!.frequency<1?1:newPlan.billingCycle!.frequency}
                       onChange={(e) =>
                         setNewPlan({
                           ...newPlan,
                           billingCycle: {
-                            ...newPlan.billingCycle,
+                            interval: e.target.value as BillingInterval,
                             frequency: parseInt(e.target.value),
                           },
                         })
                       }
                       className="mt-1 p-2 w-1/2 border rounded-md"
-                      placeholder="Frequency"
+                      placeholder="Interval_count"
                       required
                     />
                   </div>
-                </div>
+                </div>}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700">
                     Features

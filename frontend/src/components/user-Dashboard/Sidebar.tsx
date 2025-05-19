@@ -52,7 +52,7 @@ const Sidebar: React.FC<{
 
   return (
     <aside className=" bg-white shadow-md min-h-screen">
-      <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-md">
+      <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-sm">
         <Link href={"/"} className="text-4xl font-bold lobster cursor-pointer">
           <span className="text-yellow-500">w</span>ebiLink
         </Link>
@@ -86,7 +86,7 @@ const Sidebar: React.FC<{
             className="text-white bg-gray-300 transition mx-2 flex justify-center cursor-pointer"
           >
             <button className="flex items-center justify-center gap-2 px-4 py-1 cursor-pointer rounded-lg">
-              <span className="text-blue-500 text-2xl">+</span> Create Meeting
+              <span className="text-2xl">+</span> Create Meeting
             </button>
           </li>
           <li

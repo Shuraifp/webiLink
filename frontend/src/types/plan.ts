@@ -3,7 +3,6 @@ export enum BillingInterval {
   WEEK = "week",
   MONTH = "month",
   YEAR = "year",
-  LIFETIME = "lifetime",
 }
 
 export interface Plan {
@@ -11,7 +10,7 @@ export interface Plan {
   name: string;
   description?: string;
   price: number;
-  billingCycle: {
+  billingCycle?: {
     interval: BillingInterval;
     frequency: number;
   };
@@ -21,10 +20,11 @@ export interface Plan {
   stripePriceId: string;  
 }
 
-export enum PlanStatus {
+ export enum PlanStatus {
   ACTIVE = "active",
-  PAST_DUE = "past_due",
   CANCELED = "canceled",
+  PAST_DUE = "past_due",
+  PENDING = "pending",
 }
 
 export interface IUserPlan {

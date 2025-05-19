@@ -2,6 +2,8 @@
 
 import { useState, Dispatch, SetStateAction } from "react";
 import { createRoom } from "@/lib/api/user/roomApi";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 interface CreateMeetingProps {
   onSectionChange: Dispatch<SetStateAction<string>>;
@@ -35,7 +37,11 @@ export default function CreateMeeting({
         await createRoom({name: meetingTitle})
         onSectionChange('rooms')
       } catch (err) {
-        console.log(err)
+        if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
       }
     }
   }

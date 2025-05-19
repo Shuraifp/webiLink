@@ -12,14 +12,13 @@ export enum BillingInterval {
   WEEK = "week",
   MONTH = "month",
   YEAR = "year",
-  LIFETIME = "lifetime",
 }
 
 export interface PlanInput {
   name: string;
   description?: string;
   price: number;
-  billingCycle: {
+  billingCycle?: {
     interval: BillingInterval;
     frequency: number;
   };
@@ -35,10 +34,9 @@ const planSchema = new Schema<IPlan>(
     billingCycle: {
       interval: {
         type: String,
-        enum: ["day", "week", "month", "year", "lifetime"],
-        required: true,
+        enum: ["day", "week", "month", "year"],
       },
-      frequency: { type: Number, required: true, min: 0 },
+      frequency: { type: Number, min: 1 },
     },
     features: { type: [String] },
     isArchived: { type: Boolean, default: false },

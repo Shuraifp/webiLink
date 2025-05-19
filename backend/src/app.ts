@@ -22,13 +22,16 @@ import { UserRepository } from "./repositories/userRepository";
 import PlanModel from "./models/PlanModel";
 import UserPlanModel from "./models/UserPlanModel";
 import UserModel from "./models/userModel";
+import { PaymentRepository } from './repositories/paymentRepository';
+import PaymentModel from './models/PaymentModel';
 
 dotenv.config();
 
 const planRepository = new PlanRepository(PlanModel);
 const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
-const planService = new PlanService(planRepository, userPlanRepository, userRepository);
+const paymentRepository = new PaymentRepository(PaymentModel)
+const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository);
 const planController = new PlanController(planService);
 
 const app = express();

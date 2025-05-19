@@ -5,8 +5,11 @@ import {
   getUserPlan,
   cancelSubscription,
   getSubscriptionHistory,
+  getPendingPlan,
+  cancelPendingSubscription,
+  retryPayment,
 } from "@/lib/api/user/planApi";
-import { Plan, IUserPlan, BillingInterval } from "@/types/plan";
+import { Plan, IUserPlan, BillingInterval, PlanStatus } from "@/types/plan";
 import toast from "react-hot-toast";
 import axios from "axios";
 import ConfirmationModal from "./ConfirmationModal";
@@ -36,13 +39,18 @@ const Subscription = ({
   onSectionChange: Dispatch<SetStateAction<string>>;
 }) => {
   const [userPlanData, setUserPlanData] = useState<UserPlanData | null>(null);
+  const [pendingPlanData, setPendingPlanData] = useState<UserPlanData | null>(
+    null
+  );
   const [subscriptionHistory, setSubscriptionHistory] = useState<
     SubscriptionHistory[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [retryLoading, setRetryLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [postConfirmAction, setPostConfirmAction] = useState<
@@ -51,9 +59,11 @@ const Subscription = ({
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchUserPlan();
+    fetchPendingPlan();
     fetchSubscriptionHistory();
   }, [page]);
 
@@ -64,12 +74,28 @@ const Subscription = ({
       setUserPlanData(response.data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        // setError(err.response?.data.message);
+        setError(err.response?.data.message || "Failed to fetch active plan");
       } else {
-        toast.error("An unexpected error occurred.");
+        setError("An unexpected error occurred.");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingPlan = async () => {
+    try {
+      setPendingLoading(true);
+      const response = await getPendingPlan();
+      setPendingPlanData(response.data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        toast.error(
+          err.response?.data.message || "Failed to fetch pending plan"
+        );
+      }
+    } finally {
+      setPendingLoading(false);
     }
   };
 
@@ -78,7 +104,8 @@ const Subscription = ({
       setHistoryLoading(true);
       const response = await getSubscriptionHistory(page, limit);
       setSubscriptionHistory(response.data.data);
-      setTotalPages(response.data.data.totalPages);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalItems(response.data.totalItems || 0);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         toast.error(
@@ -93,18 +120,11 @@ const Subscription = ({
   };
 
   const handleCancelSubscription = async () => {
-    if (
-      !userPlanData?.userPlan.stripeSubscriptionId &&
-      !userPlanData?.userPlan.stripePaymentIntentId
-    ) {
+    if (!userPlanData?.userPlan.stripeSubscriptionId) {
       toast.error("No recurring subscription to cancel");
       return;
     }
-
-    const msg =
-      userPlanData.plan.billingCycle.interval === BillingInterval.LIFETIME
-        ? "Are you sure you want to cancel your Lifetime access?"
-        : "Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.";
+    const msg = `Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.`;
     confirmAction(msg, executeCancelSubscription);
   };
 
@@ -116,9 +136,7 @@ const Subscription = ({
         ...userPlanData!,
         userPlan: { ...userPlanData!.userPlan, cancelAtPeriodEnd: true },
       });
-      setError(null);
       toast.success("Subscription canceled successfully");
-      setIsModalOpen(false);
       fetchSubscriptionHistory();
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -128,6 +146,56 @@ const Subscription = ({
       }
     } finally {
       setCancelLoading(false);
+      closeModal();
+    }
+  };
+
+  const handleCancelPendingSubscription = async () => {
+    if (!pendingPlanData) return;
+    const msg = `Are you sure you want to cancel and refund your pending subscription for ${pendingPlanData.plan.name}?`;
+    confirmAction(msg, executeCancelPendingSubscription);
+  };
+
+  const executeCancelPendingSubscription = async () => {
+    try {
+      setCancelLoading(true);
+      await cancelPendingSubscription();
+      setPendingPlanData(null);
+      toast.success("Pending subscription canceled and refunded successfully");
+      fetchSubscriptionHistory();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      setCancelLoading(false);
+      closeModal();
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    if (!userPlanData?.userPlan.stripeSubscriptionId) return;
+    confirmAction(
+      "Are you sure you want to renew the payment for your past-due subscription?",
+      executeRetryPayment
+    );
+  };
+
+  const executeRetryPayment = async () => {
+    try {
+      setRetryLoading(true);
+      const response = await retryPayment();
+      window.location.href = response.data.url;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        toast.error(err?.response?.data.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      setRetryLoading(false);
       closeModal();
     }
   };
@@ -144,16 +212,7 @@ const Subscription = ({
     setPostConfirmAction(null);
   };
 
-  const handleUpgradePlan = (
-    cb: () => void,
-    msg = "Are you sure you want to cancel your subscription?"
-  ) => {
-    setConfirmationMessage(msg);
-    setIsModalOpen(true);
-    setPostConfirmAction(() => cb);
-  };
-
-  const upgradePlan = () => {
+  const handleUpgradePlan = () => {
     onSectionChange("upgrade");
   };
 
@@ -161,19 +220,10 @@ const Subscription = ({
     onSectionChange("upgrade");
   };
 
-  const formatBillingCycle = (plan: Plan, userPlan: IUserPlan) => {
-    if (plan.price === 0) {
-      return "Free plan";
-    }
-    if (
-      plan.billingCycle.interval === BillingInterval.LIFETIME ||
-      !userPlan.currentPeriodEnd
-    ) {
-      return "One-time payment (Lifetime access)";
-    }
-    return `Billed every ${plan.billingCycle.frequency} ${
-      plan.billingCycle.interval
-    }${plan.billingCycle.frequency > 1 ? "s" : ""}`;
+  const formatBillingCycle = (plan: Plan) => {
+    return `Billed every ${plan.billingCycle?.frequency} ${
+      plan.billingCycle?.interval
+    }${plan.billingCycle!.frequency > 1 ? "s" : ""}`;
   };
 
   const handlePageChange = (newPage: number) => {
@@ -183,40 +233,27 @@ const Subscription = ({
   };
 
   const formatStatus = (userPlan: IUserPlan) => {
-    if (userPlan.cancelAtPeriodEnd) {
+    if (userPlan.cancelAtPeriodEnd && userPlan.currentPeriodEnd) {
       return `Active until ${new Date(
-        userPlan.currentPeriodEnd!
+        userPlan.currentPeriodEnd
       ).toLocaleDateString()}`;
     }
     return userPlan.status.charAt(0).toUpperCase() + userPlan.status.slice(1);
   };
 
   const formatHistoryBillingCycle = (history: SubscriptionHistory) => {
-    if (history.planId.price === 0) {
-      return "Free plan";
-    }
-    if (
-      history.planId.billingCycle.interval === BillingInterval.LIFETIME ||
-      !history.currentPeriodEnd
-    ) {
-      return "One-time payment (Lifetime access)";
-    }
     return `Billed every ${history.planId.billingCycle.frequency} ${
       history.planId.billingCycle.interval
     }${history.planId.billingCycle.frequency > 1 ? "s" : ""}`;
   };
 
-  if (loading) {
+  if (loading || pendingLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-80">
         <div className="w-16 h-16 border-5 border-t-transparent border-b-transparent border-yellow-400 rounded-full animate-spin" />
         <p className="mt-4 text-gray-600">Loading subscription details...</p>
       </div>
     );
-  }
-
-  if (error && !userPlanData) {
-    return <div className="text-center text-red-500">{error}</div>;
   }
 
   return (
@@ -226,7 +263,7 @@ const Subscription = ({
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
         onConfirm={postConfirmAction || (() => {})}
-        loading={cancelLoading}
+        loading={cancelLoading || retryLoading}
       />
       <h2 className="text-xl raleway font-semibold mt-4 mb-2 ml-1 text-gray-600">
         My Current Subscription
@@ -239,7 +276,7 @@ const Subscription = ({
                 {userPlanData.plan.name}
               </h3>
               <p className="text-gray-600">
-                {formatBillingCycle(userPlanData.plan, userPlanData.userPlan)}
+                {formatBillingCycle(userPlanData.plan)}
               </p>
               <p className="text-gray-600">
                 Status: {formatStatus(userPlanData.userPlan)}
@@ -249,9 +286,20 @@ const Subscription = ({
               </p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-4">
-              {(userPlanData.userPlan.stripeSubscriptionId ||
-                userPlanData.plan.billingCycle.interval ===
-                  BillingInterval.LIFETIME) &&
+              {userPlanData.userPlan.status === PlanStatus.PAST_DUE && (
+                <button
+                  onClick={handleRetryPayment}
+                  disabled={retryLoading}
+                  className={`px-4 py-2 rounded-lg raleway text-white font-medium transition-all duration-300 ${
+                    retryLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-500 hover:bg-blue-600"
+                  }`}
+                >
+                  {retryLoading ? "Processing..." : "Renew Plan"}
+                </button>
+              )}
+              {userPlanData.userPlan.stripeSubscriptionId &&
                 !userPlanData.userPlan.cancelAtPeriodEnd && (
                   <button
                     onClick={handleCancelSubscription}
@@ -262,20 +310,15 @@ const Subscription = ({
                         : "bg-red-500 hover:bg-red-600"
                     }`}
                   >
-                    {cancelLoading
-                      ? "Processing..."
-                      : userPlanData.plan.billingCycle.interval ===
-                        BillingInterval.LIFETIME
-                      ? "Request Refund"
-                      : "Cancel Subscription"}
+                    {cancelLoading ? "Processing..." : "Cancel Subscription"}
                   </button>
                 )}
-              <button
-                onClick={() => handleUpgradePlan(upgradePlan)}
+              { !pendingPlanData && <button
+                onClick={handleUpgradePlan}
                 className="px-4 py-2 rounded-lg bg-gradient-to-r raleway from-yellow-400 to-yellow-500 text-white font-medium hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300"
               >
-                Change Plan
-              </button>
+                Upgrade Plan
+              </button>}
             </div>
           </div>
           <div className="border-t border-gray-200 pt-4">
@@ -308,7 +351,50 @@ const Subscription = ({
         </div>
       )}
 
-      {/* Subscription History Section  */}
+      {/* Pending Plan Section */}
+      {pendingPlanData && (
+        <>
+          <h2 className="text-xl raleway font-semibold my-4 ml-1 text-gray-600">
+            Pending Subscription
+          </h2>
+          <div className="bg-white shadow-lg rounded-xl mt-4 p-6 bg-opacity-90 border-l-4 border-blue-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  {pendingPlanData.plan.name} (Pending)
+                </h3>
+                <p className="text-gray-600">
+                  {formatBillingCycle(pendingPlanData.plan)}
+                </p>
+                <p className="text-gray-600">
+                  Starts on:{" "}
+                  {new Date(
+                    pendingPlanData.userPlan.currentPeriodStart
+                  ).toLocaleDateString()}
+                </p>
+                <p className="text-gray-600">
+                  Price: ₹{pendingPlanData.plan.price.toFixed(2)}
+                </p>
+              </div>
+              <div className="mt-4 md:mt-0 flex space-x-4">
+                <button
+                  onClick={handleCancelPendingSubscription}
+                  disabled={cancelLoading}
+                  className={`px-4 py-2 rounded-lg raleway text-white font-medium transition-all duration-300 ${
+                    cancelLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-red-500 hover:bg-red-600"
+                  }`}
+                >
+                  {cancelLoading ? "Processing..." : "Cancel & Refund"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Subscription History Section */}
       <h2 className="text-xl raleway font-semibold my-4 ml-1 text-gray-600">
         Subscription History
       </h2>
@@ -342,19 +428,32 @@ const Subscription = ({
               </thead>
               <tbody>
                 {subscriptionHistory.map((history) => (
-                  <tr key={history._id} className="border-b border-gray-100">
+                  <tr
+                    key={history._id}
+                    className={`border-b border-gray-100 ${
+                      history.status === "pending"
+                        ? "bg-blue-50"
+                        : history.status === "refunded"
+                        ? "bg-orange-50"
+                        : ""
+                    }`}
+                  >
                     <td className="px-4 py-2 text-gray-800">
                       {history.planId.name}
                     </td>
                     <td className="px-4 py-2 text-gray-600">
-                      {history.status === "canceled"
-                        ? "Canceled"
-                        : history.cancelAtPeriodEnd
-                        ? `Active until ${new Date(
-                            history.currentPeriodEnd!
-                          ).toLocaleDateString()}`
-                        : history.status.charAt(0).toUpperCase() +
-                          history.status.slice(1)}
+                      {history.status === "canceled" ? (
+                        "Canceled"
+                      ) : history.cancelAtPeriodEnd ? (
+                        `Active until ${new Date(
+                          history.currentPeriodEnd!
+                        ).toLocaleDateString()}`
+                      ) : history.status === "refunded" ? (
+                        <span className="text-orange-600">Refunded</span>
+                      ) : (
+                        history.status.charAt(0).toUpperCase() +
+                        history.status.slice(1)
+                      )}
                     </td>
                     <td className="px-4 py-2 text-gray-600">
                       ₹{history.planId.price.toFixed(2)}
@@ -382,11 +481,9 @@ const Subscription = ({
               </tbody>
             </table>
           </div>
-
           <div className="flex justify-between items-center mt-4">
             <div className="text-gray-600 text-sm">
-              Page {page} of {totalPages} (Total: {subscriptionHistory?.length}{" "}
-              records)
+              Page {page} of {totalPages} (Total: {totalItems} records)
             </div>
             <div className="flex space-x-2">
               <button

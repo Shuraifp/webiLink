@@ -1,11 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { successResponse } from "../types/type";
-import { IAdminController } from "../interfaces/controllers/IAdminController";
 import { IAdminService } from "../interfaces/services/IAdminService";
 import { HttpStatus } from "../types/type";
 import { PlanStatus } from "../models/UserPlanModel";
 
-export class AdminController implements IAdminController {
+export class AdminController {
   constructor(private _adminService: IAdminService) {}
 
   async listUsers(
@@ -113,18 +112,14 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getDashboardStats(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+ async getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await this._adminService.getDashboardStats();
       res
         .status(HttpStatus.OK)
         .json(successResponse("Dashboard stats fetched successfully", stats));
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   }
 }

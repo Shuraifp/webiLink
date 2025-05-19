@@ -3,76 +3,105 @@ import slugify from "slugify";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { IRoom } from "../models/mainRoomModel";
 import { IRoomService } from "../interfaces/services/IRoomService";
-import { BadRequestError, InternalServerError, NotFoundError } from "../utils/errors";
+import {
+  BadRequestError,
+  InternalServerError,
+  NotFoundError,
+} from "../utils/errors";
+import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 
 export class RoomService implements IRoomService {
-  constructor(private _roomRepository: IRoomRepository) {}
+  constructor(
+    private _roomRepository: IRoomRepository,
+    private _userRepository?: IUserRepository
+  ) {}
 
-  async generateId() : Promise<string> {
-    const { nanoid } = await import('nanoid');
-    return nanoid(6)
+  async generateId(): Promise<string> {
+    const { nanoid } = await import("nanoid");
+    return nanoid(6);
   }
 
   async createRoom(
     userId: string,
     name: string,
-    isPremiumUser: boolean = false
   ): Promise<IRoom> {
-    let baseSlug = slugify(name, { lower: true, strict: true });
-    if (!baseSlug) {
-      throw new BadRequestError("Unable to generate slug from room name");
-    }
-    let slug = baseSlug;
-    console.log(slug);
-    let attempts = 0;
-    const maxAttempts = 5;
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestError("Invalid user ID");
+      }
 
-    while (attempts < maxAttempts) {
-      try {
-        const roomData: Partial<IRoom> = {
-          userId: new Types.ObjectId(userId),
-          name,
-          slug,
-          isPremiumUser,
-        };
-        const room = await this._roomRepository.create(roomData);
-        if (!room) {
-          throw new InternalServerError("Failed to create a room");
-        }
-        return room;
-      } catch (error: any) {
-        if (error.code === 11000) {
-          slug = `${baseSlug}-${this.generateId()}`;
-          attempts++;
-        } else if (error instanceof BadRequestError) {
-          throw error;
-        } else {
-          throw new InternalServerError(
-            error.message || "Unexpected error while creating room"
+      const user = await this._userRepository!.findById(userId);
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+
+      if (!user.isPremium) {
+        const roomCount = await this._roomRepository.findByUserId(userId);
+        if (roomCount.length >= 1) {
+          throw new BadRequestError(
+            "Non-premium users can only create one room"
           );
         }
       }
-    }
 
-    throw new InternalServerError(
-      "Unable to generate a unique slug after maximum retries"
-    );
-  }
-
-  async getAllRooms(userId:string): Promise<IRoom[]> {
-      try {
-        const rooms = await this._roomRepository.findByUserId(userId);
-        return rooms;
-      } catch (err:any) {
-        throw new InternalServerError(
-          err.message || "Unexpected error while fetching rooms"
-        );
+      let baseSlug = slugify(name, { lower: true, strict: true });
+      if (!baseSlug) {
+        throw new BadRequestError("Unable to generate slug from room name");
       }
+      let slug = baseSlug;
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      while (attempts < maxAttempts) {
+        try {
+          const roomData: Partial<IRoom> = {
+            userId: new Types.ObjectId(userId),
+            name,
+            slug,
+            isPremiumUser: user.isPremium,
+          };
+          const room = await this._roomRepository.create(roomData);
+          if (!room) {
+            throw new InternalServerError("Failed to create a room");
+          }
+          return room;
+        } catch (error: any) {
+          if (error.code === 11000) {
+            slug = `${baseSlug}-${this.generateId()}`;
+            attempts++;
+          } else if (error instanceof BadRequestError) {
+            throw error;
+          } else {
+            throw new InternalServerError(
+              error.message || "Unexpected error while creating room"
+            );
+          }
+        }
+      }
+
+      throw new InternalServerError(
+        "Unable to generate a unique slug after maximum retries"
+      );
+    } catch (error) {
+      throw error instanceof BadRequestError || error instanceof NotFoundError
+        ? error
+        : new InternalServerError("An error occurred while creating the room");
+    }
+  }
+  async getAllRooms(userId: string): Promise<IRoom[]> {
+    try {
+      const rooms = await this._roomRepository.findByUserId(userId);
+      return rooms;
+    } catch (err: any) {
+      throw new InternalServerError(
+        err.message || "Unexpected error while fetching rooms"
+      );
+    }
   }
 
   async getRoom(roomId: string): Promise<IRoom> {
     const room = await this._roomRepository.findBySlug(roomId);
-    if (!room) throw new NotFoundError('Room not found');
+    if (!room) throw new NotFoundError("Room not found");
     return room;
   }
 }

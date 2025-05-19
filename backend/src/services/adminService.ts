@@ -11,22 +11,36 @@ import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
 import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { IPlan } from "../models/PlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
+import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
+
+export interface DashboardStats {
+  users: number;
+  subscriptions: { planId: string; planName: string; count: number }[];
+  totalRevenue: number;
+  // meetings: number;
+}
 
 export class AdminService implements IAdminService {
   constructor(
     private _userRepository: IUserRepository,
     private _planRepository: IPlanRepository,
-    private _userPlanRepository: IUserPlanRepository
+    private _userPlanRepository: IUserPlanRepository,
+    private _paymentRepository: IPaymentRepository
   ) {}
 
-  async listUsers(page: number = 1, limit: number = 10): Promise<{
+  async listUsers(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
     data: IUser[];
     totalItems: number;
     totalPages: number;
   }> {
     try {
       if (page < 1 || limit < 1) {
-        throw new InternalServerError("Page and limit must be positive numbers");
+        throw new InternalServerError(
+          "Page and limit must be positive numbers"
+        );
       }
 
       const result = await this._userRepository.listUsers(page, limit);
@@ -95,66 +109,76 @@ export class AdminService implements IAdminService {
   }
 
   async listSubscriptions({
-  page,
-  limit,
-  search,
-  status,
-}: {
-  page: number;
-  limit: number;
-  search?: string;
-  status?: PlanStatus;
-}): Promise<{
-  data: { userPlan: IUserPlan; plan: IPlan; user: IUser }[];
-  totalItems: number;
-  totalPages: number;
-}> {
-  try {
-    const query: any = {};
-    if (status) query.status = status;
-    if (search) {
-      const userIds = await this._userRepository.searchUsers(search);
-      query.userId = { $in: userIds };
+    page,
+    limit,
+    search,
+    status,
+  }: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: PlanStatus;
+  }): Promise<{
+    data: { userPlan: IUserPlan; plan: IPlan; user: IUser }[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      const query: any = {};
+      if (status) query.status = status;
+      if (search) {
+        const userIds = await this._userRepository.searchUsers(search);
+        query.userId = { $in: userIds };
+      }
+
+      const userPlans = await this._userPlanRepository.listUserPlans(
+        query,
+        page,
+        limit
+      );
+      const data = await Promise.all(
+        userPlans.data.map(async (userPlan) => {
+          const plan = await this._planRepository.findById(
+            userPlan.planId.toString()
+          );
+          const user = await this._userRepository.findById(
+            userPlan.userId.toString()
+          );
+          if (!plan || !user) throw new NotFoundError("Plan or User not found");
+          return { userPlan, plan, user };
+        })
+      );
+
+      return {
+        data,
+        totalItems: userPlans.totalItems,
+        totalPages: userPlans.totalPages,
+      };
+    } catch (error) {
+      throw error instanceof NotFoundError
+        ? error
+        : new InternalServerError("Failed to fetch subscriptions");
     }
-
-    const userPlans = await this._userPlanRepository.listUserPlans(query, page, limit);
-    const data = await Promise.all(
-      userPlans.data.map(async (userPlan) => {
-        const plan = await this._planRepository.findById(userPlan.planId.toString());
-        const user = await this._userRepository.findById(userPlan.userId.toString());
-        if (!plan || !user) throw new NotFoundError("Plan or User not found");
-        return { userPlan, plan, user };
-      })
-    );
-
-    return {
-      data,
-      totalItems: userPlans.totalItems,
-      totalPages: userPlans.totalPages,
-    };
-  } catch (error) {
-    throw error instanceof NotFoundError
-      ? error
-      : new InternalServerError("Failed to fetch subscriptions");
   }
-}
 
-async getDashboardStats(): Promise<{
-  users: number;
-  subscriptions: number;
-}> {
-  try {
-    const [users, subscriptions] = await Promise.all([
-      this._userRepository.countDocuments({ isArchived: false }),
-      this._userPlanRepository.countDocuments({ status: PlanStatus.ACTIVE }),
-    ]);
+  async getDashboardStats(): Promise<DashboardStats> {
+    try {
+      const [userCount, subscriptionCounts, totalRevenue] = await Promise.all([
+        this._userRepository.countDocuments({
+          isArchived: false,
+          isBlocked: false,
+        }),
+        this._userPlanRepository.getSubscriptionCounts(),
+        this._paymentRepository.getTotalRevenue(),
+      ]);
 
-    return {
-      users,
-      subscriptions,
-    };
-  } catch {
-    throw new InternalServerError("Failed to fetch dashboard stats");
+      return {
+        users: userCount,
+        subscriptions: subscriptionCounts,
+        totalRevenue,
+      };
+    } catch {
+      throw new InternalServerError("Failed to fetch dashboard stats");
+    }
   }
-}
 }

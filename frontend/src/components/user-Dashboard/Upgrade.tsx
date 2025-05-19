@@ -1,7 +1,12 @@
 "use client";
 
-import { getPlans, getUserPlan, subscribeToPlan } from "@/lib/api/user/planApi";
-import { Plan } from "@/types/plan";
+import {
+  getPendingPlan,
+  getPlans,
+  getUserPlan,
+  subscribeToPlan,
+} from "@/lib/api/user/planApi";
+import { IUserPlan, Plan, PlanStatus } from "@/types/plan";
 import axios from "axios";
 import { Circle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -9,20 +14,40 @@ import toast, { Toaster } from "react-hot-toast";
 
 export default function Upgrade() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<IUserPlan[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchUserPlan();
+    fetchPendingPlan();
     fetchPlans();
   }, []);
-
+ 
   const fetchUserPlan = async () => {
     try {
       const response = await getUserPlan();
-      setUserPlan(response.data?.userPlan.planId);
+      const newPlanId = response.data?.userPlan;
+      if (newPlanId) {
+        setUserPlan((prev) => (prev ? [...prev, newPlanId] : [newPlanId]));
+      }
     } catch (error) {
       console.error("Error fetching UserPlan:", error);
+    }
+  };
+
+  const fetchPendingPlan = async () => {
+    try {
+      const response = await getPendingPlan();
+      const newPlanId = response.data?.userPlan;
+      if (newPlanId) {
+        setUserPlan((prev) => (prev ? [...prev, newPlanId] : [newPlanId]));
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        toast.error(
+          err.response?.data.message || "Failed to fetch pending plan"
+        );
+      }
     }
   };
 
@@ -112,7 +137,7 @@ export default function Upgrade() {
               {plans.map(
                 (plan, index) =>
                   plan.price > 0 &&
-                  plan._id !== userPlan && (
+                 (userPlan?.length ? userPlan?.every((p) => p.planId !== plan._id) : true) && (
                     <div
                       key={index}
                       className={`relative flex flex-col justify-between p-6 rounded-2xl bg-gray-50 shadow-lg`}
@@ -155,7 +180,11 @@ export default function Upgrade() {
           </div>
         </div>
         {plans
-          .filter((p) => p._id === userPlan)
+          .filter((p) =>
+            userPlan?.some(
+              (pl) => pl.planId === p._id && pl.status === PlanStatus.ACTIVE
+            )
+          )
           .map((pl) => (
             <div key={pl._id} className="min-w-[30%] p-6">
               <h2 className="flex items-center text-lg raleway font-semibold mb-2 text-gray-600">

@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../interfaces/services/IAuthService";
-import { IAuthController } from "../interfaces/controllers/IAuthController";
 import { successResponse } from "../types/type";
 
-export class AuthController implements IAuthController {
+export class AuthController {
   constructor(private _authService: IAuthService) {}
 
   async signUp(req: Request, res: Response, next: NextFunction) {

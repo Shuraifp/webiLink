@@ -13,9 +13,16 @@ export interface IUserPlanRepository extends IBaseRepository<IUserPlan> {
     totalPages: number;
   }>;
   countDocuments(query: any): Promise<number>;
-  getHistory(userId: string, page: number, limit: number): Promise<{
+  getHistory(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{
     data: IUserPlan[];
     totalItems: number;
     totalPages: number;
   }>;
+  getSubscriptionCounts(): Promise<
+    { planId: string; planName: string; count: number }[]
+  >;
 }

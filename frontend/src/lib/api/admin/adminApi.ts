@@ -47,7 +47,7 @@ export const restoreUser = async (id: string) => {
 
 export const fetchDashboardStats = async () => {
   try {
-    const res = await adminApiWithAuth.put(`/admin/dashboard`);
+    const res = await adminApiWithAuth.get(`/admin/dashboard`);
     console.log(res)
     return res.data;
   } catch (err) {

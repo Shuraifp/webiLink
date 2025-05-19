@@ -12,40 +12,40 @@ import { Stripe } from "stripe";
 import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { Types } from "mongoose";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
+import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
+import { IPayment } from "../models/PaymentModel";
+import logger from "../utils/logger";
 
 export class PlanService implements IPlanService {
   constructor(
     private _planRepository: IPlanRepository,
     private _userPlanRepository: IUserPlanRepository,
-    private _userRepository: IUserRepository
+    private _userRepository: IUserRepository,
+    private _paymentRepository: IPaymentRepository
   ) {}
 
   async createPlan(data: Partial<IPlan>): Promise<IPlan> {
     try {
-      if (
-        !data.name ||
-        data.price == null ||
-        data.price < 0 ||
-        !data.billingCycle ||
-        !data.billingCycle.interval
-      ) {
+      if (!data.name || data.price! < 0) {
         throw new BadRequestError("Invalid plan data");
       }
-
-      if (
-        data.billingCycle.interval !== "lifetime" &&
-        (data.billingCycle.frequency == null ||
-          data.billingCycle.frequency <= 0)
-      ) {
-        throw new BadRequestError(
-          "Frequency must be greater than 0 for non-lifetime plans"
-        );
-      }
-
+      
       let stripeProductId = "";
       let stripePriceId = "";
 
-      if (data.price > 0) {
+      if (data.price! > 0) {
+        if (!data.billingCycle) {
+          throw new BadRequestError("Invalid plan data");
+        }
+        if (
+          data?.billingCycle?.frequency == null ||
+          data.billingCycle.frequency <= 0
+        ) {
+          throw new BadRequestError(
+            "Interval count must be greater than 0 for Premium plans"
+          );
+        }
+
         const product = await stripe.products.create({
           name: data.name,
           description: data.description || undefined,
@@ -55,7 +55,7 @@ export class PlanService implements IPlanService {
         // );
         // const exchangeRate = response.rates.USD;
         const exchangeRate = 0.012;
-        const priceInUsd = data.price * exchangeRate;
+        const priceInUsd = data.price! * exchangeRate;
 
         const priceData: Stripe.PriceCreateParams = {
           product: product.id,
@@ -63,12 +63,10 @@ export class PlanService implements IPlanService {
           currency: "usd",
         };
 
-        if (data.billingCycle.interval !== "lifetime") {
-          priceData.recurring = {
-            interval: data.billingCycle.interval,
-            interval_count: data.billingCycle.frequency,
-          };
-        }
+        priceData.recurring = {
+          interval: data.billingCycle.interval,
+          interval_count: data.billingCycle.frequency,
+        };
 
         const price = await stripe.prices.create(priceData);
         stripeProductId = product.id;
@@ -86,6 +84,7 @@ export class PlanService implements IPlanService {
       if (!plan) throw new InternalServerError("Failed to create plan");
       return plan;
     } catch (error) {
+      console.log(error)
       throw error instanceof BadRequestError
         ? error
         : new InternalServerError("An error occurred while creating the plan");
@@ -156,24 +155,8 @@ export class PlanService implements IPlanService {
     data: Partial<IPlan>
   ): Promise<IPlan | null> {
     try {
-      if (
-        !data.name ||
-        data.price == null ||
-        data.price < 0 ||
-        !data.billingCycle ||
-        !data.billingCycle.interval
-      ) {
+      if (!data.name || data.price! < 0 || !data.price) {
         throw new BadRequestError("Invalid plan data");
-      }
-
-      if (
-        data.billingCycle.interval !== "lifetime" &&
-        (data.billingCycle.frequency == null ||
-          data.billingCycle.frequency <= 0)
-      ) {
-        throw new BadRequestError(
-          "Frequency must be greater than 0 for non-lifetime plans"
-        );
       }
 
       const existingPlan = await this._planRepository.findById(planId);
@@ -183,6 +166,17 @@ export class PlanService implements IPlanService {
       let stripePriceId = existingPlan.stripePriceId || "";
 
       if (data.price > 0) {
+        if (!data.billingCycle) {
+          throw new BadRequestError("Invalid plan data");
+        }
+        if (
+          data?.billingCycle?.frequency == null ||
+          data.billingCycle.frequency <= 0
+        ) {
+          throw new BadRequestError(
+            "Interval count must be greater than 0 for Premium plans"
+          );
+        }
         if (stripeProductId) {
           await stripe.products.update(stripeProductId, {
             name: data.name,
@@ -198,7 +192,7 @@ export class PlanService implements IPlanService {
 
         if (
           data.price !== existingPlan.price ||
-          data.billingCycle.interval !== existingPlan.billingCycle.interval ||
+          data.billingCycle.interval !== existingPlan?.billingCycle?.interval ||
           data.billingCycle.frequency !== existingPlan.billingCycle.frequency
         ) {
           // const response = await fetch(
@@ -214,12 +208,10 @@ export class PlanService implements IPlanService {
             currency: "usd",
           };
 
-          if (data.billingCycle.interval !== "lifetime") {
-            priceData.recurring = {
-              interval: data.billingCycle.interval,
-              interval_count: data.billingCycle.frequency,
-            };
-          }
+          priceData.recurring = {
+            interval: data.billingCycle.interval,
+            interval_count: data.billingCycle.frequency,
+          };
 
           const newPrice = await stripe.prices.create(priceData);
           stripePriceId = newPrice.id;
@@ -273,41 +265,22 @@ export class PlanService implements IPlanService {
       const user = await this._userRepository.findById(userId);
       if (!user) throw new NotFoundError("User not found");
 
-      const existingUserPlan = await this._userPlanRepository.findByQuery({
-        userId,
-        status: PlanStatus.ACTIVE,
-      });
-      if (existingUserPlan && existingUserPlan.status === PlanStatus.ACTIVE) {
-        if (existingUserPlan.planId.toString() === planId) {
-          throw new BadRequestError(
-            "You already have an active subscription to this plan"
-          );
-        }
-
-        if (existingUserPlan.stripeSubscriptionId) {
-          if (!existingUserPlan.cancelAtPeriodEnd) {
-            await stripe.subscriptions.update(
-              existingUserPlan.stripeSubscriptionId,
-              {
-                cancel_at_period_end: true,
-              }
-            );
-          } else {
-            await this._userPlanRepository.update(
-              existingUserPlan._id.toString(),
-              {
-                status: PlanStatus.CANCELED,
-              }
-            );
-          }
-        }
-      }
-
       const price = await stripe.prices.retrieve(priceId);
       if (!price.active) throw new BadRequestError("Price is inactive");
 
-      const isRecurring = !!price.recurring;
-      const checkoutMode = isRecurring ? "subscription" : "payment";
+      const existingPendingPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.PENDING,
+      });
+
+      if (existingPendingPlan) {
+        throw new BadRequestError(
+          "You already have a pending subscription. Please cancel it before creating a new one."
+        );
+      }
+
+      // const isRecurring = !!price.recurring;
+      // const checkoutMode = isRecurring ? "subscription" : "payment";
 
       let customerId = user.stripeCustomerId;
       if (!customerId) {
@@ -336,24 +309,57 @@ export class PlanService implements IPlanService {
         }
       }
 
-      const session = await stripe.checkout.sessions.create({
-        customer: user.stripeCustomerId || undefined,
+      let subscriptionParams: Stripe.Checkout.SessionCreateParams = {
+        customer: customerId,
         line_items: [
           {
             price: priceId,
             quantity: 1,
           },
         ],
-        mode: checkoutMode,
+        mode: "subscription",
         success_url: `${process.env.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
         client_reference_id: userId,
         metadata: {
           userId,
           planId,
-          isOneTime: (!isRecurring).toString(),
         },
+      };
+
+      const existingUserPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
       });
+
+      if (existingUserPlan && existingUserPlan.status === PlanStatus.ACTIVE) {
+        if (existingUserPlan.planId.toString() === planId) {
+          throw new BadRequestError(
+            "You already have an active subscription to this plan"
+          );
+        }
+
+        if (existingUserPlan.currentPeriodEnd) {
+          subscriptionParams.metadata!.pendingStartTimestamp = Math.floor(
+            existingUserPlan.currentPeriodEnd.getTime() / 1000
+          ).toString();
+        }
+
+        if (existingUserPlan.stripeSubscriptionId) {
+          try {
+            await stripe.subscriptions.update(
+              existingUserPlan.stripeSubscriptionId,
+              {
+                cancel_at_period_end: true,
+              }
+            );
+          } catch (error) {
+            throw new Error(`Failed to update existing subscription: ${error}`);
+          }
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create(subscriptionParams);
 
       if (!session.url)
         throw new InternalServerError("Failed to create checkout session");
@@ -382,10 +388,17 @@ export class PlanService implements IPlanService {
         case "customer.subscription.deleted":
           await this.handleSubscriptionStatusChange(event);
           break;
+        case "invoice.payment_succeeded":
+          await this.handleInvoicePaymentSucceeded(event);
+          break;
+        case "invoice.payment_failed":
+          await this.handleInvoicePaymentFailed(event);
+          break;
         default:
           return;
       }
     } catch (error) {
+      console.log(error);
       throw error instanceof BadRequestError ||
         error instanceof InternalServerError
         ? error
@@ -398,7 +411,7 @@ export class PlanService implements IPlanService {
   async handleCheckoutSessionCompleted(event: Stripe.Event): Promise<void> {
     try {
       const session = event.data.object as Stripe.Checkout.Session;
-      const { userId, planId, isOneTime } = session.metadata || {};
+      const { userId, planId, pendingStartTimestamp } = session.metadata || {};
 
       if (!userId || !planId) {
         throw new BadRequestError("Missing metadata in checkout session");
@@ -407,13 +420,10 @@ export class PlanService implements IPlanService {
       const plan = await this._planRepository.findById(planId);
       if (!plan) throw new NotFoundError("Plan not found");
 
-      if (plan.price === 0) {
-        await this._userRepository.update(userId, {
-          planId: null,
-          isPremium: false,
-        });
-        return;
-      }
+      const existingUserPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
 
       const userPlanData: Partial<IUserPlan> = {
         userId: new Types.ObjectId(userId),
@@ -423,54 +433,69 @@ export class PlanService implements IPlanService {
       };
 
       let isPremium = plan.price > 0;
+      const paymentData: Partial<IPayment> = {
+        userId: new Types.ObjectId(userId),
+        planId: new Types.ObjectId(planId),
+        amount: plan.price,
+        currency: "INR",
+        status: "pending",
+        createdAt: new Date(),
+      };
 
-      if (isOneTime === "true") {
-        if (!session.payment_intent) {
-          throw new InternalServerError("No payment intent found in session");
+      if (!session.subscription) {
+        throw new InternalServerError("No subscription found in session");
+      }
+      const stripeSubscription = (await stripe.subscriptions.retrieve(
+        session.subscription as string,
+        { expand: ["latest_invoice", "customer", "items.data.price.product"] }
+      )) as Stripe.Subscription;
+      logger.debug(JSON.stringify(stripeSubscription));
+      userPlanData.stripeSubscriptionId = stripeSubscription.id;
+      userPlanData.status = stripeSubscription.status as PlanStatus;
+      userPlanData.currentPeriodStart = new Date(
+        stripeSubscription.items.data[0].current_period_start * 1000
+      );
+      userPlanData.currentPeriodEnd = new Date(
+        stripeSubscription.items.data[0].current_period_end * 1000
+      );
+      userPlanData.cancelAtPeriodEnd = stripeSubscription.cancel_at_period_end;
+
+      if (stripeSubscription.latest_invoice) {
+        const invoice = stripeSubscription.latest_invoice as Stripe.Invoice;
+        paymentData.stripeInvoiceId = invoice.id;
+        paymentData.status =
+          invoice.status === "paid" ? "succeeded" : "pending";
+        let paymentIntentId = null;
+        if (invoice.payments?.data && invoice.payments.data.length > 0) {
+          paymentIntentId = invoice.payments.data[0].payment.payment_intent;
         }
-        userPlanData.currentPeriodEnd = null;
-        userPlanData.stripePaymentIntentId = session.payment_intent as string;
-      } else {
-        if (!session.subscription) {
-          throw new InternalServerError("No subscription found in session");
+        if (paymentIntentId) {
+          paymentData.stripePaymentIntentId = paymentIntentId as string;
         }
-        const stripeSubscription = (await stripe.subscriptions.retrieve(
-          session.subscription as string,
-          { expand: ["latest_invoice", "customer", "items.data.price.product"] }
-        )) as Stripe.Subscription;
-        userPlanData.stripeSubscriptionId = stripeSubscription.id;
-        userPlanData.status = stripeSubscription.status as PlanStatus;
+      }
+
+      isPremium =
+        stripeSubscription.status === PlanStatus.ACTIVE ||
+        (stripeSubscription.cancel_at_period_end &&
+          new Date(stripeSubscription.items.data[0].current_period_end * 1000) >
+            new Date());
+
+      if (
+        existingUserPlan &&
+        existingUserPlan.currentPeriodEnd &&
+        pendingStartTimestamp
+      ) {
+        userPlanData.status = PlanStatus.PENDING;
         userPlanData.currentPeriodStart = new Date(
-          stripeSubscription.items.data[0].current_period_start * 1000
+          parseInt(pendingStartTimestamp) * 1000
         );
-        userPlanData.currentPeriodEnd = new Date(
-          stripeSubscription.items.data[0].current_period_end * 1000
-        );
-        userPlanData.cancelAtPeriodEnd =
-          stripeSubscription.cancel_at_period_end;
-        isPremium =
-          (stripeSubscription.status === PlanStatus.ACTIVE ||
-            (stripeSubscription.status === PlanStatus.CANCELED &&
-              stripeSubscription.cancel_at_period_end &&
-              new Date(
-                stripeSubscription.items.data[0].current_period_end * 1000
-              ) > new Date())) &&
-          plan.price > 0;
+        userPlanData.currentPeriodEnd = null;
+      } else {
+        userPlanData.status = PlanStatus.ACTIVE;
       }
 
-      const existingUserPlan = await this._userPlanRepository.findByQuery({
-        userId,
-        status: PlanStatus.ACTIVE,
-      });
-      if (existingUserPlan) {
-        await this._userPlanRepository.update(String(existingUserPlan._id), {
-          status: PlanStatus.CANCELED,
-          cancelAtPeriodEnd: true,
-        });
-        await this._userPlanRepository.create(userPlanData);
-      } else {
-        await this._userPlanRepository.create(userPlanData);
-      }
+      await this._paymentRepository.create(paymentData);
+      await this._userPlanRepository.create(userPlanData);
 
       const user = await this._userRepository.findById(userId);
       if (user && !user.stripeCustomerId && session.customer) {
@@ -482,10 +507,12 @@ export class PlanService implements IPlanService {
         });
       }
 
-      await this._userRepository.update(userId, {
-        planId: new Types.ObjectId(planId),
-        isPremium,
-      });
+      if (!existingUserPlan || userPlanData.status === PlanStatus.ACTIVE) {
+        await this._userRepository.update(userId, {
+          planId: new Types.ObjectId(planId),
+          isPremium,
+        });
+      }
     } catch (error: any) {
       if (error instanceof stripe.errors.StripeError) {
         throw new BadRequestError(`Stripe error: ${error.message}`);
@@ -515,14 +542,35 @@ export class PlanService implements IPlanService {
       const plan = await this._planRepository.findById(planId);
       if (!plan) throw new NotFoundError("Plan not found");
 
-      const status = subscription.status as PlanStatus;
-      const isPremium =
-        (status === PlanStatus.ACTIVE ||
-          (status === PlanStatus.CANCELED &&
-            subscription.cancel_at_period_end &&
-            new Date(subscription.items.data[0].current_period_end * 1000) >
-              new Date())) &&
-        plan.price > 0;
+      let status = subscription.status as PlanStatus;
+      const now = new Date();
+
+      if (
+        userPlan.status === PlanStatus.PENDING &&
+        now >= userPlan.currentPeriodStart
+      ) {
+        status = PlanStatus.ACTIVE;
+        const existingActivePlan = await this._userPlanRepository.findByQuery({
+          userId,
+          status: PlanStatus.ACTIVE,
+        });
+        if (existingActivePlan && existingActivePlan.stripeSubscriptionId) {
+          await stripe.subscriptions.update(
+            existingActivePlan.stripeSubscriptionId,
+            {
+              cancel_at_period_end: true,
+            }
+          );
+          logger.debug("cancel at period end : true for exist");
+          await this._userPlanRepository.update(
+            existingActivePlan._id.toString(),
+            {
+              status: PlanStatus.CANCELED,
+              cancelAtPeriodEnd: true,
+            }
+          );
+        }
+      }
 
       const userPlanData: Partial<IUserPlan> = {
         status,
@@ -538,19 +586,34 @@ export class PlanService implements IPlanService {
       await this._userPlanRepository.update(String(userPlan._id), userPlanData);
 
       if (event.type === "customer.subscription.deleted") {
-        await this._userRepository.update(userId, {
-          planId: null,
-          isPremium: false,
-        });
         await this._userPlanRepository.update(userPlan._id.toString(), {
           status: PlanStatus.CANCELED,
         });
-      } else {
-        await this._userRepository.update(userId, {
-          isPremium,
+
+        const pendingPlan = await this._userPlanRepository.findByQuery({
+          userId,
+          status: PlanStatus.PENDING,
+          currentPeriodStart: { $lte: now },
         });
+        if (pendingPlan) {
+          await this._userPlanRepository.update(pendingPlan._id.toString(), {
+            status: PlanStatus.ACTIVE,
+            currentPeriodEnd: new Date(
+              subscription.items.data[0].current_period_end * 1000
+            ),
+          });
+          await this._userRepository.update(userId, {
+            planId: pendingPlan.planId,
+            isPremium: plan.price > 0,
+          });
+        } else {
+          await this._userRepository.update(userId, {
+            planId: null,
+            isPremium: false,
+          });
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof stripe.errors.StripeError) {
         throw new BadRequestError(`Stripe error: ${error.message}`);
       }
@@ -559,7 +622,277 @@ export class PlanService implements IPlanService {
         error instanceof InternalServerError
         ? error
         : new InternalServerError(
-            `An error occurred while processing subscription status change: ${error.message}`
+            `An error occurred while processing subscription status change: ${error}`
+          );
+    }
+  }
+
+  async handleInvoicePaymentSucceeded(event: Stripe.Event): Promise<void> {
+    try {
+      const invoice = event.data.object as Stripe.Invoice;
+      let subscriptionId = null;
+      if (invoice.lines?.data && invoice.lines.data.length > 0) {
+        for (const line of invoice.lines.data) {
+          if (line.parent?.subscription_item_details?.subscription) {
+            subscriptionId = line.parent.subscription_item_details.subscription;
+            break;
+          }
+        }
+      }
+
+      if (!subscriptionId) {
+        logger.error(
+          "not found subscriptionId from invoice of payment succeded event"
+        );
+        return;
+      }
+
+      const userPlan = await this._userPlanRepository.findByQuery({
+        stripeSubscriptionId: subscriptionId,
+      });
+
+      if (!userPlan) {
+        throw new NotFoundError("User plan not found for subscription");
+      }
+
+      const plan = await this._planRepository.findById(
+        userPlan.planId.toString()
+      );
+      if (!plan) throw new NotFoundError("Plan not found");
+
+      const exchangeRate = 0.012;
+      const amountInInr = invoice.amount_paid / 100 / exchangeRate;
+
+      let paymentIntentId = null;
+      if (invoice.payments?.data && invoice.payments.data.length > 0) {
+        paymentIntentId = invoice.payments.data[0].payment.payment_intent;
+      }
+
+      const paymentData: Partial<IPayment> = {
+        userId: userPlan.userId,
+        planId: userPlan.planId,
+        amount: amountInInr,
+        currency: "INR",
+        status: "succeeded",
+        stripeInvoiceId: invoice.id,
+        stripePaymentIntentId: paymentIntentId as string,
+        createdAt: new Date(invoice.created * 1000),
+      };
+
+      const existingPayment = await this._paymentRepository.findByQuery({
+        stripeInvoiceId: invoice.id,
+      });
+
+      if (existingPayment) {
+        await this._paymentRepository.update(existingPayment._id.toString(), {
+          status: "succeeded",
+          amount: amountInInr,
+          stripePaymentIntentId: paymentIntentId as string | undefined,
+        });
+      } else {
+        await this._paymentRepository.create(paymentData);
+      }
+
+      const now = new Date();
+      if (
+        userPlan.status === PlanStatus.PENDING &&
+        now >= userPlan.currentPeriodStart
+      ) {
+        await this._userPlanRepository.update(userPlan._id.toString(), {
+          status: PlanStatus.ACTIVE,
+          currentPeriodEnd: new Date(
+            (
+              await stripe.subscriptions.retrieve(
+                userPlan.stripeSubscriptionId!
+              )
+            ).items.data[0].current_period_end * 1000
+          ),
+        });
+
+        await this._userRepository.update(userPlan.userId.toString(), {
+          planId: userPlan.planId,
+          isPremium: plan.price > 0,
+        });
+      } else if (
+        userPlan.status === PlanStatus.ACTIVE ||
+        userPlan.status === PlanStatus.PAST_DUE
+      ) {
+        await this._userPlanRepository.update(userPlan._id.toString(), {
+          status: PlanStatus.ACTIVE,
+        });
+        await this._userRepository.update(userPlan.userId.toString(), {
+          isPremium: plan.price > 0,
+        });
+      }
+    } catch (error) {
+      throw error instanceof NotFoundError || error instanceof BadRequestError
+        ? error
+        : new InternalServerError(
+            `An error occurred while processing invoice payment succeeded: ${
+              (error as Error).message
+            }`
+          );
+    }
+  }
+
+  async handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
+    try {
+      const invoice = event.data.object as Stripe.Invoice;
+      let subscriptionId = null;
+      if (invoice.lines?.data && invoice.lines.data.length > 0) {
+        for (const line of invoice.lines.data) {
+          if (line.parent?.subscription_item_details?.subscription) {
+            subscriptionId = line.parent.subscription_item_details.subscription;
+            break;
+          }
+        }
+      }
+      if (!subscriptionId) {
+        return;
+      }
+
+      const userPlan = await this._userPlanRepository.findByQuery({
+        stripeSubscriptionId: subscriptionId,
+      });
+
+      if (!userPlan) {
+        throw new NotFoundError("User plan not found for subscription");
+      }
+
+      const plan = await this._planRepository.findById(
+        userPlan.planId.toString()
+      );
+      if (!plan) throw new NotFoundError("Plan not found");
+
+      let paymentIntentId = null;
+      if (invoice.payments?.data && invoice.payments.data.length > 0) {
+        paymentIntentId = invoice.payments.data[0].payment.payment_intent;
+      }
+
+      const exchangeRate = 0.012;
+      const amountInInr = invoice.amount_due / 100 / exchangeRate;
+
+      const paymentData: Partial<IPayment> = {
+        userId: userPlan.userId,
+        planId: userPlan.planId,
+        amount: amountInInr,
+        currency: "INR",
+        status: "failed",
+        stripePaymentIntentId: paymentIntentId as string,
+        createdAt: new Date(invoice.created * 1000),
+      };
+
+      const existingPayment = await this._paymentRepository.findByQuery({
+        stripeInvoiceId: invoice.id,
+      });
+
+      if (existingPayment) {
+        await this._paymentRepository.update(existingPayment._id.toString(), {
+          status: "failed",
+          amount: amountInInr,
+          stripePaymentIntentId: paymentIntentId as string | undefined,
+        });
+      } else {
+        await this._paymentRepository.create(paymentData);
+      }
+
+      if (userPlan.status === PlanStatus.ACTIVE) {
+        await this._userPlanRepository.update(userPlan._id.toString(), {
+          status: PlanStatus.PAST_DUE,
+        });
+        await this._userRepository.update(userPlan.userId.toString(), {
+          isPremium: false,
+        });
+      }
+    } catch (error) {
+      throw error instanceof NotFoundError || error instanceof BadRequestError
+        ? error
+        : new InternalServerError(
+            `An error occurred while processing invoice payment failed: ${
+              (error as Error).message
+            }`
+          );
+    }
+  }
+
+  async retryPayment(userId: string): Promise<string> {
+    try {
+      const userPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.PAST_DUE,
+      });
+      if (!userPlan) {
+        throw new NotFoundError("No past_due subscription found for user");
+      }
+
+      if (!userPlan.stripeSubscriptionId) {
+        throw new BadRequestError("No recurring subscription to retry");
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(
+        userPlan.stripeSubscriptionId,
+        { expand: ["latest_invoice"] }
+      );
+      const invoice = subscription.latest_invoice as Stripe.Invoice;
+
+      let paymentIntentId = null;
+      if (invoice.payments?.data && invoice.payments.data.length > 0) {
+        paymentIntentId = invoice.payments.data[0].payment.payment_intent;
+      }
+
+      if (!paymentIntentId) {
+        throw new InternalServerError("No payment intent found for invoice");
+      }
+
+      const user = await this._userRepository.findById(userId);
+      if (!user) throw new NotFoundError("User not found");
+
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        customer: user.stripeCustomerId,
+        mode: "payment",
+        payment_intent_data: {
+          setup_future_usage: "off_session",
+        },
+        success_url: `${process.env.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
+        client_reference_id: userId,
+        metadata: {
+          userId,
+          planId: userPlan.planId.toString(),
+          subscriptionId: userPlan.stripeSubscriptionId,
+          invoiceId: invoice.id!,
+        },
+      };
+
+      sessionParams.line_items = [
+        {
+          price_data: {
+            currency: invoice.currency,
+            product_data: {
+              name: "Invoice payment",
+              description: `Payment for invoice ${invoice.id}`,
+            },
+            unit_amount: invoice.amount_due,
+          },
+          quantity: 1,
+        },
+      ];
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
+
+      if (!session.url) {
+        throw new InternalServerError("Failed to create checkout session");
+      }
+
+      return session.url;
+    } catch (error) {
+      if (error instanceof stripe.errors.StripeError) {
+        throw new BadRequestError(`Stripe error: ${error.message}`);
+      }
+      throw error instanceof BadRequestError || error instanceof NotFoundError
+        ? error
+        : new InternalServerError(
+            `Failed to retry payment: ${(error as Error).message}`
           );
     }
   }
@@ -568,7 +901,10 @@ export class PlanService implements IPlanService {
     userId: string
   ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
     try {
-      const userPlan = await this._userPlanRepository.findByQuery({ userId, status : PlanStatus.ACTIVE });
+      const userPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
       if (!userPlan) {
         // throw new NotFoundError("No active plan found for user");
         return null;
@@ -589,39 +925,105 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async cancelSubscription(userId: string): Promise<void> {
+  async getPendingPlan(
+    userId: string
+  ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
+    try {
+      const userPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.PENDING,
+      });
+      if (!userPlan) {
+        return null;
+      }
+
+      const plan = await this._planRepository.findById(
+        userPlan.planId.toString()
+      );
+      if (!plan) {
+        throw new NotFoundError("Plan not found");
+      }
+
+      return { userPlan, plan };
+    } catch (error) {
+      throw error instanceof NotFoundError
+        ? error
+        : new InternalServerError("Failed to retrieve pending plan");
+    }
+  }
+
+  async cancelPendingSubscription(userId: string): Promise<void> {
+    try {
+      const pendingPlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.PENDING,
+      });
+
+      if (!pendingPlan) {
+        throw new NotFoundError("No pending subscription found for user");
+      }
+
+      if (pendingPlan.stripeSubscriptionId) {
+        await stripe.subscriptions.cancel(pendingPlan.stripeSubscriptionId);
+
+        await this._userPlanRepository.update(pendingPlan._id.toString(), {
+          status: PlanStatus.CANCELED,
+        });
+        logger.info(
+          `Canceled pending subscription ${pendingPlan.stripeSubscriptionId}`
+        );
+      } else {
+        throw new BadRequestError(
+          "No payment information found for pending subscription"
+        );
+      }
+    } catch (error) {
+      throw error instanceof BadRequestError || error instanceof NotFoundError
+        ? error
+        : new InternalServerError("Failed to cancel pending subscription");
+    }
+  }
+
+  async cancelActiveSubscription(userId: string): Promise<void> {
     try {
       const userPlan = await this._userPlanRepository.findByQuery({
         userId,
         status: PlanStatus.ACTIVE,
       });
+
       if (!userPlan) {
-        throw new NotFoundError("No active plan found for user");
+        throw new NotFoundError("No active subscription found for user");
       }
 
-      if (!userPlan.stripeSubscriptionId) {
-        throw new BadRequestError("No recurring subscription to cancel");
+      if (userPlan.stripeSubscriptionId) {
+        const subscription = await stripe.subscriptions.update(
+          userPlan.stripeSubscriptionId,
+          {
+            cancel_at_period_end: true,
+          }
+        );
+
+        await this._userPlanRepository.update(userPlan._id.toString(), {
+          status: subscription.status as PlanStatus,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        });
+      } else {
+        throw new BadRequestError(
+          "No payment information found for subscription"
+        );
       }
-
-      const subscription = await stripe.subscriptions.update(
-        userPlan.stripeSubscriptionId,
-        {
-          cancel_at_period_end: true,
-        }
-      );
-
-      await this._userPlanRepository.update(userPlan._id.toString(), {
-        status: subscription.status as PlanStatus,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      });
     } catch (error) {
       throw error instanceof BadRequestError || error instanceof NotFoundError
         ? error
-        : new InternalServerError("Failed to cancel subscription");
+        : new InternalServerError("Failed to refund subscription");
     }
   }
 
-  async getHistory(userId: string, page: number = 1, limit: number = 10): Promise<{
+  async getHistory(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
     data: IUserPlan[];
     totalItems: number;
     totalPages: number;
@@ -634,7 +1036,11 @@ export class PlanService implements IPlanService {
         throw new BadRequestError("Page and limit must be positive numbers");
       }
 
-      const history = await this._userPlanRepository.getHistory(userId, page, limit);
+      const history = await this._userPlanRepository.getHistory(
+        userId,
+        page,
+        limit
+      );
       return history;
     } catch (error) {
       throw error instanceof BadRequestError

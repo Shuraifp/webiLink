@@ -10,12 +10,15 @@ import { authenticateJWT } from "../middlewares/authMiddleware";
 import { UserRole } from "../types/type";
 import { UserPlanRepository } from "../repositories/userPlanRepository";
 import UserPlanModel from "../models/UserPlanModel";
+import PaymentModel from "../models/PaymentModel";
+import { PaymentRepository } from "../repositories/paymentRepository";
 
 
 const userRepository = new UserRepository(UserModel)
 const planRepository = new PlanRepository(PlanModel)
 const userPlanRepository = new UserPlanRepository(UserPlanModel)
-const adminService = new AdminService(userRepository, planRepository, userPlanRepository)
+const paymentRepository = new PaymentRepository(PaymentModel)
+const adminService = new AdminService(userRepository, planRepository, userPlanRepository, paymentRepository)
 const adminController = new AdminController(adminService)
 
 const router = Router();

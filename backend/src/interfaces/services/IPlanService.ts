@@ -19,7 +19,10 @@ export interface IPlanService {
   getUserPlan(
     userId: string
   ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null>;
-  cancelSubscription(userId: string): Promise<void>;
+  getPendingPlan(userId: string): Promise<{ userPlan: IUserPlan; plan: IPlan } | null>;
+  retryPayment(userId: string): Promise<string>;
+  cancelPendingSubscription(userId: string): Promise<void>;
+  cancelActiveSubscription(userId: string): Promise<void>;
   getHistory(
     userId: string,
     page: number,
