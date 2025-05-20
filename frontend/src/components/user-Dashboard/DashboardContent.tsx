@@ -141,7 +141,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         />
         <div className="flex-1 h-screen overflow-y-scroll">
           <main className="">
-            <div className="p-8 pt-7 pb-5 flex items-center justify-between bg-gray-400 shadow-md">
+            <div className="p-8 pt-7 pb-5 flex items-center justify-between" >
               <h2 className="text-3xl font-bold raleway items-center flex-1 text-gray-800">
                 {selectedSection === "profile"
                   ? "Profile"

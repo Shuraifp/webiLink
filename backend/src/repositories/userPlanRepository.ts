@@ -12,6 +12,10 @@ export class UserPlanRepository
     super(userPlanModel);
   }
 
+  async findAllByQuery(query: any): Promise<IUserPlan[]> {
+    return await this.userPlanModel.find(query).lean();
+  }
+
   async findUserPlan(userId: string): Promise<IUserPlan | null> {
     return await this.userPlanModel
       .findOne({ userId: new Types.ObjectId(userId) })

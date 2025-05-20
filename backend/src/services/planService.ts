@@ -29,7 +29,7 @@ export class PlanService implements IPlanService {
       if (!data.name || data.price! < 0) {
         throw new BadRequestError("Invalid plan data");
       }
-      
+
       let stripeProductId = "";
       let stripePriceId = "";
 
@@ -84,7 +84,6 @@ export class PlanService implements IPlanService {
       if (!plan) throw new InternalServerError("Failed to create plan");
       return plan;
     } catch (error) {
-      console.log(error)
       throw error instanceof BadRequestError
         ? error
         : new InternalServerError("An error occurred while creating the plan");
@@ -964,7 +963,37 @@ export class PlanService implements IPlanService {
       }
 
       if (pendingPlan.stripeSubscriptionId) {
-        await stripe.subscriptions.cancel(pendingPlan.stripeSubscriptionId);
+        const subscription = await stripe.subscriptions.cancel(
+          pendingPlan.stripeSubscriptionId
+        );
+        const invoice = await stripe.invoices.retrieve(
+          subscription.latest_invoice as string
+        );
+        let paymentIntentId = null;
+        if (invoice.payments?.data && invoice.payments.data.length > 0) {
+          paymentIntentId = invoice.payments.data[0].payment.payment_intent;
+        }
+        if (paymentIntentId) {
+          await stripe.refunds.create({
+            payment_intent: paymentIntentId as string,
+          });
+        }
+        await this._userPlanRepository.update(pendingPlan._id.toString(), {
+          status: PlanStatus.CANCELED,
+        });
+
+        const existingPayment = await this._paymentRepository.findByQuery({
+          stripeInvoiceId: invoice.id,
+        });
+
+        if (!existingPayment) {
+          throw new NotFoundError("Payment not found for pending subscription");
+        }
+
+        await this._paymentRepository.update(existingPayment!._id.toString(), {
+          status: "refunded",
+          refundedAt: new Date(),
+        });
 
         await this._userPlanRepository.update(pendingPlan._id.toString(), {
           status: PlanStatus.CANCELED,
@@ -1046,6 +1075,183 @@ export class PlanService implements IPlanService {
       throw error instanceof BadRequestError
         ? error
         : new InternalServerError("Failed to fetch subscription history");
+    }
+  }
+
+  async syncSubscriptionStatuses(): Promise<void> {
+    try {
+      const now = new Date();
+
+      const activePlans = await this._userPlanRepository.findAllByQuery({
+        status: PlanStatus.ACTIVE,
+      });
+
+      if (activePlans && activePlans.length > 0) {
+        for (const plan of activePlans) {
+          if (
+            plan.cancelAtPeriodEnd &&
+            plan.currentPeriodEnd &&
+            now >= plan.currentPeriodEnd
+          ) {
+            console.log("canceled");
+            await this._userPlanRepository.update(plan._id.toString(), {
+              status: PlanStatus.CANCELED,
+            });
+
+            await this._userRepository.update(plan.userId.toString(), {
+              planId: null,
+              isPremium: false,
+            });
+
+            logger.info(
+              `Cron: Marked subscription ${plan.stripeSubscriptionId} as CANCELED due to cancel_at_period_end`
+            );
+
+            await this.activatePendingPlan(plan.userId.toString(), now);
+          }
+        }
+      }
+
+      const pastDuePlans = await this._userPlanRepository.findAllByQuery({
+        status: PlanStatus.PAST_DUE,
+      });
+
+      if (pastDuePlans && pastDuePlans.length > 0) {
+        for (const plan of pastDuePlans) {
+          if (plan.stripeSubscriptionId) {
+            const subscription = await stripe.subscriptions.retrieve(
+              plan.stripeSubscriptionId
+            );
+            if (
+              subscription.status === "past_due" &&
+              subscription.latest_invoice
+            ) {
+              const invoice = await stripe.invoices.retrieve(
+                subscription.latest_invoice as string
+              );
+
+              if (invoice.attempt_count >= 3) {
+                await stripe.subscriptions.cancel(plan.stripeSubscriptionId);
+                await this._userPlanRepository.update(plan._id.toString(), {
+                  status: PlanStatus.CANCELED,
+                });
+                await this._userRepository.update(plan.userId.toString(), {
+                  planId: null,
+                  isPremium: false,
+                });
+                logger.info(
+                  `Cron: Canceled PAST_DUE subscription ${plan.stripeSubscriptionId} after ${invoice.attempt_count} failed attempts`
+                );
+              }
+            }
+          }
+        }
+      }
+
+      const pendingPlans = await this._userPlanRepository.findAllByQuery({
+        status: PlanStatus.PENDING,
+        currentPeriodStart: { $lte: now },
+      });
+
+      if (pendingPlans && pendingPlans.length > 0) {
+        for (const plan of pendingPlans) {
+          if (plan.stripeSubscriptionId) {
+            const subscription = await stripe.subscriptions.retrieve(
+              plan.stripeSubscriptionId
+            );
+            await this._userPlanRepository.update(plan._id.toString(), {
+              status: PlanStatus.ACTIVE,
+              currentPeriodEnd: new Date(
+                subscription.items.data[0].current_period_end * 1000
+              ),
+            });
+
+            const planDetails = await this._planRepository.findById(
+              plan.planId.toString()
+            );
+            if (!planDetails) {
+              logger.error(
+                `Cron: Plan ${plan.planId} not found for pending plan activation`
+              );
+              continue;
+            }
+
+            await this._userRepository.update(plan.userId.toString(), {
+              planId: plan.planId,
+              isPremium: planDetails.price > 0,
+            });
+
+            logger.info(
+              `Cron: Activated pending subscription ${plan.stripeSubscriptionId} for user ${plan.userId}`
+            );
+            const existingActivePlan =
+              await this._userPlanRepository.findByQuery({
+                userId: plan.userId,
+                status: PlanStatus.ACTIVE,
+                _id: { $ne: plan._id },
+              });
+
+            if (existingActivePlan && existingActivePlan.stripeSubscriptionId) {
+              await stripe.subscriptions.update(
+                existingActivePlan.stripeSubscriptionId,
+                { cancel_at_period_end: true }
+              );
+              await this._userPlanRepository.update(
+                existingActivePlan._id.toString(),
+                {
+                  status: PlanStatus.CANCELED,
+                  cancelAtPeriodEnd: true,
+                }
+              );
+              logger.info(
+                `Cron: Set existing subscription ${existingActivePlan.stripeSubscriptionId} to cancel at period end`
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`Cron: Failed to sync subscription statuses: ${error}`);
+      throw new InternalServerError("Failed to sync subscription statuses");
+    }
+  }
+
+  private async activatePendingPlan(userId: string, now: Date): Promise<void> {
+    const pendingPlan = await this._userPlanRepository.findByQuery({
+      userId,
+      status: PlanStatus.PENDING,
+      currentPeriodStart: { $lte: now },
+    });
+
+    if (pendingPlan && pendingPlan.stripeSubscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(
+        pendingPlan.stripeSubscriptionId
+      );
+      await this._userPlanRepository.update(pendingPlan._id.toString(), {
+        status: PlanStatus.ACTIVE,
+        currentPeriodEnd: new Date(
+          subscription.items.data[0].current_period_end * 1000
+        ),
+      });
+
+      const planDetails = await this._planRepository.findById(
+        pendingPlan.planId.toString()
+      );
+      if (!planDetails) {
+        logger.error(
+          `Cron: Plan ${pendingPlan.planId} not found for pending plan activation`
+        );
+        return;
+      }
+
+      await this._userRepository.update(userId, {
+        planId: pendingPlan.planId,
+        isPremium: planDetails.price > 0,
+      });
+
+      logger.info(
+        `Cron: Activated pending subscription ${pendingPlan.stripeSubscriptionId} for user ${userId}`
+      );
     }
   }
 }

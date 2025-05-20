@@ -5,6 +5,7 @@ import { RoomService } from './services/roomService';
 import { RoomRepository } from './repositories/RoomRepository';
 import { SocketService } from './services/socketService';
 import mainRoomModel from './models/mainRoomModel';
+import "./utils/cron";
 import logger from './utils/logger';
 
 dotenv.config();

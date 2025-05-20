@@ -2,6 +2,7 @@ import { IUserPlan } from "../../models/UserPlanModel";
 import { IBaseRepository } from "./IBaseRepository";
 
 export interface IUserPlanRepository extends IBaseRepository<IUserPlan> {
+  findAllByQuery(query: any): Promise<IUserPlan[]>;
   findUserPlan(userId: string): Promise<IUserPlan | null>;
   listUserPlans(
     query: any,
