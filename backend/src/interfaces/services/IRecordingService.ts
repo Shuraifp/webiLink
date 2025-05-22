@@ -1,3 +1,4 @@
+import { DashboardRecordingStats } from "../../services/recordingService";
 import { ResponseRecording } from "../../types/responses";
 
 export interface IRecordingService {
@@ -9,4 +10,5 @@ export interface IRecordingService {
     recordingDate: string
   ): Promise<string>;
   getUserRecordings(userId: string): Promise<ResponseRecording[]>;
+  getDashboardStats(): Promise<DashboardRecordingStats>;
 }

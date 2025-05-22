@@ -3,9 +3,11 @@ import { IUser } from "../../models/userModel";
 import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
 import { DashboardStats } from "../../services/adminService";
 
-
 export interface IAdminService {
-  listUsers(page: number, limit: number): Promise<{
+  listUsers(
+    page: number,
+    limit: number
+  ): Promise<{
     data: IUser[];
     totalItems: number;
     totalPages: number;
@@ -28,7 +30,11 @@ export interface IAdminService {
     data: { userPlan: IUserPlan; plan: IPlan; user: IUser }[];
     totalItems: number;
     totalPages: number;
-  }> 
-  getDashboardStats(): Promise<DashboardStats>
+  }>;
+  getDashboardStats(): Promise<DashboardStats>;
+  getRevenueData(
+    timeframe?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{ labels: (string | number)[]; totalPrices: number[] }>;
 }
-

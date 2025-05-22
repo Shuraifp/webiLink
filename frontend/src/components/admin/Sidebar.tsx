@@ -28,7 +28,7 @@ const Sidebar: React.FC = () => {
               className={getLinkClassName("/admin")}
             >
               <LayoutDashboard className="w-5 h-5" />
-              Dashboard
+              Overview
             </Link>
           </li>
           <li>

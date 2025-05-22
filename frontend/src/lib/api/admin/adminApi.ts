@@ -45,6 +45,9 @@ export const restoreUser = async (id: string) => {
   }
 };
 
+
+// Dashboard
+
 export const fetchDashboardStats = async () => {
   try {
     const res = await adminApiWithAuth.get(`/admin/dashboard`);
@@ -54,3 +57,22 @@ export const fetchDashboardStats = async () => {
     throw err;
   }
 };
+
+export const fetchRevenueData = async (timeframe: string,customStart: string,customEnd: string) => {
+  try {
+    const res = await adminApiWithAuth.get("/admin/revenue", { params: { timeframe, customStart, customEnd } });
+    return res.data; // Expect: { monthly: [{ month: string, revenue: number }], transmount: number, date: string }] }
+  } catch (err) {
+    throw err;
+  }
+};
+
+export const fetchTrendingUsers = async () => {
+  try {
+    const res = await adminApiWithAuth.get("/admin/users/trending");
+    return res.data; // Expect: [{ username: string, joinDate: string, activityCount: number }]
+  } catch (err) {
+    throw err;
+  }
+};
+

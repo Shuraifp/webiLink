@@ -17,6 +17,7 @@ export interface DashboardStats {
   users: number;
   subscriptions: { planId: string; planName: string; count: number }[];
   totalRevenue: number;
+  planTrends: { planId: string; planName: string; count: number }[];
   // meetings: number;
 }
 
@@ -163,19 +164,44 @@ export class AdminService implements IAdminService {
 
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      const [userCount, subscriptionCounts, totalRevenue] = await Promise.all([
+      const [userCount, subscriptionCounts, totalRevenue, activePlans] = await Promise.all([
         this._userRepository.countDocuments({
           isArchived: false,
           isBlocked: false,
         }),
         this._userPlanRepository.getSubscriptionCounts(),
         this._paymentRepository.getTotalRevenue(),
+        this._planRepository.listActivePlans()
       ]);
 
       return {
         users: userCount,
         subscriptions: subscriptionCounts,
         totalRevenue,
+        planTrends : activePlans.map((plan) => ({
+          planId: plan._id!.toString(),
+          planName: plan.name,
+          count: subscriptionCounts.filter((sub) => sub.planId.toString() === plan._id!.toString()).reduce((acc, sub) => acc + sub.count, 0),
+        })),
+      };
+    } catch {
+      throw new InternalServerError("Failed to fetch dashboard stats");
+    }
+  }
+
+  async getRevenueData(
+    timeframe?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{ labels: (string | number)[]; totalPrices: number[] }> {
+    try {
+      const [{ labels, totalPrices }] = await Promise.all([
+        this._paymentRepository.getRevenueData(timeframe),
+      ]);
+
+      return {
+        labels,
+        totalPrices,
       };
     } catch {
       throw new InternalServerError("Failed to fetch dashboard stats");

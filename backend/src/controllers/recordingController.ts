@@ -15,7 +15,9 @@ export class RecordingController {
       const file = req.file;
 
       if (!file) {
-        res.status(HttpStatus.BAD_REQUEST).json({ message: "No recording file provided" });
+        res
+          .status(HttpStatus.BAD_REQUEST)
+          .json({ message: "No recording file provided" });
         return;
       }
 
@@ -27,7 +29,9 @@ export class RecordingController {
         recordingDate
       );
 
-      res.status(HttpStatus.OK).json(successResponse("Recording uploaded successfully", { url }));
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Recording uploaded successfully", { url }));
     } catch (error) {
       next(error);
     }
@@ -41,7 +45,27 @@ export class RecordingController {
     try {
       const userId = req.user?._id as string;
       const recordings = await this._recordingService.getUserRecordings(userId);
-      res.status(HttpStatus.OK).json(successResponse("Recordings fetched successfully", recordings));
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Recordings fetched successfully", recordings));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getDashboardStats(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const stats = await this._recordingService.getDashboardStats();
+
+      res
+        .status(HttpStatus.OK)
+        .json(
+          successResponse("Dashboard statistics fetched successfully", stats)
+        );
     } catch (error) {
       next(error);
     }

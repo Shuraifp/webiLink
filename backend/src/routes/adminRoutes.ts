@@ -28,11 +28,11 @@ router.use(authenticateJWT(UserRole.ADMIN));
 // users
 router.get('/users' , adminController.listUsers.bind(adminController))
 router.get('/dashboard' , adminController.getDashboardStats.bind(adminController))
+router.get('/revenue' , adminController.getRevenueData.bind(adminController))
 router.put('/users/:userId/block' , adminController.blockUser.bind(adminController))
 router.put('/users/:userId/unblock' , adminController.unblockUser.bind(adminController))
 router.put('/users/:userId/archive' , adminController.softDeleteUser.bind(adminController))
 router.put('/users/:userId/restore' , adminController.restoreUser.bind(adminController))
-
 
 
 export default router;

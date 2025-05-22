@@ -122,4 +122,18 @@ export class AdminController {
       next(err);
     }
   }
+ 
+  async getRevenueData(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const  { timeframe, startDate, endDate } = req.query;
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      const stats = await this._adminService.getRevenueData(timeframe as string, start, end);
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Revenue Data fetched successfully", stats));
+    } catch (err) {
+      next(err);
+    }
+  }
 }

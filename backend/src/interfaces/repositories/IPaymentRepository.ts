@@ -1,7 +1,6 @@
 import { IPayment } from "../../models/PaymentModel";
 import { IBaseRepository } from "./IBaseRepository";
 
-
 export interface IPaymentRepository extends IBaseRepository<IPayment> {
   getTotalRevenue(): Promise<number>;
   getPaymentsByUser(
@@ -13,4 +12,9 @@ export interface IPaymentRepository extends IBaseRepository<IPayment> {
     totalItems: number;
     totalPages: number;
   }>;
+  getRevenueData(
+    filter?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<{ labels: (string | number)[]; totalPrices: number[] }>;
 }

@@ -2,6 +2,18 @@ import AWS from "aws-sdk";
 import { IRecordingRepository } from "../interfaces/repositories/IRecordingRepository";
 import { IRecordingService } from "../interfaces/services/IRecordingService";
 import { ResponseRecording } from "../types/responses";
+import logger from "../utils/logger";
+
+
+export interface DashboardRecordingStats {
+  totalRecordings: number;
+  totalStorageUsed: number;
+  recordingsPerUser: Array<{
+    userId: string;
+    username: string;
+    count: number;
+  }>;
+}
 
 export class RecordingService implements IRecordingService {
   private s3: AWS.S3;
@@ -67,5 +79,81 @@ export class RecordingService implements IRecordingService {
         Expires: 3600,
       }),
     }));
+  }
+
+  async getDashboardStats(): Promise<DashboardRecordingStats> {
+    try {
+      // const stats = await this._recordingRepository.getAllStats();
+      
+      const allRecordings = await this._recordingRepository.findAll();
+      
+      let totalStorageUsed = 0;
+      const userRecordingCount = new Map<string, { username: string; count: number }>();
+
+      for (const recording of allRecordings) {
+        try {
+          const size = await this.getS3ObjectSize(recording.s3Key);
+          totalStorageUsed += size;
+          
+          const userKey = recording.userId;
+          if (userRecordingCount.has(userKey)) {
+            userRecordingCount.get(userKey)!.count += 1;
+          } else {
+            const username = await this.getUsernameFromS3Metadata(recording.s3Key) || 'Unknown User';
+            userRecordingCount.set(userKey, { username, count: 1 });
+          }
+        } catch (error) {
+          logger.warn(`Failed to process recording ${recording.recordingId}:`, error);
+        }
+      }
+
+      const recordingsPerUser = Array.from(userRecordingCount.entries())
+        .map(([userId, data]) => ({
+          userId,
+          username: data.username,
+          count: data.count
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return {
+        totalRecordings: allRecordings.length,
+        totalStorageUsed,
+        recordingsPerUser
+      };
+
+    } catch (error) {
+      logger.error('Error getting dashboard stats:', error);
+      throw new Error('Failed to retrieve dashboard statistics');
+    }
+  }
+
+  private async getS3ObjectSize(s3Key: string): Promise<number> {
+    try {
+      const params = {
+        Bucket: process.env.AWS_S3_BUCKET!,
+        Key: s3Key
+      };
+      
+      const headObject = await this.s3.headObject(params).promise();
+      return headObject.ContentLength || 0;
+    } catch (error) {
+      logger.warn(`Failed to get S3 object size for ${s3Key}:`, error);
+      return 0;
+    }
+  }
+
+  private async getUsernameFromS3Metadata(s3Key: string): Promise<string | null> {
+    try {
+      const params = {
+        Bucket: process.env.AWS_S3_BUCKET!,
+        Key: s3Key
+      };
+      
+      const headObject = await this.s3.headObject(params).promise();
+      return headObject.Metadata?.username || null;
+    } catch (error) {
+      logger.warn(`Failed to get S3 metadata for ${s3Key}:`, error);
+      return null;
+    }
   }
 }

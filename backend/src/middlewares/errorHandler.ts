@@ -6,6 +6,7 @@ import {
     NotFoundError,
     InternalServerError
 } from '../utils/errors';
+import logger from '../utils/logger';
 
 export const errorHandler = (
     err: unknown,
@@ -16,7 +17,7 @@ export const errorHandler = (
     let statusCode = 500;
     let message = 'Internal Server Error';
 
-    console.error('Error:', err);
+    logger.error('Error:', err);
 
     if (err instanceof BadRequestError ||
         err instanceof UnauthorizedError ||
