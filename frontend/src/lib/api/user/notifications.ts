@@ -1,12 +1,11 @@
-// lib/api/notifications.ts
-import axios from 'axios';
+import { userApiWithAuth } from "../axios";
 
 export const fetchNotifications = async () => {
-  const response = await axios.get('/api/notifications');
+  const response = await userApiWithAuth.get('/notifications');
   return response.data;
 };
 
 export const markNotificationAsRead = async (notificationId: string) => {
-  const response = await axios.post(`/api/notifications/${notificationId}/read`);
+  const response = await userApiWithAuth.post(`/notifications/${notificationId}/read`);
   return response.data;
 };

@@ -5,6 +5,9 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchRooms } from "@/lib/api/user/roomApi";
+import { isPremiumUser } from "@/lib/api/user/planApi";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 interface RoomsProps {
   user: UserData;
@@ -13,7 +16,7 @@ interface RoomsProps {
   setPrevSection: Dispatch<SetStateAction<string>>;
 }
 
-interface Room {
+export interface Room {
   name: string;
   slug: string;
 }
@@ -29,17 +32,42 @@ export default function DashboardPage({
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [roomId, setRoomId] = useState<string>("");
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const getRooms = async () => {
+      setLoading(true);
       try {
         const res = await fetchRooms();
         setRooms(res);
       } catch (err) {
         console.log("error Fetching rooms: ", err);
+      } finally {
+        setLoading(false);
       }
     };
     getRooms();
+  }, []);
+
+  useEffect(() => {
+    const checkingSubscriptionStatus = async () => {
+      try {
+        const res = await isPremiumUser();
+        if (res.data.isPremiumUser) {
+          setIsPremium(true);
+        } else {
+          setIsPremium(false);
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          toast.error(err?.response?.data.message);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+      }
+    };
+    checkingSubscriptionStatus();
   }, []);
 
   const handleCopyLink = (slug: string) => {
@@ -60,11 +88,25 @@ export default function DashboardPage({
   };
 
   const handleSectionChange = (sec: string) => {
+    if(sec === "create-meeting" && !isPremium && rooms.length > 0) {
+      toast.error("You need to upgrade to premium to create more rooms.");
+      return;
+    }
     if (selectedSection === sec) return;
     const curSec = selectedSection;
     onSectionChange(sec);
     setPrevSection(curSec);
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-80">
+        <div className="w-16 h-16 border-5 border-t-transparent border-b-transparent border-yellow-400 rounded-full animate-spin" />
+        <p className="mt-4 text-gray-600">Loading rooms...</p>
+      </div>
+    );
+  }
+
 
   return (
     <>

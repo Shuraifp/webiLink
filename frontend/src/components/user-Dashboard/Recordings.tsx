@@ -1,7 +1,8 @@
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import { userApiWithAuth } from "../../lib/api/axios";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { getRecordings } from "@/lib/api/user/recordings";
+import { isPremiumUser } from "@/lib/api/user/planApi";
 
 interface Recording {
   recordingId: string;
@@ -22,8 +23,8 @@ const Recordings: React.FC<RecordingsProps> = ({ onSectionChanges }) => {
   useEffect(() => {
     const fetchRecordings = async () => {
       try {
-        const res = await userApiWithAuth.get("/recordings");
-        setRecordings(res.data.data);
+        const res = await getRecordings();
+        setRecordings(res.data);
       } catch (err) {
         if (axios.isAxiosError(err)) {
           toast.error(err?.response?.data.message);
@@ -36,8 +37,8 @@ const Recordings: React.FC<RecordingsProps> = ({ onSectionChanges }) => {
     };
     const checkingSubscriptionStatus = async () => {
       try {
-        const res = await userApiWithAuth.get("/users/isPremium");
-        if (res.data.data.isPremiumUser) {
+        const res = await isPremiumUser();
+        if (res.data.isPremiumUser) {
           setIsPremium(true);
           fetchRecordings();
         } else {
@@ -97,14 +98,14 @@ const Recordings: React.FC<RecordingsProps> = ({ onSectionChanges }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-      {recordings.map((recording) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+      {recordings.map((recording,i) => (
         <div
           key={recording.recordingId}
           className="bg-white p-4 rounded-lg shadow"
         >
-          <h3 className="text-lg font-semibold">
-            Recording<span className="font-medium ml-2">{recording.recordingId}</span>
+          <h3 className="text-lg font-medium">
+            Recording<span className="ml-2">{i+1}</span>
           </h3>
           <p className="text-sm text-gray-600">Room: {recording.roomId}</p>
           <p className="text-sm text-gray-600">

@@ -10,6 +10,8 @@ import {
   User,
   LogOut,
   Video,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 import { useState, useRef, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
@@ -109,6 +111,25 @@ const Sidebar: React.FC<{
             <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
               <Video size={24} />
               Recordings
+            </button>
+          </li>
+          <li
+            onClick={() => handleSectionChange("dashboard")}
+            className={getStyle("dashboard")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <BarChart3 size={24} />
+              Dashboard
+            </button>
+          </li>
+
+          <li
+            onClick={() => handleSectionChange("history")}
+            className={getStyle("history")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <Clock size={24} />
+              History
             </button>
           </li>
           <li

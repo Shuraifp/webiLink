@@ -18,6 +18,8 @@ import {
   markNotificationAsRead,
 } from "@/lib/api/user/notifications";
 import { Bell, X } from "lucide-react";
+import Dashboard from "./Overview";
+import History from "./History";
 
 interface DashboardContentProps {
   user: UserData;
@@ -115,6 +117,23 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         return <Subscription onSectionChange={setSelectedSection} />;
       case "recordings":
         return <Recordings onSectionChanges={setSelectedSection} />;
+      case "dashboard":
+        return (
+          <Dashboard
+            onSectionChange={setSelectedSection}
+            selectedSection={selectedSection}
+            setPrevSection={setPrevSection}
+          />
+        );
+      case "history":
+        return (
+          <History
+            user={user}
+            onSectionChange={setSelectedSection}
+            selectedSection={selectedSection}
+            setPrevSection={setPrevSection}
+          />
+        );
       case "upgrade":
         return <Upgrade />;
       default:
@@ -141,7 +160,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         />
         <div className="flex-1 h-screen overflow-y-scroll">
           <main className="">
-            <div className="p-8 pt-7 pb-5 flex items-center justify-between" >
+            <div className="p-8 pt-7 pb-5 flex items-center justify-between">
               <h2 className="text-3xl font-bold raleway items-center flex-1 text-gray-800">
                 {selectedSection === "profile"
                   ? "Profile"

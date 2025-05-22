@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { changePassword, getUser, updateProfile } from "../../lib/api/user/profileApi";
+import {
+  changePassword,
+  getUser,
+  updateProfile,
+} from "../../lib/api/user/profileApi";
 import { UserProfile } from "../../types/type";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { fetchRooms } from "@/lib/api/user/roomApi";
+import { Room } from "./Rooms";
 
 export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -40,7 +47,16 @@ export default function Profile() {
         setLoading(false);
       }
     };
+    const getRooms = async () => {
+      try {
+        const res = await fetchRooms();
+        setRooms(res);
+      } catch (err) {
+        console.log("error Fetching rooms: ", err);
+      }
+    };
     fetchUser();
+    getRooms();
   }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -178,7 +194,7 @@ export default function Profile() {
       <div className="relative px-4 w-full max-w-2xl">
         <div className="relative">
           <div
-          onClick={() => handleImageClick(backgroundInputRef)}
+            onClick={() => handleImageClick(backgroundInputRef)}
             className="w-full h-48 rounded-t-3xl bg-gray-200 cursor-pointer relative"
             title="Change Background image"
           >
@@ -498,10 +514,10 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="flex justify-around mt-4 pl-2 border-green-500 border-l-2 bg-gray-200 h-fit py-4">
+      <div className="flex justify-around mt-4 pl-2 border-yellow-500 border-l-3 bg-gray-200 h-fit py-4">
         <div className="text-center">
           <p className="text-xl text-gray-500">Active rooms</p>
-          <p className="text-lg font-semibold text-gray-800">0</p>
+          <p className="text-lg font-semibold text-gray-800">{rooms.length}</p>
         </div>
       </div>
     </div>

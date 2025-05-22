@@ -10,6 +10,15 @@ export const getPlans = async () => {
   }
 };
 
+export const isPremiumUser = async () => {
+  try {
+    const response = await userApiWithAuth.get("/users/isPremium");
+    return response.data;
+  } catch (err) {
+    throw err;
+  }
+};
+
 export const subscribeToPlan = async ({
   planId,
   priceId,

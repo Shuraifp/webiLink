@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, Dispatch, SetStateAction } from "react";
-import { createRoom } from "@/lib/api/user/roomApi";
+import { useState, Dispatch, SetStateAction, useEffect } from "react";
+import { createRoom, fetchRooms } from "@/lib/api/user/roomApi";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { isPremiumUser } from "@/lib/api/user/planApi";
 
 interface CreateMeetingProps {
   onSectionChange: Dispatch<SetStateAction<string>>;
@@ -16,35 +17,76 @@ export default function CreateMeeting({
 }: CreateMeetingProps) {
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingType, setMeetingType] = useState<"one-time" | "reusable">(
-    prevSection === "rooms" ? "reusable" : "one-time"
+    "reusable"
   );
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [duration, setDuration] = useState("30");
   const [timeZone, setTimeZone] = useState("GMT");
-  const [errors, setErrors] = useState({meetingTitle:'',date:'',startTime:''})
- 
-  const handleSave = async () => {
-    const newErrors = { meetingTitle: "", date: "", startTime: "" };
-    setErrors(newErrors)
-    if(meetingType==='reusable'){
-      if(meetingTitle==='') {
-        newErrors.meetingTitle = "Title is required for reusable meetings";
-        setErrors(newErrors)
-        return
-      }
+  const [errors, setErrors] = useState({
+    meetingTitle: "",
+    date: "",
+    startTime: "",
+  });
+  const [isPremium, setIsPremium] = useState(false);
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    const checkingSubscriptionStatus = async () => {
       try {
-        await createRoom({name: meetingTitle})
-        onSectionChange('rooms')
+        const res = await isPremiumUser();
+        if (res.data.isPremiumUser) {
+          setIsPremium(true);
+        } else {
+          setIsPremium(false);
+        }
       } catch (err) {
         if (axios.isAxiosError(err)) {
-        toast.error(err?.response?.data.message);
-      } else {
-        toast.error("An unexpected error occurred.");
+          toast.error(err?.response?.data.message);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
       }
+    };
+    const getRooms = async () => {
+      try {
+        const res = await fetchRooms();
+        setRooms(res);
+      } catch (err) {
+        console.log("error Fetching rooms: ", err);
+      }
+    };
+    checkingSubscriptionStatus();
+    getRooms();
+  }, []);
+
+  const handleSave = async () => {
+    const newErrors = { meetingTitle: "", date: "", startTime: "" };
+    setErrors(newErrors);
+    if (meetingType === "reusable") {
+      if (meetingTitle === "") {
+        newErrors.meetingTitle = "Title is required for reusable meetings";
+        setErrors(newErrors);
+        return;
+      }
+      if (rooms.length > 0 && !isPremium) {
+        toast.error(
+          "You have reached the limit of 1 reusable room. Please upgrade to premium to create more rooms."
+        );
+        return;
+      }
+      try {
+        await createRoom({ name: meetingTitle });
+        onSectionChange("rooms");
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          toast.error(err?.response?.data.message);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
       }
     }
-  }
+  };
 
   const handleCancel = () => {
     onSectionChange(prevSection);
@@ -77,8 +119,9 @@ export default function CreateMeeting({
             className="w-full p-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Max 100 characters"
           />
-          {errors.meetingTitle && 
-          <p className="text-sm text-red-400">{errors.meetingTitle}</p>}
+          {errors.meetingTitle && (
+            <p className="text-sm text-red-400">{errors.meetingTitle}</p>
+          )}
         </div>
 
         <div>
@@ -149,7 +192,12 @@ export default function CreateMeeting({
                     {/* <option value="UTC">UTC</option> */}
                   </select>
                   <p className="text-sm text-gray-600 mt-1">
-                    { startTime && <p>Your invite will say this meeting starts at {startTime} AM</p>}
+                    {startTime && (
+                      <p>
+                        Your invite will say this meeting starts at {startTime}{" "}
+                        AM
+                      </p>
+                    )}
                   </p>
                 </div>
               </div>

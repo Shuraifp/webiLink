@@ -351,13 +351,13 @@ const Subscription = ({
         </div>
       )}
 
-      {/* Pending Plan Section */}
+
       {pendingPlanData && (
         <>
           <h2 className="text-xl raleway font-semibold my-4 ml-1 text-gray-600">
             Pending Subscription
           </h2>
-          <div className="bg-white shadow-lg rounded-xl mt-4 p-6 bg-opacity-90 border-l-4 border-blue-500">
+          <div className="bg-white shadow-lg rounded-xl mt-4 p-6 bg-opacity-90 border-l-4 border-yellow-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
               <div>
                 <h3 className="text-xl font-semibold text-gray-800">
