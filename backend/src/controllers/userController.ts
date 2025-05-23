@@ -102,4 +102,16 @@ export class UserController {
       next(error);
     }
   }
+
+  async getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?._id as string;
+      const stats = await this._userService.getDashboardStats(userId);
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Dashboard stats fetched successfully", stats));
+    } catch (error) {
+      next(error);
+    }
+  }
 }

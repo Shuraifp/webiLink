@@ -1,14 +1,15 @@
 "use client";
 
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import {  
-  Clock, 
-  Video, 
+import {
+  Clock,
+  Video,
   Calendar,
   TrendingUp,
   BarChart3,
-  Activity
+  Activity,
 } from "lucide-react";
+import { getStats } from "@/lib/api/user/overview";
 
 interface DashboardProps {
   onSectionChange: Dispatch<SetStateAction<string>>;
@@ -20,7 +21,7 @@ interface DashboardStats {
   totalMeetings: number;
   hostedMeetings: number;
   attendedMeetings: number;
-  totalDuration: number; // in minutes
+  totalDuration: number;
   totalParticipants: number;
   avgMeetingDuration: number;
   thisWeekMeetings: number;
@@ -33,9 +34,9 @@ interface RecentActivity {
   duration: number;
   participants: number;
   date: string;
-  status: 'completed'; // | 'ongoing' | 'scheduled';
-  type: 'hosted' | 'attended';
-  hostName?: string; // for attended meetings
+  status: "completed" | "ongoing";
+  type: "hosted" | "attended";
+  hostName?: string;
 }
 
 export default function Dashboard({
@@ -47,7 +48,7 @@ export default function Dashboard({
   const [stats, setStats] = useState<DashboardStats>({
     totalMeetings: 0,
     hostedMeetings: 0,
-  attendedMeetings:0,
+    attendedMeetings: 0,
     totalDuration: 0,
     totalParticipants: 0,
     avgMeetingDuration: 0,
@@ -60,65 +61,20 @@ export default function Dashboard({
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API calls
-        // const statsRes = await fetchUserStats();
-        // const activityRes = await fetchRecentActivity();
-        
-        // Mock data for now
-        setTimeout(() => {
-          setStats({
-            totalMeetings: 32,
-            hostedMeetings: 24,
-            attendedMeetings: 8,
-            totalDuration: 1920, // 32 hours
-            totalParticipants: 86,
-            avgMeetingDuration: 60,
-            thisWeekMeetings: 7,
-            thisMonthMeetings: 15,
-          });
-          
-          setRecentActivity([
-            {
-              id: "1",
-              roomName: "Team Standup",
-              duration: 30,
-              participants: 6,
-              date: "2024-12-15",
-              status: "completed",
-              type: "hosted"
-            },
-            {
-              id: "2", 
-              roomName: "Project Review",
-              duration: 45,
-              participants: 4,
-              date: "2024-12-14",
-              status: "completed",
-              type: "attended",
-              hostName: "John Smith"
-            },
-            {
-              id: "3",
-              roomName: "Client Meeting",
-              duration: 90,
-              participants: 3,
-              date: "2024-12-13",
-              status: "completed",
-              type: "hosted"
-            },
-            {
-              id: "4",
-              roomName: "Weekly Sync",
-              duration: 25,
-              participants: 8,
-              date: "2024-12-12",
-              status: "completed",
-              type: "attended",
-              hostName: "Sarah Johnson"
-            }
-          ]);
-          setLoading(false);
-        }, 1000);
+        const res = await getStats();
+        const data = res.data;
+        setStats({
+          totalMeetings: data.totalMeetings,
+          hostedMeetings: data.hostedMeetings,
+          attendedMeetings: data.attendedMeetings,
+          totalDuration: data.totalDuration,
+          totalParticipants: data.totalParticipants,
+          avgMeetingDuration: data.avgMeetingDuration,
+          thisWeekMeetings: data.thisWeekMeetings,
+          thisMonthMeetings: data.thisMonthMeetings,
+        });
+        setRecentActivity(data.recentActivity);
+        setLoading(false);
       } catch (err) {
         console.error("Error fetching dashboard data: ", err);
         setLoading(false);
@@ -144,19 +100,6 @@ export default function Dashboard({
     return `${mins}m`;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'ongoing':
-        return 'bg-blue-100 text-blue-800';
-      case 'scheduled':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-80">
@@ -168,19 +111,29 @@ export default function Dashboard({
 
   return (
     <>
-      <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
-        Overview & Analytics
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
+          Overview
+        </p>
+        <button
+          onClick={() => handleSectionChange("rooms")}
+          className="px-5 py-2 bg-yellow-500 cursor-pointer text-white rounded-lg hover:bg-yellow-600 transition"
+        >
+          Start Meeting
+        </button>
+      </div>
 
-      {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Meetings</p>
-              <p className="text-3xl font-bold text-gray-800">{stats.totalMeetings}</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {stats.totalMeetings}
+              </p>
               <p className="text-xs text-gray-400 mt-1">
-                {stats.hostedMeetings} hosted • {stats.attendedMeetings} attended
+                {stats.hostedMeetings} hosted • {stats.attendedMeetings}{" "}
+                attended
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
@@ -193,7 +146,9 @@ export default function Dashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Duration</p>
-              <p className="text-3xl font-bold text-gray-800">{formatDuration(stats.totalDuration)}</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {formatDuration(stats.totalDuration)}
+              </p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <Clock className="w-6 h-6 text-green-600" />
@@ -205,7 +160,9 @@ export default function Dashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">This Week</p>
-              <p className="text-3xl font-bold text-gray-800">{stats.thisWeekMeetings}</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {stats.thisWeekMeetings}
+              </p>
               <div className="flex items-center mt-1">
                 <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
                 <p className="text-xs text-green-500">+2 from last week</p>
@@ -221,7 +178,9 @@ export default function Dashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Avg Duration</p>
-              <p className="text-3xl font-bold text-gray-800">{formatDuration(stats.avgMeetingDuration)}</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {formatDuration(stats.avgMeetingDuration)}
+              </p>
             </div>
             <div className="bg-orange-100 p-3 rounded-full">
               <BarChart3 className="w-6 h-6 text-orange-600" />
@@ -230,7 +189,6 @@ export default function Dashboard({
         </div>
       </div>
 
-    
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -252,25 +210,33 @@ export default function Dashboard({
               className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition"
             >
               <div className="flex items-center gap-3">
-                <div className={`px-2 py-1 rounded text-xs font-medium ${
-                  activity.type === 'hosted' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {activity.type === 'hosted' ? 'HOST' : 'JOIN'}
+                <div
+                  className={`px-2 py-1 rounded text-xs font-medium ${
+                    activity.type === "hosted"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  {activity.type === "hosted" ? "HOST" : "JOIN"}
                 </div>
                 <div>
-                  <p className="font-medium text-gray-800">{activity.roomName}</p>
+                  <p className="font-medium text-gray-800">
+                    {activity.roomName}
+                  </p>
                   <p className="text-sm text-gray-500">
-                    {activity.type === 'attended' && activity.hostName 
-                      ? `Hosted by ${activity.hostName}` 
+                    {activity.type === "attended" && activity.hostName
+                      ? `Hosted by ${activity.hostName}`
                       : `${activity.participants} participants`}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">{formatDuration(activity.duration)}</p>
-                <p className="text-xs text-gray-400">{new Date(activity.date).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-600">
+                  {formatDuration(activity.duration)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {new Date(activity.date).toLocaleDateString()}
+                </p>
               </div>
             </div>
           ))}
@@ -280,13 +246,17 @@ export default function Dashboard({
           <div className="text-center py-8">
             <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-500">No recent activity</p>
-            <p className="text-sm text-gray-400 mt-1">Your meeting activity will appear here</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Your meeting activity will appear here
+            </p>
           </div>
         )}
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Quick Actions
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => handleSectionChange("create-meeting")}

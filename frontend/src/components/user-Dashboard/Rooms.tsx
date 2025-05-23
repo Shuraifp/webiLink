@@ -243,7 +243,7 @@ export default function DashboardPage({
           onClick={handleJoinRoom}
           className="px-4 py-1 text-lg text-white rounded-lg bg-gray-500 hover:bg-gray-600 cursor-pointer transition w-full"
         >
-          Join a different room
+          Attend a meeting
         </button>
       </div>
 

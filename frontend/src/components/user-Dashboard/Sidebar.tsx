@@ -10,8 +10,8 @@ import {
   User,
   LogOut,
   Video,
-  BarChart3,
   Clock,
+  LayoutDashboard,
 } from "lucide-react";
 import { useState, useRef, Dispatch, SetStateAction } from "react";
 import { logout } from "@/lib/api/user/authApi";
@@ -92,6 +92,26 @@ const Sidebar: React.FC<{
             </button>
           </li>
           <li
+            onClick={() => handleSectionChange("dashboard")}
+            className={getStyle("dashboard")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <LayoutDashboard size={24} />
+              Overview
+            </button>
+          </li>
+          <li
+            onClick={() => {
+              handleSectionChange("profile");
+            }}
+            className={getStyle("profile")}
+          >
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+              <User size={24} />
+              Profile
+            </button>
+          </li>
+          <li
             onClick={() => {
               handleSectionChange("rooms");
             }}
@@ -114,33 +134,12 @@ const Sidebar: React.FC<{
             </button>
           </li>
           <li
-            onClick={() => handleSectionChange("dashboard")}
-            className={getStyle("dashboard")}
-          >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
-              <BarChart3 size={24} />
-              Dashboard
-            </button>
-          </li>
-
-          <li
             onClick={() => handleSectionChange("history")}
             className={getStyle("history")}
           >
             <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
               <Clock size={24} />
               History
-            </button>
-          </li>
-          <li
-            onClick={() => {
-              handleSectionChange("profile");
-            }}
-            className={getStyle("profile")}
-          >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
-              <User size={24} />
-              Profile
             </button>
           </li>
           <li

@@ -43,13 +43,13 @@ export default function Navbar({ user }: NavbarProps) {
         <div className="flex space-x-3">
           <Link
             href="/login"
-            className="px-4 py-2 text-blue-600 hover:underline"
+            className="px-4 py-2 text-yellow-600 hover:underline"
           >
             Log In
           </Link>
           <Link
             href="/signup"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition"
           >
             Sign Up
           </Link>
@@ -58,13 +58,13 @@ export default function Navbar({ user }: NavbarProps) {
         <div className="flex space-x-3">
           <Link
             href="/host"
-            className="px-4 py-2 text-blue-600 hover:underline"
+            className="px-4 py-2 text-yellow-600 hover:underline"
           >
             Dashboard
           </Link>
           <div
             onClick={handleLogout}
-            className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-md hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-yellow-500 cursor-pointer text-white rounded-md hover:bg-yellow-600 transition"
           >
             Log Out
           </div>

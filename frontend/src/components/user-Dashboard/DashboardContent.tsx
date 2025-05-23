@@ -45,7 +45,7 @@ interface Notification {
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const searchParams = useSearchParams();
-  const initialSection = searchParams.get("section") || "rooms";
+  const initialSection = searchParams.get("section") || "overview";
   const [selectedSection, setSelectedSection] = useState(initialSection);
   const [prevSection, setPrevSection] = useState("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -117,7 +117,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         return <Subscription onSectionChange={setSelectedSection} />;
       case "recordings":
         return <Recordings onSectionChanges={setSelectedSection} />;
-      case "dashboard":
+      case "overview":
         return (
           <Dashboard
             onSectionChange={setSelectedSection}
@@ -126,20 +126,12 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           />
         );
       case "history":
-        return (
-          <History
-            user={user}
-            // onSectionChange={setSelectedSection}
-            // selectedSection={selectedSection}
-            // setPrevSection={setPrevSection}
-          />
-        );
+        return <History />;
       case "upgrade":
         return <Upgrade />;
       default:
         return (
-          <Rooms
-            user={user}
+          <Dashboard
             onSectionChange={setSelectedSection}
             selectedSection={selectedSection}
             setPrevSection={setPrevSection}
