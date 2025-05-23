@@ -15,10 +15,10 @@ import {
   SocketEvent,
 } from "../types/chatRoom";
 import logger from "../utils/logger";
+import { IMeetingService } from "../interfaces/services/IMeetingService";
+import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
 
 export class SocketService {
-  private io: Server;
-  private roomService: IRoomService;
   private users: Map<string, UserData> = new Map();
   private hosts: Map<string, string> = new Map();
   private breakoutRooms: Map<string, BreakoutRoom[]> = new Map();
@@ -30,10 +30,17 @@ export class SocketService {
     { intervalId: NodeJS.Timeout | null; state: TimerState }
   > = new Map();
   private raisedHands: Map<string, Set<string>> = new Map();
+  private meetingIds: Map<string, string> = new Map();
 
-  constructor(io: Server, roomService: IRoomService) {
-    this.io = io;
-    this.roomService = roomService;
+  constructor(
+    private io: Server,
+    private roomService: IRoomService,
+    private meetingService: IMeetingService,
+    private meetingRepository: IMeetingRepository
+  ) {
+    // this.io = io;
+    // this.roomService = roomService;
+    // this.meetingService = meetingService;
     this.setupSocket();
   }
 
@@ -44,7 +51,6 @@ export class SocketService {
         userId: socket.data.userId || "unknown",
         username: this.users.get(socketId)?.username || "unknown",
         avatar: this.users.get(socketId)?.avatar || "unknown",
-        isMuted: this.users.get(socketId)?.isMuted ?? false,
         rooms: Array.from(socket.rooms).toString(),
         connected: socket.connected,
       })
@@ -194,9 +200,12 @@ export class SocketService {
 
   private async handleJoin(
     socket: Socket,
-    { roomId, userId, username, avatar, isMuted }: UserData
+    { roomId, userId, username, avatar }: UserData
   ) {
-    if(!roomId) return
+    if (!roomId) {
+      logger.error("Room ID is missing");
+      return;
+    }
     try {
       const room = await this.roomService.getRoom(roomId!);
       if (!room) {
@@ -204,22 +213,43 @@ export class SocketService {
         return;
       }
       const isHost = room.userId.toString() === userId;
-      socket.join(roomId!);
-
-      if (!isHost && !this.hosts.has(roomId!)) {
+      let meeting;
+      if (this.meetingIds.get(roomId)) {
+        meeting = await this.meetingService.getMeetingById(
+          this.meetingIds.get(roomId)!
+        );
+      }
+      if (!meeting && isHost) {
+        meeting = await this.meetingService.createMeeting(
+          room._id!.toString(),
+          userId,
+          room.name,
+          room.slug,
+          { userId, username, avatar }
+        );
+        this.meetingIds.set(roomId, meeting._id!.toString());
+      } else if (!isHost && meeting) {
+        await this.meetingService.addParticipant(meeting._id!.toString(), {
+          userId,
+          username,
+          avatar,
+        });
+      } else if (!isHost && !this.hosts.has(roomId)) {
         socket.emit("waiting-for-host");
         logger.info("Waiting for host:", roomId, username);
         return;
       }
 
+      socket.join(roomId!);
+
       logger.info("User joined room:", username);
+
       if (isHost) {
         this.hosts.set(roomId!, socket.id);
         this.users.set(socket.id, {
           userId,
           username,
           avatar,
-          isMuted,
           role: Role.HOST,
           roomId,
         });
@@ -230,7 +260,6 @@ export class SocketService {
           userId,
           username,
           avatar,
-          isMuted,
           role: Role.JOINEE,
           roomId,
         });
@@ -238,7 +267,6 @@ export class SocketService {
           userId,
           username,
           avatar,
-          isMuted,
           role: Role.JOINEE,
         });
       }
@@ -256,18 +284,18 @@ export class SocketService {
 
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
-    } catch {
+    } catch (err) {
+      console.error("Error joining room:", err);
       socket.emit("error", { message: "Failed to join room" });
     }
   }
 
   private getRoomUsers(roomId: string): Partial<UserData>[] {
-  const list = Array.from(this.users.entries())
-    .filter(([, user]) => user.roomId === roomId)
-    .map(([, user]) => user);
-  console.log("Room users:", list);
-  return list;
-}
+    const list = Array.from(this.users.entries())
+      .filter(([, user]) => user.roomId === roomId)
+      .map(([, user]) => user);
+    return list;
+  }
 
   private handleCreateBreakoutRooms(
     socket: Socket,
@@ -421,10 +449,27 @@ export class SocketService {
     }
   }
 
-  private handleLeave(
+  private async handleLeave(
     socket: Socket,
     { roomId, userId }: { roomId: string; userId: string }
   ) {
+    logger.info(`User is leaving: ${socket.id}`);
+    const meetingId = this.meetingIds.get(roomId);
+    if (meetingId) {
+      const meeting = await this.meetingService.getMeetingById(meetingId);
+      if (meeting) {
+        const participant = meeting.participants.find(
+          (p) => p.userId.toString() === userId
+        );
+        if (participant) {
+          participant.leaveTime = new Date();
+          await this.meetingRepository.update(meetingId, meeting);
+        }
+        if (this.hosts.get(roomId) === socket.id) {
+          await this.meetingService.endMeeting(meetingId);
+        }
+      }
+    }
     socket.to(roomId).emit("user-left", userId);
     socket.leave(roomId);
     this.users.delete(socket.id);
@@ -456,12 +501,28 @@ export class SocketService {
     }
   }
 
-  private handleDisconnect(socket: Socket) {
+  private async handleDisconnect(socket: Socket) {
     const user = this.users.get(socket.id);
     if (!user) return;
     logger.info(`User disconnected: ${socket.id} ${user.userId}`);
-    const roomId = user.roomId
+    const roomId = user.roomId;
     if (roomId) {
+      const meetingId = this.meetingIds.get(roomId);
+      if (meetingId) {
+        const meeting = await this.meetingService.getMeetingById(meetingId);
+        if (meeting) {
+          const participant = meeting.participants.find(
+            (p) => p.userId.toString() === user.userId
+          );
+          if (participant) {
+            participant.leaveTime = new Date();
+            await this.meetingRepository.update(meetingId, meeting);
+          }
+          if (this.hosts.get(roomId) === socket.id) {
+            await this.meetingService.endMeeting(meetingId);
+          }
+        }
+      }
       socket.to(roomId).emit("user-disconnected", user.userId);
       if (this.hosts.get(roomId) === socket.id) {
         this.hosts.delete(roomId);
@@ -479,12 +540,10 @@ export class SocketService {
       if (roomRaisedHands) {
         roomRaisedHands.delete(user.userId!);
         this.raisedHands.set(roomId, roomRaisedHands);
-        this.io
-          .to(roomId)
-          .emit("hand-lowered", {
-            userId: user.userId,
-            username: user.username,
-          });
+        this.io.to(roomId).emit("hand-lowered", {
+          userId: user.userId,
+          username: user.username,
+        });
       }
 
       this.users.delete(socket.id);
@@ -511,6 +570,7 @@ export class SocketService {
     this.breakoutRooms.delete(roomId);
     this.hosts.delete(roomId);
     this.raisedHands.delete(roomId);
+    this.meetingIds.delete(roomId);
     const timer = this.timers.get(roomId);
     if (timer?.intervalId) {
       clearInterval(timer.intervalId);

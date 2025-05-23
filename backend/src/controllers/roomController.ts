@@ -27,7 +27,6 @@ export class RoomController {
     try {
       const { name } = req.body;
       const userId = req.user?._id;
-      // const isPremiumUser = req.user?.isPremium || false;
       if(!name) throw new BadRequestError('room name is required');
       const room = await this._roomService.createRoom(userId!,name)
       res.status(HttpStatus.CREATED).json(successResponse('Room created successfully', room));

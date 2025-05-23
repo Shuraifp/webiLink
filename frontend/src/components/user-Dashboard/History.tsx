@@ -1,26 +1,17 @@
 "use client";
 
-import { UserData } from "@/types/type";
-import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import { 
-  Search, 
-  Filter, 
+import { useState, useEffect } from "react";
+import {
+  Search,
+  Filter,
   Calendar,
   Clock,
   Users,
   Video,
-  Download,
-  Eye,
   ChevronDown,
-  X
+  X,
 } from "lucide-react";
-
-interface HistoryProps {
-  user: UserData;
-  onSectionChange: Dispatch<SetStateAction<string>>;
-  selectedSection: string;
-  setPrevSection: Dispatch<SetStateAction<string>>;
-}
+import { getMeetings } from "@/lib/api/user/meetings";
 
 interface MeetingHistory {
   id: string;
@@ -28,131 +19,39 @@ interface MeetingHistory {
   date: string;
   startTime: string;
   endTime: string;
-  duration: number; // in minutes
+  duration: number;
   participants: number;
-  type: 'hosted' | 'attended';
-  status: 'completed' | 'ongoing' | 'cancelled';
-  hostName?: string; // for attended meetings
-  hasRecording: boolean;
-  recordingUrl?: string;
+  type: "hosted" | "attended";
+  status: "completed" | "ongoing";
+  hostName?: string;
   participantsList?: string[];
 }
 
-type FilterType = 'all' | 'hosted' | 'attended';
-type StatusFilter = 'all' | 'completed' | 'ongoing' | 'cancelled';
+type FilterType = "all" | "hosted" | "attended";
+type StatusFilter = "all" | "completed" | "ongoing";
 
-export default function History({
-  user,
-  onSectionChange,
-  selectedSection,
-  setPrevSection,
-}: HistoryProps) {
+export default function History() {
   const [loading, setLoading] = useState<boolean>(true);
   const [meetings, setMeetings] = useState<MeetingHistory[]>([]);
-  const [filteredMeetings, setFilteredMeetings] = useState<MeetingHistory[]>([]);
+  const [filteredMeetings, setFilteredMeetings] = useState<MeetingHistory[]>(
+    []
+  );
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [selectedMeeting, setSelectedMeeting] = useState<MeetingHistory | null>(null);
+  const [selectedMeeting, setSelectedMeeting] = useState<MeetingHistory | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchMeetingHistory = async () => {
       setLoading(true);
       try {
-       
-        setTimeout(() => {
-          const mockMeetings: MeetingHistory[] = [
-            {
-              id: "1",
-              roomName: "Team Standup",
-              date: "2024-12-15",
-              startTime: "09:00",
-              endTime: "09:30",
-              duration: 30,
-              participants: 6,
-              type: "hosted",
-              status: "completed",
-              hasRecording: true,
-              recordingUrl: "/recordings/1",
-              participantsList: ["John Doe", "Jane Smith", "Mike Johnson", "Sarah Wilson", "Tom Brown"]
-            },
-            {
-              id: "2",
-              roomName: "Project Review",
-              date: "2024-12-14",
-              startTime: "14:00",
-              endTime: "14:45",
-              duration: 45,
-              participants: 4,
-              type: "attended",
-              status: "completed",
-              hostName: "John Smith",
-              hasRecording: false,
-              participantsList: ["John Smith", "You", "Alice Cooper", "Bob Wilson"]
-            },
-            {
-              id: "3",
-              roomName: "Client Presentation",
-              date: "2024-12-13",
-              startTime: "16:00",
-              endTime: "17:30",
-              duration: 90,
-              participants: 3,
-              type: "hosted",
-              status: "completed",
-              hasRecording: true,
-              recordingUrl: "/recordings/3",
-              participantsList: ["Client A", "Client B", "You"]
-            },
-            {
-              id: "4",
-              roomName: "Weekly Sync",
-              date: "2024-12-12",
-              startTime: "10:00",
-              endTime: "10:25",
-              duration: 25,
-              participants: 8,
-              type: "attended",
-              status: "completed",
-              hostName: "Sarah Johnson",
-              hasRecording: false,
-              participantsList: ["Sarah Johnson", "Team Member 1", "Team Member 2", "You", "Others..."]
-            },
-            {
-              id: "5",
-              roomName: "1-on-1 Meeting",
-              date: "2024-12-11",
-              startTime: "11:00",
-              endTime: "11:45",
-              duration: 45,
-              participants: 2,
-              type: "hosted",
-              status: "completed",
-              hasRecording: false,
-              participantsList: ["Manager", "You"]
-            },
-            {
-              id: "6",
-              roomName: "Training Session",
-              date: "2024-12-10",
-              startTime: "13:00",
-              endTime: "14:30",
-              duration: 90,
-              participants: 12,
-              type: "attended",
-              status: "completed",
-              hostName: "Training Team",
-              hasRecording: true,
-              recordingUrl: "/recordings/6",
-              participantsList: ["Training Team", "You", "10 Others..."]
-            }
-          ];
-          
-          setMeetings(mockMeetings);
-          setFilteredMeetings(mockMeetings);
-          setLoading(false);
-        }, 1000);
+        const res = await getMeetings();
+        setMeetings(res.data);
+        setFilteredMeetings(res.data);
+        setLoading(false);
       } catch (err) {
         console.error("Error fetching meeting history: ", err);
         setLoading(false);
@@ -162,26 +61,23 @@ export default function History({
     fetchMeetingHistory();
   }, []);
 
-  // Filter meetings based on search and filters
   useEffect(() => {
     let filtered = meetings;
 
-    // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(meeting =>
-        meeting.roomName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        meeting.hostName?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (meeting) =>
+          meeting.roomName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          meeting.hostName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(meeting => meeting.type === typeFilter);
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((meeting) => meeting.type === typeFilter);
     }
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(meeting => meeting.status === statusFilter);
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((meeting) => meeting.status === statusFilter);
     }
 
     setFilteredMeetings(filtered);
@@ -198,30 +94,19 @@ export default function History({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'ongoing':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "ongoing":
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTypeColor = (type: string) => {
-    return type === 'hosted' 
-      ? 'bg-blue-100 text-blue-800' 
-      : 'bg-green-100 text-green-800';
-  };
-
-  const handleViewDetails = (meeting: MeetingHistory) => {
-    setSelectedMeeting(meeting);
-  };
-
-  const handleDownloadRecording = (recordingUrl: string) => {
-    // TODO: Implement download logic
-    console.log('Downloading recording:', recordingUrl);
+    return type === "hosted"
+      ? "bg-blue-100 text-blue-800"
+      : "bg-green-100 text-green-800";
   };
 
   if (loading) {
@@ -253,22 +138,29 @@ export default function History({
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition cursor-pointer ${
-              showFilters ? 'bg-yellow-50 border-yellow-300' : 'border-gray-300 hover:bg-gray-50'
+              showFilters
+                ? "bg-yellow-50 border-yellow-300"
+                : "border-gray-300 hover:bg-gray-50"
             }`}
           >
             <Filter className="w-4 h-4" />
             Filters
-            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${
+                showFilters ? "rotate-180" : ""
+              }`}
+            />
           </button>
         </div>
       </div>
 
-      {/* Filters Panel */}
       {showFilters && (
         <div className="bg-white p-4 rounded-lg shadow-md mb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Meeting Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Meeting Type
+              </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as FilterType)}
@@ -280,79 +172,78 @@ export default function History({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
               >
                 <option value="all">All Status</option>
                 <option value="completed">Completed</option>
                 <option value="ongoing">Ongoing</option>
-                <option value="cancelled">Cancelled</option>
               </select>
             </div>
           </div>
         </div>
       )}
 
-      {/* Meeting List */}
       <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar">
         {filteredMeetings.map((meeting) => (
           <div
             key={meeting.id}
-            className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition"
+            className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition"
+            onClick={() => setSelectedMeeting(meeting)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <div className="flex flex-col gap-1">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(meeting.type)}`}>
-                    {meeting.type === 'hosted' ? 'HOSTED' : 'ATTENDED'}
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(
+                      meeting.type
+                    )}`}
+                  >
+                    {meeting.type === "hosted" ? "HOSTED" : "ATTENDED"}
                   </span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(meeting.status)}`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                      meeting.status
+                    )}`}
+                  >
                     {meeting.status.toUpperCase()}
                   </span>
                 </div>
-                
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800">{meeting.roomName}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+
+                <div className="flex-1 justify-between">
+                  <div className="flex gap-2 items-center">
+                    <h3 className="font-semibold text-gray-800">
+                      {meeting.roomName}
+                    </h3>
+                    {meeting.type === "attended" && meeting.hostName && (
+                      <p className="text-sm text-gray-400">
+                        Hosted by {meeting.hostName}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-6 text-sm text-gray-500 mt-1">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
                       {new Date(meeting.date).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      {meeting.startTime} - {meeting.endTime} ({formatDuration(meeting.duration)})
+                      {meeting.startTime} - {meeting.endTime} (
+                      {formatDuration(meeting.duration)})
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
                       {meeting.participants} participants
                     </div>
                   </div>
-                  {meeting.type === 'attended' && meeting.hostName && (
-                    <p className="text-sm text-gray-400 mt-1">Hosted by {meeting.hostName}</p>
-                  )}
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {meeting.hasRecording && (
-                  <button
-                    onClick={() => handleDownloadRecording(meeting.recordingUrl!)}
-                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition cursor-pointer"
-                    title="Download Recording"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                )}
-                <button
-                  onClick={() => handleViewDetails(meeting)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                  title="View Details"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </div>
@@ -361,9 +252,11 @@ export default function History({
         {filteredMeetings.length === 0 && (
           <div className="bg-white p-8 rounded-lg shadow-md text-center">
             <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg font-medium mb-2">No meetings found</p>
+            <p className="text-gray-600 text-lg font-medium mb-2">
+              No meetings found
+            </p>
             <p className="text-gray-500 text-sm">
-              {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
+              {searchTerm || typeFilter !== "all" || statusFilter !== "all"
                 ? "Try adjusting your search or filters"
                 : "Your meeting history will appear here once you start hosting or joining meetings"}
             </p>
@@ -371,7 +264,6 @@ export default function History({
         )}
       </div>
 
-      {/* Meeting Details Modal */}
       {selectedMeeting && (
         <div
           className="fixed inset-0 z-20 min-h-screen flex justify-center items-center"
@@ -392,19 +284,24 @@ export default function History({
 
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-gray-800 text-lg">{selectedMeeting.roomName}</h3>
+                <h3 className="font-semibold text-gray-800 text-lg">
+                  {selectedMeeting.roomName}
+                </h3>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(selectedMeeting.type)}`}>
-                    {selectedMeeting.type === 'hosted' ? 'HOSTED' : 'ATTENDED'}
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(
+                      selectedMeeting.type
+                    )}`}
+                  >
+                    {selectedMeeting.type === "hosted" ? "HOSTED" : "ATTENDED"}
                   </span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(selectedMeeting.status)}`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                      selectedMeeting.status
+                    )}`}
+                  >
                     {selectedMeeting.status.toUpperCase()}
                   </span>
-                  {selectedMeeting.hasRecording && (
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                      RECORDED
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -414,9 +311,15 @@ export default function History({
                     <Calendar className="w-4 h-4" />
                     Date & Time
                   </h4>
-                  <p className="text-gray-600">{new Date(selectedMeeting.date).toLocaleDateString()}</p>
-                  <p className="text-gray-600">{selectedMeeting.startTime} - {selectedMeeting.endTime}</p>
-                  <p className="text-sm text-gray-500">Duration: {formatDuration(selectedMeeting.duration)}</p>
+                  <p className="text-gray-600">
+                    {new Date(selectedMeeting.date).toLocaleDateString()}
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedMeeting.startTime} - {selectedMeeting.endTime}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Duration: {formatDuration(selectedMeeting.duration)}
+                  </p>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -424,35 +327,23 @@ export default function History({
                     <Users className="w-4 h-4" />
                     Participants ({selectedMeeting.participants})
                   </h4>
-                  {selectedMeeting.type === 'attended' && selectedMeeting.hostName && (
-                    <p className="text-sm text-gray-600 mb-2">Host: {selectedMeeting.hostName}</p>
-                  )}
+                  {selectedMeeting.type === "attended" &&
+                    selectedMeeting.hostName && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        Host: {selectedMeeting.hostName}
+                      </p>
+                    )}
                   <div className="space-y-1">
-                    {selectedMeeting.participantsList?.map((participant, index) => (
-                      <p key={index} className="text-sm text-gray-600">• {participant}</p>
-                    ))}
+                    {selectedMeeting.participantsList?.map(
+                      (participant, index) => (
+                        <p key={index} className="text-sm text-gray-600">
+                          • {participant}
+                        </p>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
-
-              {selectedMeeting.hasRecording && (
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Video className="w-4 h-4" />
-                    Recording Available
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    This meeting was recorded and is available for download.
-                  </p>
-                  <button
-                    onClick={() => handleDownloadRecording(selectedMeeting.recordingUrl!)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition cursor-pointer flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download Recording
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>

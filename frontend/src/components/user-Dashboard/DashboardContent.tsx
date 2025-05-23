@@ -13,10 +13,10 @@ import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import Profile from "./Profile";
 import Recordings from "./Recordings";
-import {
-  fetchNotifications,
-  markNotificationAsRead,
-} from "@/lib/api/user/notifications";
+// import {
+//   fetchNotifications,
+//   markNotificationAsRead,
+// } from "@/lib/api/user/notifications";
 import { Bell, X } from "lucide-react";
 import Dashboard from "./Overview";
 import History from "./History";
@@ -57,39 +57,39 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const data = await fetchNotifications();
-        setNotifications(data);
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-      }
-    };
-    loadNotifications();
-  }, []);
+  // useEffect(() => {
+  //   const loadNotifications = async () => {
+  //     try {
+  //       const data = await fetchNotifications();
+  //       setNotifications(data);
+  //     } catch (error) {
+  //       console.error("Failed to fetch notifications:", error);
+  //     }
+  //   };
+  //   loadNotifications();
+  // }, []);
 
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await markNotificationAsRead(notificationId);
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n._id === notificationId ? { ...n, status: "read" } : n
-        )
-      );
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-    }
-  };
+  // const handleMarkAsRead = async (notificationId: string) => {
+  //   try {
+  //     await markNotificationAsRead(notificationId);
+  //     setNotifications((prev) =>
+  //       prev.map((n) =>
+  //         n._id === notificationId ? { ...n, status: "read" } : n
+  //       )
+  //     );
+  //   } catch (error) {
+  //     console.error("Failed to mark notification as read:", error);
+  //   }
+  // };
 
-  const handleNotificationAction = (notification: Notification) => {
-    if (
-      notification.type === "payment_failed" &&
-      notification.metadata?.paymentUrl
-    ) {
-      window.location.href = notification.metadata.paymentUrl;
-    }
-  };
+  // const handleNotificationAction = (notification: Notification) => {
+  //   if (
+  //     notification.type === "payment_failed" &&
+  //     notification.metadata?.paymentUrl
+  //   ) {
+  //     window.location.href = notification.metadata.paymentUrl;
+  //   }
+  // };
 
   const renderContent = () => {
     switch (selectedSection) {
@@ -129,9 +129,9 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
         return (
           <History
             user={user}
-            onSectionChange={setSelectedSection}
-            selectedSection={selectedSection}
-            setPrevSection={setPrevSection}
+            // onSectionChange={setSelectedSection}
+            // selectedSection={selectedSection}
+            // setPrevSection={setPrevSection}
           />
         );
       case "upgrade":
@@ -209,9 +209,9 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
                             {notification.type === "payment_failed" &&
                               notification.metadata?.paymentUrl && (
                                 <button
-                                  onClick={() =>
-                                    handleNotificationAction(notification)
-                                  }
+                                  // onClick={() =>
+                                  //   handleNotificationAction(notification)
+                                  // }
                                   className="text-blue-500 text-sm mt-2"
                                 >
                                   Fix Payment
@@ -219,9 +219,9 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
                               )}
                             {notification.status === "unread" && (
                               <button
-                                onClick={() =>
-                                  handleMarkAsRead(notification._id)
-                                }
+                                // onClick={() =>
+                                //   handleMarkAsRead(notification._id)
+                                // }
                                 className="text-gray-500 text-xs mt-2"
                               >
                                 Mark as read

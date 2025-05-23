@@ -1,21 +1,112 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
+import { Types } from "mongoose";
+import { Role } from "../types/chatRoom";
 
 export interface IMeeting extends Document {
-  userId: Types.ObjectId;
-  title: string;
+  roomId: Types.ObjectId;
+  hostId: Types.ObjectId;
+  roomName: string;
+  slug: string;
   startTime: Date;
-  endTime: Date;
-  participants: Types.ObjectId[];
-  status: "scheduled" | "completed" | "canceled";
+  endTime?: Date;
+  duration?: number;
+  participants: {
+    userId: Types.ObjectId;
+    username: string;
+    avatar?: string;
+    joinTime: Date;
+    leaveTime?: Date;
+    role: Role;
+  }[];
+  status: "ongoing" | "completed";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const MeetingSchema: Schema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  title: { type: String, required: true },
-  startTime: { type: Date, required: true },
-  endTime: { type: Date, required: true },
-  participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
-  status: { type: String, enum: ["scheduled", "completed", "canceled"], default: "scheduled" },
-});
+const meetingSchema = new Schema<IMeeting>(
+  {
+    roomId: {
+      type: Schema.Types.ObjectId,
+      ref: "Room",
+      required: true,
+    },
+    hostId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    roomName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    startTime: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    endTime: {
+      type: Date,
+      default: null,
+    },
+    duration: {
+      type: Number,
+      default: null,
+    },
+    participants: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        username: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        avatar: {
+          type: String,
+          default: null,
+        },
+        joinTime: {
+          type: Date,
+          required: true,
+          default: Date.now,
+        },
+        leaveTime: {
+          type: Date,
+          default: null,
+        },
+        role: {
+          type: String,
+          enum: ["host", "joinee"],
+          required: true,
+        },
+      },
+    ],
+    status: {
+      type: String,
+      enum: ["ongoing", "completed", "cancelled"],
+      default: "ongoing",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-export default mongoose.model<IMeeting>("Meeting", MeetingSchema);
+export default mongoose.model<IMeeting>("Meeting", meetingSchema);

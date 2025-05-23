@@ -23,7 +23,7 @@ const planService = new PlanService(
 );
 
 
-cron.schedule("*/30 * * * *", async () => {
+cron.schedule("0 * * * *", async () => {
   try {
     logger.info("Cron: Starting subscription status sync");
     await planService.syncSubscriptionStatuses();

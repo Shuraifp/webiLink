@@ -14,7 +14,6 @@ export interface UserData {
   username: string;
   avatar?: string;
   role: string;
-  isMuted?: boolean;
   roomId?: string;
 }
 
