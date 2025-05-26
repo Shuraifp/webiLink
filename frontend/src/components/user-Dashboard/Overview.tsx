@@ -8,6 +8,7 @@ import {
   TrendingUp,
   BarChart3,
   Activity,
+  Building,
 } from "lucide-react";
 import { getStats } from "@/lib/api/user/overview";
 
@@ -277,7 +278,7 @@ export default function Dashboard({
           >
             <div className="text-center">
               <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:bg-blue-200 transition">
-                <Video className="w-5 h-5 text-blue-600" />
+                <Building className="w-5 h-5 text-blue-600" />
               </div>
               <p className="font-medium text-gray-700">My Rooms</p>
               <p className="text-sm text-gray-500">Manage your rooms</p>

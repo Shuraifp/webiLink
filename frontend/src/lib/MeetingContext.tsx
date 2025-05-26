@@ -10,6 +10,7 @@ import {
   Question,
   ChatMessage,
   TimerState,
+  Caption,
 } from "@/types/chatRoom";
 
 export interface MeetingContextType {
@@ -58,6 +59,8 @@ export enum MeetingActionType {
   RAISE_HAND = "RAISE_HAND",
   LOWER_HAND = "LOWER_HAND",
   SET_RAISED_HANDS = "SET_RAISED_HANDS",
+  ADD_CAPTION = "ADD_CAPTION",
+  SET_CAPTIONS = "SET_CAPTIONS",
 }
 
 export type MeetingAction =
@@ -127,6 +130,14 @@ export type MeetingAction =
   | {
       type: MeetingActionType.SET_RAISED_HANDS;
       payload: { userId: string; username: string }[];
+    }
+  | {
+      type: MeetingActionType.ADD_CAPTION;
+      payload: Caption;
+    }
+  | {
+      type: MeetingActionType.SET_CAPTIONS;
+      payload: Caption[];
     };
 
 export interface MeetingState {
@@ -150,6 +161,7 @@ export interface MeetingState {
   questions: Question[];
   timer: TimerState;
   raisedHands: { userId: string; username: string }[];
+  captions: Caption[];
 }
 
 export const initialState: MeetingState = {
@@ -173,6 +185,7 @@ export const initialState: MeetingState = {
   questions: [],
   timer: { isRunning: false, duration: 0, timeLeft: 0 },
   raisedHands: [],
+  captions: [],
 };
 
 const meetingReducer = (
@@ -339,6 +352,16 @@ const meetingReducer = (
       return {
         ...state,
         raisedHands: uniqueRaisedHands,
+      };
+    case MeetingActionType.ADD_CAPTION:
+      return {
+        ...state,
+        captions: [...state.captions, action.payload],
+      };
+    case MeetingActionType.SET_CAPTIONS:
+      return {
+        ...state,
+        captions: action.payload,
       };
     default:
       return state;

@@ -56,6 +56,11 @@ export interface DrawEvent {
   lineWidth?: number;
   username?:string;
 }
+export interface Caption {
+  username: string;
+  text: string;
+  timestamp: number;
+}
 export enum SocketEvent {
   JOIN_ROOM = "join-room",
   LEAVE_ROOM = "leave-room",
@@ -108,6 +113,7 @@ export interface Question {
 export interface RoomState {
   isDrawing: boolean;
   isQAEnabled: boolean;
+  captions: Caption[];
 }
 
 export interface TimerState {

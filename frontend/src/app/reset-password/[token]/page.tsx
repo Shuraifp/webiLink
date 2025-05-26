@@ -54,8 +54,7 @@ const ResetPasswordPage: React.FC = () => {
     }
 
     try {
-      const res = await resetPassword(token, newPassword);
-      console.log(res)
+      await resetPassword(token, newPassword);
       setSuccess("Password reset successfully")
     } catch (err) {
       if (axios.isAxiosError(err)) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useReducedState } from "@/hooks/useReducedState";
 import { MeetingActionType } from "@/lib/MeetingContext";
@@ -8,6 +8,57 @@ import Whiteboard from "./Whiteboard";
 import { createPortal } from "react-dom";
 import { Socket } from "socket.io-client";
 import useRecording from "@/hooks/useRecording";
+
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+}
+
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: { new (): SpeechRecognition };
+    webkitSpeechRecognition: { new (): SpeechRecognition };
+  }
+}
+
+interface ShowCaption {
+  id: number;
+  text: string;
+  username: string;
+  expiresAt: number;
+}
 
 export default function MeetingComponent({
   navbarHeight,
@@ -24,9 +75,14 @@ export default function MeetingComponent({
   const whiteboardButtonRef = useRef<HTMLButtonElement>(null);
   const raiseHandButtonRef = useRef<HTMLButtonElement>(null);
   const recordButtonRef = useRef<HTMLButtonElement>(null);
-  const lastWhiteboardVisibleState = useRef(true);
-  const lastHandRaisedState = useRef(true);
+  const captionButtonRef = useRef<HTMLButtonElement>(null);
+  const dropUpButtonRef = useRef<HTMLButtonElement>(null);
+  const captionPanelRef = useRef<HTMLDivElement>(null);
+  const lastWhiteboardVisibleState = useRef<boolean>(true);
+  const lastHandRaisedState = useRef<boolean>(true);
   const lastRecordingState = useRef<boolean>(true);
+  const lastCaptionState = useRef<boolean>(true);
+  const timeoutsRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
 
   const {
     isRecording,
@@ -41,30 +97,183 @@ export default function MeetingComponent({
     currentUsername: state.currentUsername,
   });
 
-  const debounce = <T extends (...args: unknown[]) => unknown>(
+  const [isCaptioning, setIsCaptioning] = useState(false);
+  const [areCaptionsVisible, setAreCaptionsVisible] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("en-US");
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isRecognitionActive = useRef(false);
+  const [visibleCaptions, setVisibleCaptions] = useState<ShowCaption[]>([]);
+  const [isDropUpOpen, setIsDropUpOpen] = useState(false);
+  const captionIdCounter = useRef(0);
+  const dropUpMenuRef = useRef<HTMLDivElement>(null);
+
+  const socket = useMemo(() => socketRef.current, [socketRef]);
+
+  const handleSpeechResult = useCallback(
+    (event: SpeechRecognitionEvent) => {
+      const lastResult = event.results[event.results.length - 1];
+      if (lastResult.isFinal) {
+        const transcript = lastResult[0].transcript.trim();
+        if (transcript) {
+          const caption = {
+            username: state.currentUsername,
+            text: transcript,
+            timestamp: Date.now(),
+          };
+          socket?.emit("caption", {
+            roomId: state.roomId,
+            caption,
+          });
+        }
+      }
+    },
+    [state.currentUsername, state.roomId, socket]
+  );
+
+  const stopCaptioning = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      } catch (error) {
+        console.error("Failed to stop speech recognition:", error);
+      }
+    }
+    isRecognitionActive.current = false;
+    setIsCaptioning(false);
+    setVisibleCaptions([]);
+    setAreCaptionsVisible(false);
+    setIsDropUpOpen(false);
+    timeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+    timeoutsRef.current.clear();
+  }, []);
+
+  const startCaptioning = useCallback(() => {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      alert("Speech Recognition API is not supported in this browser.");
+      return;
+    }
+
+    if (recognitionRef.current || isRecognitionActive.current) {
+      return;
+    }
+
+    const startNewRecognition = () => {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = selectedLanguage;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.continuous = true;
+
+      recognitionRef.current.onresult = handleSpeechResult;
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        isRecognitionActive.current = false;
+        if (
+          event.error === "no-speech" ||
+          event.error === "aborted"
+        ) {
+          setTimeout(() => {
+            if (!isRecognitionActive.current && isCaptioning) {
+              try {
+                recognitionRef.current?.start();
+                isRecognitionActive.current = true;
+              } catch (error) {
+                console.error("Failed to restart recognition:", error);
+              }
+            }
+          }, 1000);
+        } else if (event.error === "not-allowed") {
+          alert(
+            "Microphone access denied. Please allow microphone access and try again."
+          );
+          stopCaptioning();
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        isRecognitionActive.current = false;
+        setTimeout(() => {
+          if (!isRecognitionActive.current && isCaptioning) {
+            try {
+              recognitionRef.current?.start();
+              isRecognitionActive.current = true;
+            } catch (error) {
+              console.error("Failed to restart recognition:", error);
+            }
+          }
+        }, 500);
+      };
+
+      try {
+        recognitionRef.current.start();
+        isRecognitionActive.current = true;
+        setIsCaptioning(true);
+      } catch (error) {
+        console.error("Failed to start speech recognition:", error);
+        isRecognitionActive.current = false;
+        setIsCaptioning(false);
+        alert("Failed to start speech recognition. Please try again.");
+      }
+    };
+
+    startNewRecognition();
+  }, [selectedLanguage, handleSpeechResult, stopCaptioning, isCaptioning]);
+
+  // Start speech recognition when the component mounts
+  useEffect(() => {
+    startCaptioning();
+    return () => {
+      stopCaptioning();
+    };
+  }, [startCaptioning, stopCaptioning]);
+
+  const downloadCaptions = useCallback(() => {
+    const text = state.captions
+      .map(
+        (c) =>
+          `[${new Date(c.timestamp).toLocaleTimeString()}] ${c.username}: ${
+            c.text
+          }`
+      )
+      .join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `captions_${state.roomId}_${new Date().toISOString()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [state.captions, state.roomId]);
+
+  const debounce = useCallback(<T extends (...args: unknown[]) => unknown>(
     func: T,
     wait: number
   ): ((...args: Parameters<T>) => void) => {
     let timeout: NodeJS.Timeout | undefined;
-
     return (...args: Parameters<T>): void => {
       clearTimeout(timeout);
       timeout = setTimeout(() => func(...args), wait);
     };
-  };
+  }, []);
 
   const toggleHandRef = useRef(() => {
     const currentIsHandRaised = state.raisedHands.some(
       (hand) => hand.userId === state.currentUserId
     );
     if (currentIsHandRaised) {
-      socketRef.current?.emit("lower-hand", {
+      socket?.emit("lower-hand", {
         roomId: state.roomId,
         userId: state.currentUserId,
         username: state.currentUsername,
       });
     } else {
-      socketRef.current?.emit("raise-hand", {
+      socket?.emit("raise-hand", {
         roomId: state.roomId,
         userId: state.currentUserId,
         username: state.currentUsername,
@@ -78,13 +287,13 @@ export default function MeetingComponent({
         (hand) => hand.userId === state.currentUserId
       );
       if (currentIsHandRaised) {
-        socketRef.current?.emit("lower-hand", {
+        socket?.emit("lower-hand", {
           roomId: state.roomId,
           userId: state.currentUserId,
           username: state.currentUsername,
         });
       } else {
-        socketRef.current?.emit("raise-hand", {
+        socket?.emit("raise-hand", {
           roomId: state.roomId,
           userId: state.currentUserId,
           username: state.currentUsername,
@@ -95,7 +304,7 @@ export default function MeetingComponent({
     state.raisedHands,
     state.currentUserId,
     state.roomId,
-    socketRef,
+    socket,
     state.currentUsername,
   ]);
 
@@ -131,9 +340,7 @@ export default function MeetingComponent({
           if (whiteboardButtonRef.current) {
             whiteboardButtonRef.current.removeEventListener("click", () => {});
           }
-          whiteboardButtonRef.current = document.createElement(
-            "button"
-          ) as HTMLButtonElement;
+          whiteboardButtonRef.current = document.createElement("button");
           whiteboardButtonRef.current.id = "zegoRoomWhiteboardButton";
           whiteboardButtonRef.current.style.backgroundColor = "#333445";
           whiteboardButtonRef.current.style.border = "none";
@@ -145,6 +352,23 @@ export default function MeetingComponent({
           whiteboardButtonRef.current.style.display = "flex";
           whiteboardButtonRef.current.style.alignItems = "center";
           whiteboardButtonRef.current.style.justifyContent = "center";
+
+          const initialWhiteboardSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ${
+                state.isWhiteboardVisible
+                  ? `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                     <line x1="3" y1="9" x2="21" y2="9"></line>
+                     <line x1="9" y1="21" x2="9" y2="9"></line>`
+                  : `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                     <line x1="3" y1="9" x2="21" y2="9"></line>
+                     <line x1="9" y1="21" x2="9" y2="9"></line>
+                     <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2"></line>`
+              }
+            </svg>
+          `;
+          whiteboardButtonRef.current.innerHTML = initialWhiteboardSvg;
+
           whiteboardButtonRef.current.addEventListener("click", () => {
             whiteboardButtonRef.current?.classList.toggle("active");
             dispatch({
@@ -169,13 +393,15 @@ export default function MeetingComponent({
             }
             raiseHandButtonRef.current = newButton;
           } else {
-            raiseHandButtonRef.current = document.createElement(
-              "button"
-            ) as HTMLButtonElement;
+            raiseHandButtonRef.current = document.createElement("button");
           }
 
           raiseHandButtonRef.current.id = "zegoRoomRaiseHandButton";
-          raiseHandButtonRef.current.style.backgroundColor = "#333445";
+          raiseHandButtonRef.current.style.backgroundColor = state.raisedHands.some(
+            (hand) => hand.userId === state.currentUserId
+          )
+            ? "#555566"
+            : "#333445";
           raiseHandButtonRef.current.style.border = "none";
           raiseHandButtonRef.current.style.borderRadius = "20%";
           raiseHandButtonRef.current.style.width = "40px";
@@ -185,6 +411,23 @@ export default function MeetingComponent({
           raiseHandButtonRef.current.style.display = "flex";
           raiseHandButtonRef.current.style.alignItems = "center";
           raiseHandButtonRef.current.style.justifyContent = "center";
+
+          const initialHandSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+              state.raisedHands.some((hand) => hand.userId === state.currentUserId)
+                ? "#FFD700"
+                : "white"
+            }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 11.5V6.5a2 2 0 0 0-4 0v5"></path>
+              <path d="M13 11.5V4.5a2 2 0 0 0-4 0v7"></path>
+              <path d="M9 11.5v-1a2 2 0 0 0-4 0v1"></path>
+              <path d="M19 11v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2"></path>
+              <path d="M9 17v1"></path>
+              <path d="M12 17v2"></path>
+              <path d="M15 17v3"></path>
+            </svg>
+          `;
+          raiseHandButtonRef.current.innerHTML = initialHandSvg;
 
           raiseHandButtonRef.current.addEventListener("click", () => {
             toggleHandRef.current();
@@ -198,14 +441,13 @@ export default function MeetingComponent({
 
         if (
           (!recordButtonRef.current ||
-          !footerMiddle.contains(recordButtonRef.current)) && state.isPremiumUser
+            !footerMiddle.contains(recordButtonRef.current)) &&
+          state.isPremiumUser
         ) {
           if (recordButtonRef.current) {
             recordButtonRef.current.removeEventListener("click", () => {});
           }
-          recordButtonRef.current = document.createElement(
-            "button"
-          ) as HTMLButtonElement;
+          recordButtonRef.current = document.createElement("button");
           recordButtonRef.current.id = "zegoRoomRecordButton";
           recordButtonRef.current.style.backgroundColor = "#333445";
           recordButtonRef.current.style.border = "none";
@@ -219,6 +461,13 @@ export default function MeetingComponent({
           recordButtonRef.current.style.justifyContent = "center";
           recordButtonRef.current.style.position = "relative";
 
+          const initialRecordSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+          `;
+          recordButtonRef.current.innerHTML = initialRecordSvg;
+
           recordButtonRef.current.addEventListener("click", () => {
             if (isRecording) {
               stopRecording();
@@ -229,139 +478,108 @@ export default function MeetingComponent({
 
           footerMiddle.insertBefore(
             recordButtonRef.current,
-            footerMiddle.children[4] || footerMiddle.lastChild 
-          );
-        }
-
-
-        if (
-          whiteboardButtonRef.current &&
-          lastWhiteboardVisibleState.current !== state.isWhiteboardVisible
-        ) {
-          const baseSvg = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            ${
-              state.isWhiteboardVisible
-                ? `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                   <line x1="3" y1="9" x2="21" y2="9"></line>
-                   <line x1="9" y1="21" x2="9" y2="9"></line>`
-                : `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                   <line x1="3" y1="9" x2="21" y2="9"></line>
-                   <line x1="9" y1="21" x2="9" y2="9"></line>
-                   <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2"></line>`
-            }
-          </svg>
-
-        `;
-          whiteboardButtonRef.current.innerHTML = baseSvg;
-          lastWhiteboardVisibleState.current = state.isWhiteboardVisible;
-        }
-        if (
-          raiseHandButtonRef.current &&
-          lastHandRaisedState.current !==
-            state.raisedHands.some(
-              (hand) => hand.userId === state.currentUserId
-            )
-        ) {
-          const handSvg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
-              state.raisedHands.some(
-                (hand) => hand.userId === state.currentUserId
-              )
-                ? "#FFD700"
-                : "white"
-            }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 11.5V6.5a2 2 0 0 0-4 0v5"></path>
-              <path d="M13 11.5V4.5a2 2 0 0 0-4 0v7"></path>
-              <path d="M9 11.5v-1a2 2 0 0 0-4 0v1"></path>
-              <path d="M19 11v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2"></path>
-              <path d="M9 17v1"></path>
-              <path d="M12 17v2"></path>
-              <path d="M15 17v3"></path>
-            </svg>
- 
-          `;
-          raiseHandButtonRef.current.innerHTML = handSvg;
-          raiseHandButtonRef.current.style.backgroundColor =
-            state.raisedHands.some(
-              (hand) => hand.userId === state.currentUserId
-            )
-              ? "#555566"
-              : "#333445";
-          lastHandRaisedState.current = state.raisedHands.some(
-            (hand) => hand.userId === state.currentUserId
+            footerMiddle.children[4] || footerMiddle.lastChild
           );
         }
 
         if (
-          recordButtonRef.current &&
-          lastRecordingState.current !== isRecording
+          !captionButtonRef.current ||
+          !footerMiddle.contains(captionButtonRef.current)
         ) {
-          const recordSvg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
-              isRecording ? "#FF0000" : "white"
-            }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              ${
-                isRecording
-                  ? `<rect x="6" y="6" width="12" height="12" />` 
-                  : `<circle cx="12" cy="12" r="10" />`
-              }
+          if (captionButtonRef.current) {
+            captionButtonRef.current.remove();
+          }
+
+          captionButtonRef.current = document.createElement("button");
+          captionButtonRef.current.id = "zegoRoomCaptionButton";
+          captionButtonRef.current.style.backgroundColor = "#333445";
+          captionButtonRef.current.style.border = "none";
+          captionButtonRef.current.style.borderTopLeftRadius = "20%";
+          captionButtonRef.current.style.borderBottomLeftRadius = "20%";
+          captionButtonRef.current.style.width = "40px";
+          captionButtonRef.current.style.height = "40px";
+          captionButtonRef.current.style.margin = "0 1px 0 5px";
+          captionButtonRef.current.style.cursor = "pointer";
+          captionButtonRef.current.style.display = "flex";
+          captionButtonRef.current.style.alignItems = "center";
+          captionButtonRef.current.style.justifyContent = "center";
+          captionButtonRef.current.style.position = "relative";
+          captionButtonRef.current.style.zIndex = "1000";
+
+          const initialCaptionSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="6" width="18" height="12" rx="2"/>
+              <path d="M7 10h4M13 10h4"/>
+              <path d="M7 14h2M11 14h6"/>
             </svg>
           `;
-          recordButtonRef.current.innerHTML = recordSvg;
-          recordButtonRef.current.style.backgroundColor = isRecording
-            ? "#555566"
-            : "#333445";
+          captionButtonRef.current.innerHTML = initialCaptionSvg;
 
-          if (isRecording) {
-            const indicator = document.createElement("div");
-            indicator.className = "recording-indicator";
-            indicator.style.position = "absolute";
-            indicator.style.top = "-5px";
-            indicator.style.right = "-5px";
-            indicator.style.width = "10px";
-            indicator.style.height = "10px";
-            indicator.style.backgroundColor = "#FF0000";
-            indicator.style.borderRadius = "50%";
-            indicator.style.animation = "pulse 1s infinite";
+          const handleCaptionClick = (e: MouseEvent) => {
+            e.stopPropagation();
+            setAreCaptionsVisible((prev) => {
+              const newState = !prev;
+              console.log(`Caption visibility toggled: ${newState}`);
+              return newState;
+            });
+          };
 
-            const timer = document.createElement("span");
-            timer.className = "recording-timer";
-            timer.style.position = "absolute";
-            timer.style.bottom = "-20px";
-            timer.style.fontSize = "12px";
-            timer.style.color = "#FF0000";
-            timer.textContent = formatTime(recordingTime);
+          captionButtonRef.current.addEventListener("click", handleCaptionClick);
 
-            recordButtonRef.current.appendChild(indicator);
-            recordButtonRef.current.appendChild(timer);
-          } else {
-            const indicator = recordButtonRef.current.querySelector(
-              ".recording-indicator"
-            );
-            const timer = recordButtonRef.current.querySelector(
-              ".recording-timer"
-            );
-            if (indicator) indicator.remove();
-            if (timer) timer.remove();
-          }
-
-          lastRecordingState.current = isRecording;
+          footerMiddle.insertBefore(
+            captionButtonRef.current,
+            footerMiddle.lastChild
+          );
         }
 
-        if (isRecording && recordButtonRef.current) {
-          const timer = recordButtonRef.current.querySelector(
-            ".recording-timer"
-          ) as HTMLSpanElement;
-          if (timer) {
-            timer.textContent = formatTime(recordingTime);
+        if (
+          !dropUpButtonRef.current ||
+          !footerMiddle.contains(dropUpButtonRef.current)
+        ) {
+          if (dropUpButtonRef.current) {
+            dropUpButtonRef.current.remove();
           }
+
+          dropUpButtonRef.current = document.createElement("button");
+          dropUpButtonRef.current.id = "zegoRoomDropUpButton";
+          dropUpButtonRef.current.style.backgroundColor = "#333445";
+          dropUpButtonRef.current.style.border = "none";
+          dropUpButtonRef.current.style.borderTopRightRadius = "20%";
+          dropUpButtonRef.current.style.borderBottomRightRadius = "20%";
+          dropUpButtonRef.current.style.width = "25px";
+          dropUpButtonRef.current.style.height = "40px";
+          dropUpButtonRef.current.style.margin = "0 5px 0 0";
+          dropUpButtonRef.current.style.cursor = "pointer";
+          dropUpButtonRef.current.style.display = "flex";
+          dropUpButtonRef.current.style.alignItems = "center";
+          dropUpButtonRef.current.style.justifyContent = "center";
+          dropUpButtonRef.current.style.position = "relative";
+          dropUpButtonRef.current.style.zIndex = "1000";
+
+          const initialDropUpSvg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="2" y1="3" x2="10" y2="3"/>
+              <line x1="2" y1="6" x2="10" y2="6"/>
+              <line x1="2" y1="9" x2="10" y2="9"/>
+            </svg>
+          `;
+          dropUpButtonRef.current.innerHTML = initialDropUpSvg;
+
+          const handleDropUpClick = (e: MouseEvent) => {
+            e.stopPropagation();
+            setIsDropUpOpen((prev) => !prev);
+          };
+
+          dropUpButtonRef.current.addEventListener("click", handleDropUpClick);
+
+          footerMiddle.insertBefore(
+            dropUpButtonRef.current,
+            footerMiddle.lastChild
+          );
         }
 
         if (!whiteboardPlaceholderRef.current) {
-          whiteboardPlaceholderRef.current = document.createElement(
-            "div"
-          ) as HTMLDivElement;
+          whiteboardPlaceholderRef.current = document.createElement("div");
           whiteboardPlaceholderRef.current.className = "whiteboard-placeholder";
           whiteboardPlaceholderRef.current.style.flex = "0 0 100%";
           whiteboardPlaceholderRef.current.style.height = "100%";
@@ -377,23 +595,6 @@ export default function MeetingComponent({
           whiteboardPlaceholderRef.current.style.position = "relative";
           whiteboardPlaceholderRef.current.style.zIndex = "30";
           whiteboardPlaceholderRef.current.style.marginRight = "10px";
-        }
-        if (
-          state.isWhiteboardVisible &&
-          !streamParent.contains(whiteboardPlaceholderRef.current)
-        ) {
-          streamParent.insertBefore(
-            whiteboardPlaceholderRef.current,
-            streamParent.firstChild
-          );
-          whiteboardPlaceholderRef.current.style.display = "flex";
-        } else if (
-          !state.isWhiteboardVisible &&
-          streamParent.contains(whiteboardPlaceholderRef.current)
-        ) {
-          whiteboardPlaceholderRef.current.style.display = "none";
-        } else {
-          whiteboardPlaceholderRef.current.style.display = "flex";
         }
 
         (streamParent as HTMLElement).style.paddingBottom = "30px";
@@ -422,9 +623,7 @@ export default function MeetingComponent({
           const parentContainer = rejoinButton.parentElement;
           rejoinButton.style.marginBottom = "14px";
 
-          const backButton = document.createElement(
-            "button"
-          ) as HTMLButtonElement;
+          const backButton = document.createElement("button");
           backButton.innerText = "Back to Dashboard";
           backButton.className = "back-to-dashboard";
           backButton.style.marginLeft = "1px";
@@ -446,9 +645,8 @@ export default function MeetingComponent({
       }
     };
 
-    const debouncedInjectLayout = debounce(injectLayout, 50);
+    const debouncedInjectLayout = debounce(injectLayout, 100);
     const observer = new MutationObserver(() => {
-      console.log("MutationObserver triggered, re-injecting layout");
       debouncedInjectLayout();
     });
 
@@ -461,18 +659,347 @@ export default function MeetingComponent({
 
     debouncedInjectLayout();
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [
-    router,
-    navbarHeight,
     meetingContainerRef,
+    navbarHeight,
+    state.isPremiumUser,
     state.isWhiteboardVisible,
-    dispatch,
     state.raisedHands,
-    socketRef,
     state.currentUserId,
-    state.roomId,
+    dispatch,
+    router,
+    debounce,
   ]);
+
+  useEffect(() => {
+    if (whiteboardPlaceholderRef.current && meetingContainerRef.current) {
+      const streamParent = meetingContainerRef.current.querySelector(
+        ".lRNsiz_pTf7YmA5QMh4z "
+      ) as HTMLElement | null;
+      if (!streamParent) return;
+
+      if (
+        state.isWhiteboardVisible &&
+        !streamParent.contains(whiteboardPlaceholderRef.current)
+      ) {
+        streamParent.insertBefore(
+          whiteboardPlaceholderRef.current,
+          streamParent.firstChild
+        );
+        whiteboardPlaceholderRef.current.style.display = "flex";
+      } else if (
+        !state.isWhiteboardVisible &&
+        streamParent.contains(whiteboardPlaceholderRef.current)
+      ) {
+        whiteboardPlaceholderRef.current.style.display = "none";
+      } else {
+        whiteboardPlaceholderRef.current.style.display = "flex";
+      }
+
+      if (
+        whiteboardButtonRef.current &&
+        lastWhiteboardVisibleState.current !== state.isWhiteboardVisible
+      ) {
+        const baseSvg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${
+              state.isWhiteboardVisible
+                ? `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                   <line x1="3" y1="9" x2="21" y2="9"></line>
+                   <line x1="9" y1="21" x2="9" y2="9"></line>`
+                : `<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                   <line x1="3" y1="9" x2="21" y2="9"></line>
+                   <line x1="9" y1="21" x2="9" y2="9"></line>
+                   <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2"></line>`
+            }
+          </svg>
+        `;
+        whiteboardButtonRef.current.innerHTML = baseSvg;
+        lastWhiteboardVisibleState.current = state.isWhiteboardVisible;
+      }
+    }
+  }, [state.isWhiteboardVisible, meetingContainerRef]);
+
+  useEffect(() => {
+    if (
+      raiseHandButtonRef.current &&
+      lastHandRaisedState.current !==
+        state.raisedHands.some((hand) => hand.userId === state.currentUserId)
+    ) {
+      const handSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+          state.raisedHands.some((hand) => hand.userId === state.currentUserId)
+            ? "#FFD700"
+            : "white"
+        }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 11.5V6.5a2 2 0 0 0-4 0v5"></path>
+          <path d="M13 11.5V4.5a2 2 0 0 0-4 0v7"></path>
+          <path d="M9 11.5v-1a2 2 0 0 0-4 0v1"></path>
+          <path d="M19 11v4a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6v-2"></path>
+          <path d="M9 17v1"></path>
+          <path d="M12 17v2"></path>
+          <path d="M15 17v3"></path>
+        </svg>
+      `;
+      raiseHandButtonRef.current.innerHTML = handSvg;
+      raiseHandButtonRef.current.style.backgroundColor = state.raisedHands.some(
+        (hand) => hand.userId === state.currentUserId
+      )
+        ? "#555566"
+        : "#333445";
+      lastHandRaisedState.current = state.raisedHands.some(
+        (hand) => hand.userId === state.currentUserId
+      );
+    }
+  }, [state.raisedHands, state.currentUserId]);
+
+  useEffect(() => {
+    if (
+      recordButtonRef.current &&
+      lastRecordingState.current !== isRecording
+    ) {
+      const recordSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+          isRecording ? "#FF0000" : "white"
+        }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          ${
+            isRecording
+              ? `<rect x="6" y="6" width="12" height="12" />`
+              : `<circle cx="12" cy="12" r="10" />`
+          }
+        </svg>
+      `;
+      recordButtonRef.current.innerHTML = recordSvg;
+      recordButtonRef.current.style.backgroundColor = isRecording
+        ? "#555566"
+        : "#333445";
+
+      if (isRecording) {
+        const indicator = document.createElement("div");
+        indicator.className = "recording-indicator";
+        indicator.style.position = "absolute";
+        indicator.style.top = "-5px";
+        indicator.style.right = "-5px";
+        indicator.style.width = "10px";
+        indicator.style.height = "10px";
+        indicator.style.backgroundColor = "#FF0000";
+        indicator.style.borderRadius = "50%";
+        indicator.style.animation = "pulse 1s infinite";
+
+        const timer = document.createElement("span");
+        timer.className = "recording-timer";
+        timer.style.position = "absolute";
+        timer.style.bottom = "-20px";
+        timer.style.fontSize = "12px";
+        timer.style.color = "#FF0000";
+        timer.textContent = formatTime(recordingTime);
+
+        recordButtonRef.current.appendChild(indicator);
+        recordButtonRef.current.appendChild(timer);
+      } else {
+        const indicator = recordButtonRef.current.querySelector(
+          ".recording-indicator"
+        );
+        const timer = recordButtonRef.current.querySelector(
+          ".recording-timer"
+        );
+        if (indicator) indicator.remove();
+        if (timer) timer.remove();
+      }
+
+      lastRecordingState.current = isRecording;
+    }
+  }, [isRecording, recordingTime, formatTime]);
+
+  useEffect(() => {
+    if (isRecording && recordButtonRef.current) {
+      const timer = recordButtonRef.current.querySelector(
+        ".recording-timer"
+      ) as HTMLSpanElement;
+      if (timer) {
+        timer.textContent = formatTime(recordingTime);
+      }
+    }
+  }, [isRecording, recordingTime, formatTime]);
+
+  useEffect(() => {
+    if (captionButtonRef.current) {
+      const captionSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+          areCaptionsVisible ? "#FFD700" : "white"
+        }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="2"/>
+          <path d="M7 10h4M13 10h4"/>
+          <path d="M7 14h2M11 14h6"/>
+        </svg>
+      `;
+      captionButtonRef.current.innerHTML = captionSvg;
+      captionButtonRef.current.style.backgroundColor = areCaptionsVisible
+        ? "#555566"
+        : "#333445";
+      console.log(`Caption button updated: areCaptionsVisible=${areCaptionsVisible}`);
+      lastCaptionState.current = areCaptionsVisible;
+    }
+  }, [areCaptionsVisible]);
+
+  useEffect(() => {
+    if (dropUpButtonRef.current) {
+      const dropUpSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="${
+          isDropUpOpen ? "#FFD700" : "white"
+        }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="3" x2="10" y2="3"/>
+          <line x1="2" y1="6" x2="10" y2="6"/>
+          <line x1="2" y1="9" x2="10" y2="9"/>
+        </svg>
+      `;
+      dropUpButtonRef.current.innerHTML = dropUpSvg;
+      dropUpButtonRef.current.style.backgroundColor = isDropUpOpen
+        ? "#555566"
+        : "#333445";
+
+      let dropUpMenu = dropUpButtonRef.current.querySelector(
+        ".drop-up-menu"
+      ) as HTMLElement;
+      if (!dropUpMenu) {
+        dropUpMenu = document.createElement("div");
+        dropUpMenu.className = "drop-up-menu";
+        dropUpMenu.style.position = "absolute";
+        dropUpMenu.style.left = "50px";
+        dropUpMenu.style.bottom = "0";
+        dropUpMenu.style.backgroundColor = "#444";
+        dropUpMenu.style.borderRadius = "8px";
+        dropUpMenu.style.padding = "10px";
+        dropUpMenu.style.zIndex = "1001";
+        dropUpMenu.style.boxShadow = "2px 0 10px rgba(0, 0, 0, 0.3)";
+        dropUpMenu.style.width = "150px";
+
+        dropUpMenuRef.current = dropUpMenu;
+
+        const langSelect = document.createElement("select");
+        langSelect.style.padding = "5px";
+        langSelect.style.marginBottom = "5px";
+        langSelect.style.width = "100%";
+        langSelect.style.backgroundColor = "#555";
+        langSelect.style.color = "white";
+        langSelect.style.border = "none";
+        langSelect.style.borderRadius = "4px";
+        const languages = [
+          { code: "en-US", name: "English (US)" },
+          { code: "es-ES", name: "Spanish" },
+          { code: "fr-FR", name: "French" },
+          { code: "de-DE", name: "German" },
+          { code: "zh-CN", name: "Chinese (Simplified)" },
+        ];
+
+        languages.forEach((lang) => {
+          const option = document.createElement("option");
+          option.value = lang.code;
+          option.textContent = lang.name;
+          if (lang.code === selectedLanguage) option.selected = true;
+          langSelect.appendChild(option);
+        });
+
+        langSelect.addEventListener("change", (e) => {
+          e.stopPropagation();
+          const newLang = (e.target as HTMLSelectElement).value;
+          setSelectedLanguage(newLang);
+          if (isCaptioning) {
+            stopCaptioning();
+            setTimeout(() => {
+              startCaptioning();
+            }, 500);
+          }
+        });
+
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = "Download Captions";
+        downloadBtn.style.padding = "5px";
+        downloadBtn.style.width = "100%";
+        downloadBtn.style.backgroundColor = "#4a4a4a";
+        downloadBtn.style.color = "white";
+        downloadBtn.style.border = "none";
+        downloadBtn.style.borderRadius = "4px";
+        downloadBtn.style.cursor = "pointer";
+
+        downloadBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          downloadCaptions();
+          setIsDropUpOpen(false);
+        });
+
+        dropUpMenu.appendChild(langSelect);
+        dropUpMenu.appendChild(downloadBtn);
+        dropUpButtonRef.current.appendChild(dropUpMenu);
+      }
+
+      dropUpMenu.style.display = isDropUpOpen && isCaptioning ? "block" : "none";
+      console.log(
+        `Drop-up menu visibility: isDropUpOpen=${isDropUpOpen}, isCaptioning=${isCaptioning}, display=${dropUpMenu.style.display}`
+      );
+    }
+  }, [
+    isCaptioning,
+    isDropUpOpen,
+    selectedLanguage,
+    stopCaptioning,
+    startCaptioning,
+    downloadCaptions,
+  ]);
+
+  const handleClickOutside = useCallback((e: MouseEvent) => {
+    if (
+      dropUpButtonRef.current &&
+      dropUpMenuRef.current &&
+      !dropUpButtonRef.current.contains(e.target as Node) &&
+      !dropUpMenuRef.current.contains(e.target as Node)
+    ) {
+      console.log("Click outside detected, closing drop-up menu");
+      setIsDropUpOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [handleClickOutside]);
+
+  useEffect(() => {
+    if (state.captions.length > 0) {
+      const latestCaption = state.captions[state.captions.length - 1];
+      const captionId = captionIdCounter.current++;
+      const newCaption: ShowCaption = {
+        id: captionId,
+        text: latestCaption.text,
+        username: latestCaption.username,
+        expiresAt: Date.now() + 3000,
+      };
+
+      setVisibleCaptions((prev) => [...prev, newCaption]);
+
+      const timeout = setTimeout(() => {
+        setVisibleCaptions((prev) =>
+          prev.filter((caption) => caption.id !== captionId)
+        );
+        timeoutsRef.current.delete(captionId);
+      }, 3000);
+
+      timeoutsRef.current.set(captionId, timeout);
+    }
+  }, [state.captions]);
+
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutsRef.current.clear();
+      stopCaptioning();
+    };
+  }, [stopCaptioning]);
 
   useEffect(() => {
     const getStreamBoxes = (streamParent: HTMLElement) => {
@@ -560,10 +1087,9 @@ export default function MeetingComponent({
       });
     };
 
-    const debouncedUpdateStreamBoxes = debounce(updateStreamBoxes, 50);
+    const debouncedUpdateStreamBoxes = debounce(updateStreamBoxes, 100);
 
     const observer = new MutationObserver(() => {
-      console.log("MutationObserver triggered, updating stream boxes");
       debouncedUpdateStreamBoxes();
     });
 
@@ -577,13 +1103,14 @@ export default function MeetingComponent({
     debouncedUpdateStreamBoxes();
 
     return () => observer.disconnect();
-  }, [state.raisedHands, state.users, meetingContainerRef]);
+  }, [state.raisedHands, state.users, meetingContainerRef, debounce]);
 
   return (
     <div
       className={`flex-1 transition-all bg-gray-800 duration-300 w-full ${
         state.isSidebarOpen ? "pr-[320px]" : "pr-0"
       }`}
+      style={{ position: "relative" }}
     >
       <div
         ref={meetingContainerRef}
@@ -600,6 +1127,33 @@ export default function MeetingComponent({
           />,
           whiteboardPlaceholderRef.current
         )}
+      {areCaptionsVisible && visibleCaptions.length > 0 && (
+        <div
+          ref={captionPanelRef}
+          className="caption-panel"
+          style={{
+            position: "absolute",
+            bottom: "80px",
+            left: "10px",
+            right: "50%",
+            maxHeight: "150px",
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            color: "white",
+            padding: "10px",
+            borderRadius: "8px",
+            overflowY: "auto",
+            zIndex: 100,
+            fontSize: "14px",
+            pointerEvents: "none",
+          }}
+        >
+          {visibleCaptions.map((caption) => (
+            <p key={caption.id}>
+              {caption.username}: {caption.text}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   NotFoundError,
   InternalServerError,
 } from "../utils/errors";
+import logger from "../utils/logger";
 
 export class AuthService implements IAuthService {
   constructor(
@@ -210,7 +211,7 @@ export class AuthService implements IAuthService {
       ${resetUrl}\n
       This link expires in 15 minutes. If you didn’t request this, ignore this email.
     `;
-
+    logger.info('reset url: '+resetUrl)
     try {
       await this._mailService.sendOtpEmail(
         email,

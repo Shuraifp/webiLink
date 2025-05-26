@@ -158,7 +158,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
                   ? "Profile"
                   : selectedSection === "recordings"
                   ? "Recordings"
-                  : `Wellcome, ${user.username}`}
+                  : `Welcome, ${user.username}`}
               </h2>
               <div className="relative flex">
                 <button

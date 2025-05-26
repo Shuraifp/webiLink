@@ -21,7 +21,8 @@ export class MeetingRepository extends BaseRepository<IMeeting> implements IMeet
         ],
       })
       .populate("hostId")
-      .populate("participants.userId");
+      .populate("participants.userId")
+      .sort({ createdAt: -1 });
   }
 
   async findOngoingByRoomId(roomId: string): Promise<IMeeting | null> {

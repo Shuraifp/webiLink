@@ -99,7 +99,11 @@ export interface Poll {
   image?: string;
 }
 
-
+export interface Caption {
+  username: string;
+  text: string;
+  timestamp: number;
+}
 export enum QuestionStatus {
   OPEN = "OPEN",
   CLOSED = "CLOSED",
@@ -118,10 +122,10 @@ export interface Question {
   answer?: string; 
   answeredBy?: string; 
 }
-
 export interface RoomState {
   isDrawing: boolean;
   isQAEnabled: boolean;
+  captions: Caption[];
 }
 
 export interface TimerState {

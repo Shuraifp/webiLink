@@ -13,6 +13,7 @@ import {
   RoomState,
   TimerState,
   SocketEvent,
+  Caption,
 } from "../types/chatRoom";
 import logger from "../utils/logger";
 import { IMeetingService } from "../interfaces/services/IMeetingService";
@@ -89,6 +90,12 @@ export class SocketService {
       );
       socket.on("whiteboard-draw", (data: DrawEvent) =>
         this.handleWhiteboardDraw(socket, data)
+      );
+
+      // Caption
+
+      socket.on("caption", ({ roomId, caption }) =>
+        this.handleCaption(socket, { roomId, caption })
       );
 
       // Polls
@@ -192,7 +199,7 @@ export class SocketService {
     if (!user) return;
     let roomState = this.roomState.get(roomId);
     if (!roomState) {
-      roomState = { isQAEnabled: false, isDrawing: false };
+      roomState = { isQAEnabled: false, isDrawing: false, captions: [] };
       this.roomState.set(roomId, roomState);
     }
     socket.emit("room-state-fetched", roomState);
@@ -285,7 +292,7 @@ export class SocketService {
       this.io.to(roomId).emit("user-list", this.getRoomUsers(roomId));
       this.emitBreakoutRoomUpdate(roomId);
     } catch (err) {
-      console.error("Error joining room:", err);
+      logger.error("Error joining room:", err);
       socket.emit("error", { message: "Failed to join room" });
     }
   }
@@ -295,6 +302,29 @@ export class SocketService {
       .filter(([, user]) => user.roomId === roomId)
       .map(([, user]) => user);
     return list;
+  }
+
+  private handleCaption(
+    socket: Socket,
+    { roomId, caption }: { roomId: string; caption: Caption }
+  ) {
+    const user = this.users.get(socket.id);
+    if (!user || !user.username) {
+      logger.warn(`No user or username found for socket: ${socket.id}`);
+      return;
+    }
+     let roomState = this.roomState.get(roomId);
+    if (!roomState) {
+      roomState = { isQAEnabled: false, isDrawing: false, captions: [caption] };
+      this.roomState.set(roomId, roomState);
+    } else {
+      roomState.captions.push(caption);
+      this.roomState.set(roomId, roomState);
+    }
+
+    logger.info(`Caption by ${user.username}: ${caption.text}`);
+
+    this.io.to(roomId).emit("caption", caption);
   }
 
   private handleCreateBreakoutRooms(

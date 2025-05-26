@@ -177,7 +177,7 @@ const Sidebar: React.FC<{
           </li>
         </ul>
         <div
-          className="flex items-center gap-2 hover:bg-red-100 mx-2 rounded-lg bg-red-50 text-red-500 cursor-pointer transition-all"
+          className="flex items-center gap-2 hover:bg-red-100 mx-2 rounded-lg bg-red-50 text-gray-800 cursor-pointer transition-all"
           onClick={handleLogout}
         >
           <button className="flex items-center gap-2 px-4 py-2 cursor-pointer">

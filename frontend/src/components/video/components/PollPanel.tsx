@@ -432,9 +432,9 @@ export default function PollPanel({ socketRef }: Props) {
                   : "Launch Poll"}
               </button>
             )}
-          {poll.status === PollStatus.ACTIVE && (
+         {poll.status !== PollStatus.UPCOMING && (
             <div>
-              {!poll.responses[state.currentUserId] && (
+              {!poll.responses[state.currentUserId] && poll.status === PollStatus.ACTIVE && (
                 <div className="mt-2">
                   {poll.options.map((opt, index) => (
                     <label
@@ -492,8 +492,8 @@ export default function PollPanel({ socketRef }: Props) {
                   </button>
                 </div>
               )}
-              {(poll.responses[state.currentUserId] ||
-                state.currentUserRole === Role.HOST) && (
+              {/* {(poll.responses[state.currentUserId] ||
+                state.currentUserRole === Role.HOST) && ( */}
                 <div className="mt-6">
                   {(poll.showResults ||
                     state.currentUserRole === Role.HOST) && (
@@ -554,9 +554,9 @@ export default function PollPanel({ socketRef }: Props) {
                     </div>
                   )}
                 </div>
-              )}
+               {/* )} */}
             </div>
-          )}
+         )}
         </div>
       ))}
       {state.polls.length === 0 && (

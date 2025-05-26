@@ -83,8 +83,6 @@ export class RecordingService implements IRecordingService {
 
   async getDashboardStats(): Promise<DashboardRecordingStats> {
     try {
-      // const stats = await this._recordingRepository.getAllStats();
-      
       const allRecordings = await this._recordingRepository.findAll();
       
       let totalStorageUsed = 0;
