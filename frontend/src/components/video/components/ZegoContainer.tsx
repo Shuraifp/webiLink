@@ -347,7 +347,7 @@ export default function MeetingComponent({
           whiteboardButtonRef.current.style.borderRadius = "20%";
           whiteboardButtonRef.current.style.width = "40px";
           whiteboardButtonRef.current.style.height = "40px";
-          whiteboardButtonRef.current.style.margin = "0 5px";
+          whiteboardButtonRef.current.style.margin = "0 10px";
           whiteboardButtonRef.current.style.cursor = "pointer";
           whiteboardButtonRef.current.style.display = "flex";
           whiteboardButtonRef.current.style.alignItems = "center";
@@ -406,7 +406,7 @@ export default function MeetingComponent({
           raiseHandButtonRef.current.style.borderRadius = "20%";
           raiseHandButtonRef.current.style.width = "40px";
           raiseHandButtonRef.current.style.height = "40px";
-          raiseHandButtonRef.current.style.margin = "0 5px 0 10px";
+          raiseHandButtonRef.current.style.margin = "0 10px";
           raiseHandButtonRef.current.style.cursor = "pointer";
           raiseHandButtonRef.current.style.display = "flex";
           raiseHandButtonRef.current.style.alignItems = "center";
@@ -454,7 +454,7 @@ export default function MeetingComponent({
           recordButtonRef.current.style.borderRadius = "20%";
           recordButtonRef.current.style.width = "40px";
           recordButtonRef.current.style.height = "40px";
-          recordButtonRef.current.style.margin = "0 5px";
+          recordButtonRef.current.style.margin = "0 10px";
           recordButtonRef.current.style.cursor = "pointer";
           recordButtonRef.current.style.display = "flex";
           recordButtonRef.current.style.alignItems = "center";
@@ -498,7 +498,7 @@ export default function MeetingComponent({
           captionButtonRef.current.style.borderBottomLeftRadius = "20%";
           captionButtonRef.current.style.width = "40px";
           captionButtonRef.current.style.height = "40px";
-          captionButtonRef.current.style.margin = "0 1px 0 5px";
+          captionButtonRef.current.style.margin = "0 1px 0 10px";
           captionButtonRef.current.style.cursor = "pointer";
           captionButtonRef.current.style.display = "flex";
           captionButtonRef.current.style.alignItems = "center";
@@ -870,6 +870,7 @@ export default function MeetingComponent({
         dropUpMenu.style.position = "absolute";
         dropUpMenu.style.left = "50px";
         dropUpMenu.style.bottom = "0";
+        dropUpMenu.style.marginRight = "10px";
         dropUpMenu.style.backgroundColor = "#444";
         dropUpMenu.style.borderRadius = "8px";
         dropUpMenu.style.padding = "10px";
@@ -1135,7 +1136,7 @@ export default function MeetingComponent({
             position: "absolute",
             bottom: "80px",
             left: "10px",
-            right: "50%",
+            // right: "50%",
             maxHeight: "150px",
             backgroundColor: "rgba(0, 0, 0, 0.7)",
             color: "white",
@@ -1149,7 +1150,7 @@ export default function MeetingComponent({
         >
           {visibleCaptions.map((caption) => (
             <p key={caption.id}>
-              {caption.username}: {caption.text}
+              {caption.username === state.currentUsername? "You":caption.username} : {caption.text}
             </p>
           ))}
         </div>
