@@ -8,12 +8,14 @@ export class MeetingController {
 
   async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
       const userId = req.user?._id;
       if (!userId) {
         throw new UnauthorizedError("Invalid or missing user ID");
       }
-      const meetings = await this._meetingService.getUserMeetings(userId);
-      res.status(HttpStatus.OK).json(successResponse("Meetings fetched successfully", meetings));
+      const data = await this._meetingService.getUserMeetings(userId,page,limit);
+      res.status(HttpStatus.OK).json(successResponse("Meetings fetched successfully", data));
     } catch (error) {
       next(error);
     }

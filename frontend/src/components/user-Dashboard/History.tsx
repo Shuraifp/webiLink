@@ -43,14 +43,18 @@ export default function History() {
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingHistory | null>(
     null
   );
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const fetchMeetingHistory = async () => {
       setLoading(true);
       try {
-        const res = await getMeetings();
-        setMeetings(res.data);
-        setFilteredMeetings(res.data);
+        const res = await getMeetings(page, limit);
+        setMeetings(res.data.meetings);
+        setFilteredMeetings(res.data.meetings);
+        setTotalPages(res.data.totalPages);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching meeting history: ", err);
@@ -59,7 +63,13 @@ export default function History() {
     };
 
     fetchMeetingHistory();
-  }, []);
+  }, [page, limit]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
 
   useEffect(() => {
     let filtered = meetings;
@@ -348,6 +358,35 @@ export default function History() {
           </div>
         </div>
       )}
+      <div className="flex justify-between items-center mt-4">
+        <div className="text-gray-600 text-sm">
+          Page {page} of {totalPages} (Total: {meetings.length} records)
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 1}
+            className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+              page === 1
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-yellow-500 hover:bg-yellow-600"
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page === totalPages}
+            className={`px-4 py-2 rounded-sm raleway text-white font-medium transition-all duration-300 ${
+              page === totalPages
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-yellow-500 hover:bg-yellow-600"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </>
   );
 }

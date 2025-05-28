@@ -8,5 +8,6 @@ export interface IMeetingRepository {
   findAll(): Promise<IMeeting[]>;
   findByRoomId(roomId: string): Promise<IMeeting[]>;
   findByUserId(userId: string): Promise<IMeeting[]>;
+  listByUserId(userId: string,page:number,limit:number): Promise<{meetings:IMeeting[],totalPages:number}>
   findOngoingByRoomId(roomId: string): Promise<IMeeting | null>;
 }

@@ -8,6 +8,7 @@ import Whiteboard from "./Whiteboard";
 import { createPortal } from "react-dom";
 import { Socket } from "socket.io-client";
 import useRecording from "@/hooks/useRecording";
+import toast from "react-hot-toast";
 
 interface SpeechRecognition extends EventTarget {
   lang: string;
@@ -109,6 +110,35 @@ export default function MeetingComponent({
 
   const socket = useMemo(() => socketRef.current, [socketRef]);
 
+  // const isUserMuted = useCallback(() => {
+  //   if (!meetingContainerRef.current) return false;
+
+  //   const footerMiddle = meetingContainerRef.current.querySelector(
+  //     "#ZegoRoomFooterMiddle"
+  //   ) as HTMLElement | null;
+  //   if (!footerMiddle) {
+  //     console.log("ZegoRoomFooterMiddle not found");
+  //     return false;
+  //   }
+
+  //   const micButton = footerMiddle.querySelector("#zegoMicButton") as HTMLButtonElement | null;
+  //   if (!micButton) {
+  //     console.log("zegoMicButton not found");
+  //     return false;
+  //   }
+  //   const classes = micButton.className.split(" ");
+  //   console.log(classes)
+  //   if (classes.length < 2) {
+  //     console.log("zegoMicButton does not have expected number of classes");
+  //     return false;
+  //   }
+
+  //   const secondClass = classes[1];
+  //   const isMuted = secondClass !== "false";
+  //   console.log(`User mute status: ${isMuted} (second class: ${secondClass})`);
+  //   return isMuted;
+  // }, [meetingContainerRef]);
+
   const handleSpeechResult = useCallback(
     (event: SpeechRecognitionEvent) => {
       const lastResult = event.results[event.results.length - 1];
@@ -160,6 +190,11 @@ export default function MeetingComponent({
     if (recognitionRef.current || isRecognitionActive.current) {
       return;
     }
+
+    // if (isUserMuted()) {
+    //   toast.error("You are muted. Please unmute your microphone to enable captioning.");
+    //   return;
+    // }
 
     const startNewRecognition = () => {
       const SpeechRecognition =
@@ -225,15 +260,51 @@ export default function MeetingComponent({
     startNewRecognition();
   }, [selectedLanguage, handleSpeechResult, stopCaptioning, isCaptioning]);
 
-  // Start speech recognition when the component mounts
+//   useEffect(() => {
+//     console.log('in observer effect')
+//     if (!isCaptioning) return;
+// console.log(meetingContainerRef)
+//     const footer = meetingContainerRef.current?.querySelector(
+//       "#ZegoRoomFooter"
+//     ) as HTMLElement | null;
+//     console.log(footer)
+//     const footerMiddle = meetingContainerRef.current?.querySelector(
+//       "#ZegoRoomFooterMiddle"
+//     ) as HTMLElement | null;
+//     console.log(footerMiddle)
+//     if (!footerMiddle) return;
+//     const micButton = footerMiddle.querySelector("#zegoMicButton") as HTMLButtonElement | null;
+//     console.log(micButton)
+//     if (!micButton) return;
+
+//     const observer = new MutationObserver(() => {
+//       if (isUserMuted()) {
+//         console.error("You have muted your microphone. Captioning has been stopped.");
+//         stopCaptioning();
+//       }
+//     });
+
+//     observer.observe(micButton, { attributes: true, attributeFilter: ["class"] });
+
+//     return () => observer.disconnect();
+//   }, [isCaptioning, isUserMuted, stopCaptioning, meetingContainerRef]);
+
   useEffect(() => {
+    if (!state.isPremiumUser) {
+      stopCaptioning();
+      return;
+    }
     startCaptioning();
     return () => {
       stopCaptioning();
     };
-  }, [startCaptioning, stopCaptioning]);
+  }, [startCaptioning, stopCaptioning, state.isPremiumUser]);
 
   const downloadCaptions = useCallback(() => {
+    if(!state.isPremiumUser){
+      toast.error("This feature is available for premium users only.");
+      return;
+    }
     const text = state.captions
       .map(
         (c) =>
@@ -249,7 +320,7 @@ export default function MeetingComponent({
     a.download = `captions_${state.roomId}_${new Date().toISOString()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [state.captions, state.roomId]);
+  }, [state.captions, state.roomId, state.isPremiumUser]);
 
   const debounce = useCallback(<T extends (...args: unknown[]) => unknown>(
     func: T,

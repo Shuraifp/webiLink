@@ -14,6 +14,6 @@ export interface IMeetingService {
     userData: { userId: string; username: string; avatar?: string }
   ): Promise<IMeeting>;
   endMeeting(meetingId: string): Promise<IMeeting>;
-  getUserMeetings(userId: string): Promise<MeetingHistoryDTO[]>;
+  getUserMeetings(userId: string,page:number,limit:number): Promise<{meetings: MeetingHistoryDTO[],totalPages:number}>;
   getMeetingById(meetingId: string): Promise<IMeeting>;
 }

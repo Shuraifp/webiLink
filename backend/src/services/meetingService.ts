@@ -138,14 +138,14 @@ export class MeetingService implements IMeetingService {
     }
   }
 
-  async getUserMeetings(userId: string): Promise<MeetingHistoryDTO[]> {
+  async getUserMeetings(userId: string,page:number,limit:number): Promise<{meetings: MeetingHistoryDTO[],totalPages:number}> {
     try {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestError("Invalid user ID");
       }
 
-      const meetings = await this._meetingRepository.findByUserId(userId);
-      return MeetingMapper.toMeetingHistoryDTOList(meetings, userId);
+      const {meetings, totalPages} = await this._meetingRepository.listByUserId(userId,page,limit);
+      return {meetings: MeetingMapper.toMeetingHistoryDTOList(meetings, userId), totalPages};
     } catch (error) {
       throw error instanceof BadRequestError
         ? error

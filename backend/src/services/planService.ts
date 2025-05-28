@@ -1093,7 +1093,7 @@ export class PlanService implements IPlanService {
             plan.currentPeriodEnd &&
             now >= plan.currentPeriodEnd
           ) {
-            console.log("canceled");
+            logger.info("canceled");
             await this._userPlanRepository.update(plan._id.toString(), {
               status: PlanStatus.CANCELED,
             });
