@@ -20,6 +20,7 @@ import Recordings from "./Recordings";
 import { Bell, X } from "lucide-react";
 import Dashboard from "./Overview";
 import History from "./History";
+import { ConfirmationModalProvider } from "./ConfirmationModal";
 
 interface DashboardContentProps {
   user: UserData;
@@ -32,16 +33,6 @@ interface Notification {
   status: "unread" | "read";
   metadata?: { paymentUrl?: string };
 }
-
-// interface SidebarSections {
-//   Rooms : 'rooms';
-//   Profile: 'profile';
-//   Create_Meeting: 'create-meeting';
-//   Settings: 'settings';
-//   Subscription: 'subscription';
-//   Recordings: 'recordings';
-//   Upgrade: 'upgrade';
-// }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
   const searchParams = useSearchParams();
@@ -142,6 +133,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
 
   return (
     <ThemeProvider>
+      <ConfirmationModalProvider>
       <Toaster />
       <div className="flex host-root min-h-screen bg-gray-200">
         <Sidebar
@@ -234,6 +226,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
           </main>
         </div>
       </div>
+      </ConfirmationModalProvider>
     </ThemeProvider>
   );
 };

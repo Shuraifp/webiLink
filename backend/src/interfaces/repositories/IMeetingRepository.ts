@@ -10,4 +10,9 @@ export interface IMeetingRepository {
   findByUserId(userId: string): Promise<IMeeting[]>;
   listByUserId(userId: string,page:number,limit:number): Promise<{meetings:IMeeting[],totalPages:number}>
   findOngoingByRoomId(roomId: string): Promise<IMeeting | null>;
+  getUniqueParticipantsCountAndDuration(): Promise<{
+    totalMeetings: number;
+    totalParticipants: number;
+    totalDuration: number;
+  }>;
 }

@@ -25,6 +25,8 @@ import UserPlanModel from "./models/UserPlanModel";
 import UserModel from "./models/userModel";
 import { PaymentRepository } from './repositories/paymentRepository';
 import PaymentModel from './models/PaymentModel';
+import { RoomRepository } from './repositories/RoomRepository';
+import RoomModel from './models/RoomModel';
 
 dotenv.config();
 
@@ -32,7 +34,8 @@ const planRepository = new PlanRepository(PlanModel);
 const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
 const paymentRepository = new PaymentRepository(PaymentModel)
-const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository);
+const roomRepository = new RoomRepository(RoomModel);
+const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository, roomRepository);
 const planController = new PlanController(planService);
 
 const app = express();

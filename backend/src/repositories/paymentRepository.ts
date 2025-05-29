@@ -3,6 +3,8 @@ import { BaseRepository } from "./baseRepository";
 import { IPayment } from "../models/PaymentModel";
 import { InternalServerError } from "../utils/errors";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
+import logger from "../utils/logger";
+import { PopulatedPayment } from "../mappers/paymentMapper";
 
 export class PaymentRepository
   extends BaseRepository<IPayment>
@@ -64,12 +66,54 @@ export class PaymentRepository
     }
   }
 
+  async getRecentTransactions(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    data: PopulatedPayment[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      const skip = (page - 1) * limit;
+      const query = { status: "succeeded" };
+      const [rdata, totalItems] = await Promise.all([
+        this._paymentModel
+          .find(query)
+          .populate<{ userId: { username: string } }>("userId", "username")
+          .populate<{ planId: { name: string } }>("planId", "name")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean()
+          .exec(),
+        this._paymentModel.countDocuments(query),
+      ]);
+      
+      const data: PopulatedPayment[] = rdata.map((payment) => ({
+        ...payment,
+        userId: payment.userId ? { username: payment.userId.username } : { username: "Unknown" },
+        planId: payment.planId ? { name: payment.planId.name } : { name: "Unknown" },
+      }));
+      
+      return {
+        data,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+      };
+    } catch (error) {
+      logger.error("Error fetching recent transactions:", error);
+      throw new InternalServerError(
+        `Failed to fetch recent transactions: ${(error as Error).message}`
+      );
+    }
+  }
+
   async getRevenueData(
     filter?: string,
-    // startDate?: Date,
-    // endDate?: Date
+    startDate?: Date,
+    endDate?: Date
   ): Promise<{ labels: (string | number)[]; totalPrices: number[] }> {
-
     const currentYear = new Date().getFullYear();
     const pipeline: PipelineStage[] = [];
 
@@ -141,6 +185,35 @@ export class PaymentRepository
           },
           { $sort: { _id: 1 } }
         );
+      } else if (filter === "Custom" && startDate && endDate) {
+        pipeline.push(
+          {
+            $match: {
+              createdAt: {
+                $gte: startDate,
+                $lte: endDate,
+              },
+              status: "succeeded",
+            },
+          },
+          {
+            $project: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+              day: { $dayOfMonth: "$createdAt" },
+              totalPrice: "$amount",
+            },
+          },
+          {
+            $group: {
+              _id: { year: "$year", month: "$month", day: "$day" },
+              totalPrice: { $sum: "$totalPrice" },
+            },
+          },
+          {
+            $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+          },
+        );
       }
 
       const payments = await this._paymentModel.aggregate(pipeline);
@@ -187,7 +260,8 @@ export class PaymentRepository
         nearestThursday.setDate(date.getDate() + (4 - dayOfWeek));
         const yearStart = new Date(nearestThursday.getFullYear(), 0, 1);
         const daysDifference = Math.floor(
-          (nearestThursday.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000)
+          (nearestThursday.getTime() - yearStart.getTime()) /
+            (24 * 60 * 60 * 1000)
         );
         const weekNumber = Math.floor((daysDifference + 10) / 7);
 
@@ -212,10 +286,23 @@ export class PaymentRepository
 
         labels.push(...weeks);
         totalPrices.push(...weeklyData);
+      } else if (filter === "Custom" && startDate && endDate) {
+        payments.forEach((pay) => {
+          const date = new Date(pay._id.year, pay._id.month - 1, pay._id.day);
+          labels.push(date.toLocaleDateString());
+          totalPrices.push(pay.totalPrice || 0);
+        });
+        if (labels.length === 0 && startDate && endDate) {
+          labels.push(
+            `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`
+          );
+          totalPrices.push(0);
+        }
       }
 
-      return {labels, totalPrices};
+      return { labels, totalPrices };
     } catch (error) {
+      logger.error("Error fetching revenue data:", error);
       throw new InternalServerError(
         `Failed to fetch revenue data: ${(error as Error).message}`
       );

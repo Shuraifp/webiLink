@@ -5,7 +5,7 @@ import { MeetingRepository } from "../repositories/meetingRepository";
 import { RoomRepository } from "../repositories/RoomRepository";
 import { UserRepository } from "../repositories/userRepository";
 import MeetingModel from "../models/MeetingModel";
-import MainRoomModel from "../models/mainRoomModel";
+import MainRoomModel from "../models/RoomModel";
 import UserModel from "../models/userModel";
 import { authenticateJWT } from "../middlewares/authMiddleware";
 import { UserRole } from "../types/type";

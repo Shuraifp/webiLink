@@ -290,15 +290,16 @@ export default function MeetingComponent({
 //   }, [isCaptioning, isUserMuted, stopCaptioning, meetingContainerRef]);
 
   useEffect(() => {
-    if (!state.isPremiumUser) {
-      stopCaptioning();
-      return;
-    }
+    // if (!state.isPremiumUser) {
+    //   console.log('not premium')
+    //   stopCaptioning();
+    //   return;
+    // }
     startCaptioning();
     return () => {
       stopCaptioning();
     };
-  }, [startCaptioning, stopCaptioning, state.isPremiumUser]);
+  }, [startCaptioning, stopCaptioning]);
 
   const downloadCaptions = useCallback(() => {
     if(!state.isPremiumUser){

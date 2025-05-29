@@ -11,3 +11,13 @@ export interface MeetingHistoryDTO {
   hostName?: string;
   participantsList?: string[];
 }
+
+export interface AdminDashboardRecentMeetingDTO {
+  id: string;
+  roomName: string;
+  hostName: string;
+  participants: number;
+  duration: number;
+  startTime: string;
+  endTime: string;
+}

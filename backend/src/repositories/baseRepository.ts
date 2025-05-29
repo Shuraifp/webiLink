@@ -21,6 +21,6 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   async findAll(): Promise<T[]> {
-    return await this._model.find();
+    return await this._model.find().sort({ createdAt: -1 }).exec();
   }
 }

@@ -1,15 +1,16 @@
 "use client";
 
 import { RecentMeeting } from "@/app/(dashboard)/admin/page";
+import { fetchMeetingStats } from "@/lib/api/admin/adminApi";
+import axios from "axios";
 import { Calendar, Clock, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 interface MeetingStats {
   totalMeetings: number;
-  activeMeetings: number;
   totalDuration: number;
   totalParticipants: number;
-  meetingsPerDay: { date: string; count: number }[];
 }
 
 export function Meetings({
@@ -20,6 +21,47 @@ export function Meetings({
   formatDuration: (minutes: number) => string;
 }) {
   const [meetingStats, setMeetingStats] = useState<MeetingStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const calculateMeetingStats = async () => {
+      try {
+        setLoading(true);
+        const res = await fetchMeetingStats();
+        setMeetingStats(res.data);
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          const message =
+            err.response?.data.message || "Failed to fetch dashboard stats";
+          setError(message);
+          toast.error(message);
+        } else {
+          const message = "An unexpected error occurred.";
+          setError(message);
+          toast.error(message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    calculateMeetingStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex justify-center items-center flex-col">
+          <div className="w-16 h-16 border-4 border-t-transparent border-yellow-400 rounded-full animate-spin" />
+          <p className="mt-4 text-gray-600">Loading dashboard..</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-red-600">{error}</div>;
+  }
 
   return (
     <div>
@@ -85,13 +127,13 @@ export function Meetings({
                   Start Time
                 </th>
                 <th className="px-4 py-2 text-left text-gray-600 raleway">
+                  End Time
+                </th>
+                <th className="px-4 py-2 text-left text-gray-600 raleway">
                   Duration
                 </th>
                 <th className="px-4 py-2 text-left text-gray-600 raleway">
                   Participants
-                </th>
-                <th className="px-4 py-2 text-left text-gray-600 raleway">
-                  Recording
                 </th>
               </tr>
             </thead>
@@ -108,17 +150,13 @@ export function Meetings({
                     {new Date(meeting.startTime).toLocaleString()}
                   </td>
                   <td className="px-4 py-2 text-gray-600">
+                    {new Date(meeting.endTime).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 text-gray-600">
                     {formatDuration(meeting.duration)}
                   </td>
                   <td className="px-4 py-2 text-gray-600">
                     {meeting.participants}
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">
-                    {meeting.hasRecording ? (
-                      <span className="text-green-600">Yes</span>
-                    ) : (
-                      <span className="text-gray-400">No</span>
-                    )}
                   </td>
                 </tr>
               ))}

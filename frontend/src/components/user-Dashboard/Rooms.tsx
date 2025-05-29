@@ -4,10 +4,11 @@ import { UserData } from "@/types/type";
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchRooms } from "@/lib/api/user/roomApi";
+import { fetchRooms, deleteRoom } from "@/lib/api/user/roomApi";
 import { isPremiumUser } from "@/lib/api/user/planApi";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useConfirmationModal } from "./ConfirmationModal";
 
 interface RoomsProps {
   user: UserData;
@@ -17,8 +18,10 @@ interface RoomsProps {
 }
 
 export interface Room {
+  _id: string;
   name: string;
   slug: string;
+  isActive: boolean;
 }
 
 export default function DashboardPage({
@@ -34,6 +37,11 @@ export default function DashboardPage({
   const [roomId, setRoomId] = useState<string>("");
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [deleteLoading, setDeleteLoading] = useState<{ [id: string]: boolean }>(
+    {}
+  );
+  const [showWarning, setShowWarning] = useState<boolean>(false);
+  const { confirm } = useConfirmationModal();
 
   useEffect(() => {
     const getRooms = async () => {
@@ -41,8 +49,11 @@ export default function DashboardPage({
       try {
         const res = await fetchRooms();
         setRooms(res);
+        const hasInactiveRooms = res.some((room: Room) => !room.isActive);
+        setShowWarning(hasInactiveRooms);
       } catch (err) {
         console.log("error Fetching rooms: ", err);
+        toast.error("Failed to fetch rooms");
       } finally {
         setLoading(false);
       }
@@ -70,6 +81,10 @@ export default function DashboardPage({
     checkingSubscriptionStatus();
   }, []);
 
+  const handleUpgradePlan = () => {
+    onSectionChange("upgrade");
+  };
+
   const handleCopyLink = (slug: string) => {
     navigator.clipboard.writeText(slug);
     setCopied((prev) => ({ ...prev, [slug]: true }));
@@ -87,8 +102,30 @@ export default function DashboardPage({
     setIsModalOpen(true);
   };
 
+  const handleDeleteRoom = async (roomId: string) => {
+    confirm(
+      "Are you sure you want to delete this room?. once you deleted then it will be lost for ever",
+      async () => {
+        try {
+          setDeleteLoading((prev) => ({ ...prev, [roomId]: true }));
+          await deleteRoom(roomId);
+          setRooms((prev) => prev.filter((room) => room._id !== roomId));
+          toast.success("Room deleted successfully");
+        } catch (err) {
+          if (axios.isAxiosError(err)) {
+            toast.error(err?.response?.data.message || "Failed to delete room");
+          } else {
+            toast.error("An unexpected error occurred.");
+          }
+        } finally {
+          setDeleteLoading((prev) => ({ ...prev, [roomId]: false }));
+        }
+      }
+    );
+  };
+
   const handleSectionChange = (sec: string) => {
-    if(sec === "create-meeting" && !isPremium && rooms.length > 0) {
+    if (sec === "create-meeting" && !isPremium && rooms.length > 0) {
       toast.error("You need to upgrade to premium to create more rooms.");
       return;
     }
@@ -107,12 +144,47 @@ export default function DashboardPage({
     );
   }
 
-
   return (
     <>
       <p className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">
         My rooms
       </p>
+      {showWarning && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg shadow-md flex items-center justify-between">
+          <div className="flex items-center">
+            <svg
+              className="w-6 h-6 text-red-500 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-gray-800 text-sm">
+              Your premium plan is past due. Please renew your subscription to
+              regain access to all premium features and archived rooms.{" "}
+              <div
+                onClick={handleUpgradePlan}
+                className="text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                Upgrade Now
+              </div>
+            </p>
+          </div>
+          <button
+            onClick={() => setShowWarning(false)}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
       {isModalOpen && (
         <div
           className="fixed inset-0 z-20 min-h-screen flex justify-center items-center"
@@ -123,7 +195,6 @@ export default function DashboardPage({
               <p className="text-2xl raleway ml-2 font-semibold text-center text-gray-700">
                 Join Video Room
               </p>
-
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="bg-white focus:outline-none rounded-sm text-red-700 hover:text-red-800 mr-1 cursor-pointer"
@@ -131,7 +202,6 @@ export default function DashboardPage({
                 <X className="w-6 h-6" />
               </button>
             </div>
-
             <div className="space-y-4">
               <input
                 type="text"
@@ -155,7 +225,9 @@ export default function DashboardPage({
         {rooms?.map((room, ind) => (
           <div
             key={ind}
-            className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between"
+            className={`bg-white p-4 rounded-lg shadow-md flex items-center justify-between ${
+              !room.isActive ? "opacity-70" : ""
+            }`}
           >
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
@@ -169,39 +241,58 @@ export default function DashboardPage({
                   {process.env.NEXT_PUBLIC_DOMAIN + "/" + room.slug}
                 </p>
                 <p className="text-gray-800 font-medium">{room.name}</p>
-                <p className="text-gray-500 text-sm">{user.username}</p>
+                <p className="text-gray-500 text-sm">
+                  {user.username}
+                  {!room.isActive && " (Archived)"}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleCopyLink(room.slug)}
                 className={`px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition ${
-                  copied[room.slug] ? "" : "cursor-pointer"
+                  copied[room.slug] || !room.isActive ? "" : "cursor-pointer"
                 }`}
+                disabled={!room.isActive}
               >
                 {copied[room.slug] ? "Copied!" : "Copy link"}
               </button>
               <button
                 onClick={() => handleStartMeeting(room.slug)}
-                className="px-4 py-2 bg-yellow-500 cursor-pointer text-white rounded-lg hover:bg-yellow-600 transition"
+                className={`px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition ${
+                  !room.isActive ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
+                disabled={!room.isActive}
               >
                 Start meeting
               </button>
-              <button className="p-2 text-gray-500 hover:text-gray-700">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
+              <button
+                onClick={() => handleDeleteRoom(room._id)}
+                className={`p-2 text-gray-500 hover:text-gray-700 ${
+                  deleteLoading[room._id]
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
+                disabled={deleteLoading[room._id]}
+              >
+                {deleteLoading[room._id] ? (
+                  <div className="w-5 h-5 border-2 border-t-transparent border-gray-500 rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -243,7 +334,7 @@ export default function DashboardPage({
           onClick={handleJoinRoom}
           className="px-4 py-1 text-lg text-white rounded-lg bg-gray-500 hover:bg-gray-600 cursor-pointer transition w-full"
         >
-          Attend a meeting
+          Enter a Room
         </button>
       </div>
 

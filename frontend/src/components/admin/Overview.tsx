@@ -93,7 +93,7 @@ export default function Overview({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-800 raleway">
-              Active Meetings
+              Ongoing Meetings
             </h3>
             <p className="text-2xl font-bold text-gray-900">
               {stats?.activeMeetings || 0}
@@ -139,7 +139,7 @@ export default function Overview({
                 </tr>
               </thead>
               <tbody>
-                {recentMeetings.slice(0, 5).map((meeting) => (
+                {recentMeetings.map((meeting) => (
                   <tr key={meeting.id} className="border-b border-gray-100">
                     <td className="px-4 py-2 text-gray-800">
                       {meeting.roomName}

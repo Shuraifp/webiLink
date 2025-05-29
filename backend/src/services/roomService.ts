@@ -1,14 +1,16 @@
 import { Types } from "mongoose";
 import slugify from "slugify";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
-import { IRoom } from "../models/mainRoomModel";
+import { IRoom } from "../models/RoomModel";
 import { IRoomService } from "../interfaces/services/IRoomService";
 import {
   BadRequestError,
   InternalServerError,
   NotFoundError,
+  UnauthorizedError,
 } from "../utils/errors";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
+import logger from "../utils/logger";
 
 export class RoomService implements IRoomService {
   constructor(
@@ -21,10 +23,7 @@ export class RoomService implements IRoomService {
     return nanoid(6);
   }
 
-  async createRoom(
-    userId: string,
-    name: string,
-  ): Promise<IRoom> {
+  async createRoom(userId: string, name: string): Promise<IRoom> {
     try {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestError("Invalid user ID");
@@ -36,7 +35,7 @@ export class RoomService implements IRoomService {
       }
 
       if (!user.isPremium) {
-        const roomCount = await this._roomRepository.findByUserId(userId);
+        const roomCount = await this._roomRepository.findAllByUserId(userId);
         if (roomCount.length >= 1) {
           throw new BadRequestError(
             "Non-premium users can only create one room"
@@ -67,7 +66,7 @@ export class RoomService implements IRoomService {
           return room;
         } catch (error: any) {
           if (error.code === 11000) {
-            slug = `${baseSlug}-${this.generateId()}`;
+            slug = `${baseSlug}-${await this.generateId()}`;
             attempts++;
           } else if (error instanceof BadRequestError) {
             throw error;
@@ -88,9 +87,13 @@ export class RoomService implements IRoomService {
         : new InternalServerError("An error occurred while creating the room");
     }
   }
+
   async getAllRooms(userId: string): Promise<IRoom[]> {
     try {
-      const rooms = await this._roomRepository.findByUserId(userId);
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestError("Invalid user ID");
+      }
+      const rooms = await this._roomRepository.findAllByUserId(userId);
       return rooms;
     } catch (err: any) {
       throw new InternalServerError(
@@ -103,5 +106,58 @@ export class RoomService implements IRoomService {
     const room = await this._roomRepository.findBySlug(roomId);
     if (!room) throw new NotFoundError("Room not found");
     return room;
+  }
+
+  async deleteRoom(userId: string, roomId: string): Promise<void> {
+    try {
+      if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(roomId)) {
+        throw new BadRequestError("Invalid user ID or room ID");
+      }
+      const room = await this._roomRepository.findById(roomId);
+      if (!room) throw new NotFoundError("Room not found");
+      if (room.userId.toString() !== userId) {
+        throw new UnauthorizedError("You are not authorized to delete this room");
+      }
+      await this._roomRepository.delete(roomId);
+    } catch (error) {
+      throw error instanceof BadRequestError ||
+        error instanceof NotFoundError ||
+        error instanceof UnauthorizedError
+        ? error
+        : new InternalServerError("Failed to delete room");
+    }
+  }
+
+  async archiveExcessRooms(userId: string, keepRoomId?: string): Promise<void> {
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestError("Invalid user ID");
+      }
+      await this._roomRepository.archiveExcessRooms(userId, keepRoomId);
+    } catch (error) {
+      logger.error("Error archiving excess rooms:", error);
+      throw new InternalServerError("Failed to archive excess rooms");
+    }
+  }
+
+  async restoreArchivedRooms(userId: string): Promise<void> {
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestError("Invalid user ID");
+      }
+      const user = await this._userRepository!.findById(userId);
+      if (!user) {
+        throw new NotFoundError("User not found");
+      }
+      if (!user.isPremium) {
+        throw new BadRequestError("Only premium users can restore rooms");
+      }
+      await this._roomRepository.restoreArchivedRooms(userId);
+    } catch (error) {
+      logger.error("Error restoring archived rooms:", error);
+      throw error instanceof BadRequestError || error instanceof NotFoundError
+        ? error
+        : new InternalServerError("Failed to restore archived rooms");
+    }
   }
 }

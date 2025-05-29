@@ -35,37 +35,26 @@ export class RoomController {
     }
   }
 
-  async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // Logic to update a room
-      res.status(HttpStatus.OK).json(successResponse('Room updated successfully', {}));
-    } catch (error) {
-      next(error);
-    }
-  }
+  // async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  //   try {
+  //     res.status(HttpStatus.OK).json(successResponse('Room updated successfully', {}));
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // }
 
   async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Logic to delete a room
-      res.status(HttpStatus.OK).json(successResponse('Room deleted successfully', {}));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async getRoomById(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // Logic to fetch a room by ID
-      res.status(HttpStatus.OK).json(successResponse('Room fetched successfully', {}));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async getRoomByName(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // Logic to fetch a room by name
-      res.status(HttpStatus.OK).json(successResponse('Room fetched successfully', {}));
+      const { roomId } = req.params;
+      const userId = req.user?._id;
+      if (!userId || !Types.ObjectId.isValid(userId)) {
+        throw new UnauthorizedError("Invalid or missing user ID.");
+      }
+      if (!roomId || !Types.ObjectId.isValid(roomId)) {
+        throw new BadRequestError("Invalid room ID");
+      }
+      await this._roomService.deleteRoom(userId, roomId);
+      res.status(HttpStatus.OK).json(successResponse("Room deleted successfully", {}));
     } catch (error) {
       next(error);
     }

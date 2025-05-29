@@ -1,7 +1,8 @@
+import { TransactionDTO } from "../../dto/transactionDTO";
 import { IPlan } from "../../models/PlanModel";
 import { IUser } from "../../models/userModel";
 import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
-import { DashboardStats } from "../../services/adminService";
+import { DashboardStats, MeetingStats } from "../../services/adminService";
 
 export interface IAdminService {
   listUsers(
@@ -32,9 +33,18 @@ export interface IAdminService {
     totalPages: number;
   }>;
   getDashboardStats(): Promise<DashboardStats>;
+  getMeetingStats(): Promise<MeetingStats>;
   getRevenueData(
     timeframe?: string,
-    startDate?: Date,
-    endDate?: Date
+    startDate?: string,
+    endDate?: string
   ): Promise<{ labels: (string | number)[]; totalPrices: number[] }>;
+  getTransactions(
+    page: number,
+    limit: number
+  ): Promise<{
+    data: TransactionDTO[];
+    totalItems: number;
+    totalPages: number;
+  }>;
 }

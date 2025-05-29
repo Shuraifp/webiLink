@@ -4,6 +4,7 @@
   --light-background: #f2f4f8;
   --micro-bg: #fdfdff;
   --text: #1f2937;
+  --text-light: #1f2937;
   --card-bg: #ffffff;
   --border: #9ca3af;
   --button-bg: #7e828b;
@@ -20,6 +21,7 @@
   --light-background: #7f8083;
   --micro-bg: #2c2d30;
   --text: #f3f4f6;
+  --text-light: #cbcfd8;
   --card-bg: #374151;
   --border: #6b7280;
   --button-bg: #1a1b1d;
@@ -69,6 +71,10 @@
 
 .host-root .text-gray-800 {
   color: var(--text);
+}
+
+.host-root .text-gray-600 {
+  color: var(--text-light);
 }
 
 .host-root .text-gray-500 {

@@ -35,14 +35,6 @@ ChartJS.register(
   Legend
 );
 
-interface Subscription {
-  planId: string;
-  planName: string;
-  count: number;
-  growth?: number;
-  newSubscribers?: number;
-  churnedSubscribers?: number;
-}
 export interface DashboardStats {
   users: number;
   subscriptions: { planId: string; planName: string; count: number }[];
@@ -51,12 +43,7 @@ export interface DashboardStats {
   totalMeetings: number;
   activeMeetings: number;
   totalRecordings: number;
-}
-
-interface StorageStats {
-  totalRecordings: number;
-  totalStorageUsed: number;
-  recordingsPerUser: { userId: string; username: string; count: number }[];
+  recentMeetings: RecentMeeting[];
 }
 
 export interface RecentMeeting {
@@ -66,14 +53,12 @@ export interface RecentMeeting {
   participants: number;
   duration: number;
   startTime: string;
-  hasRecording: boolean;
+  endTime: string;
 }
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentMeetings, setRecentMeetings] = useState<RecentMeeting[]>([]);
-  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
-
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
@@ -86,19 +71,11 @@ export default function AdminDashboardPage() {
         setLoading(true);
         const [
           statsResponse,
-          // meetingStatsResponse,
-          // storageStatsResponse,
-          // recentMeetingsResponse,
         ] = await Promise.all([
           fetchDashboardStats(),
-          // fetchMeetingStats(),
-          // fetchStorageStats(),
-          // fetchRecentMeetings(),
         ]);
         setStats(statsResponse.data);
-        // setMeetingStats(meetingStatsResponse.data);
-        // setStorageStats(storageStatsResponse.data);
-        // setRecentMeetings(recentMeetingsResponse.data);
+        setRecentMeetings(statsResponse.data.recentMeetings || []);
       } catch (err) {
         if (axios.isAxiosError(err)) {
           const message =

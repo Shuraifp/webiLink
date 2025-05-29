@@ -44,7 +44,7 @@ export class MailService implements IMailService {
         text
       });
     } catch (error: any) {
-      console.error(`Failed to send link email to ${to}:`, error);
+      logger.error(`Failed to send link email to ${to}:`, error);
       throw new Error("Failed to send email");
     }
   }

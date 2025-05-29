@@ -112,7 +112,11 @@ export class AdminController {
     }
   }
 
- async getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getDashboardStats(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const stats = await this._adminService.getDashboardStats();
       res
@@ -122,16 +126,60 @@ export class AdminController {
       next(err);
     }
   }
- 
-  async getRevenueData(req: Request, res: Response, next: NextFunction): Promise<void> {
+
+  async getMeetingStats(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const  { timeframe, startDate, endDate } = req.query;
-      const start = new Date(startDate as string);
-      const end = new Date(endDate as string);
-      const stats = await this._adminService.getRevenueData(timeframe as string, start, end);
+      const stats = await this._adminService.getMeetingStats();
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Meetings' stats fetched successfully", stats));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getRevenueData(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { timeframe, startDate, endDate } = req.query;
+      const stats = await this._adminService.getRevenueData(
+        timeframe as string,
+        startDate as string,
+        endDate as string
+      );
       res
         .status(HttpStatus.OK)
         .json(successResponse("Revenue Data fetched successfully", stats));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getTransactions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const transactions = await this._adminService.getTransactions(
+        page,
+        limit
+      );
+      res
+        .status(HttpStatus.OK)
+        .json(
+          successResponse("Transactions fetched successfully", transactions)
+        );
     } catch (err) {
       next(err);
     }

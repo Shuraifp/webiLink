@@ -15,13 +15,15 @@ import { IUserPlanRepository } from "../interfaces/repositories/IUserplanReposit
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
 import { IPayment } from "../models/PaymentModel";
 import logger from "../utils/logger";
+import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 
 export class PlanService implements IPlanService {
   constructor(
     private _planRepository: IPlanRepository,
     private _userPlanRepository: IUserPlanRepository,
     private _userRepository: IUserRepository,
-    private _paymentRepository: IPaymentRepository
+    private _paymentRepository: IPaymentRepository,
+    private _roomRepository: IRoomRepository
   ) {}
 
   async createPlan(data: Partial<IPlan>): Promise<IPlan> {
@@ -397,7 +399,7 @@ export class PlanService implements IPlanService {
           return;
       }
     } catch (error) {
-      console.log(error);
+      logger.error(error);
       throw error instanceof BadRequestError ||
         error instanceof InternalServerError
         ? error
@@ -1088,31 +1090,54 @@ export class PlanService implements IPlanService {
 
       if (activePlans && activePlans.length > 0) {
         for (const plan of activePlans) {
-          if (
-            plan.cancelAtPeriodEnd &&
-            plan.currentPeriodEnd &&
-            now >= plan.currentPeriodEnd
-          ) {
-            logger.info("canceled");
-            await this._userPlanRepository.update(plan._id.toString(), {
-              status: PlanStatus.CANCELED,
-            });
-
-            await this._userRepository.update(plan.userId.toString(), {
-              planId: null,
-              isPremium: false,
-            });
-
-            logger.info(
-              `Cron: Marked subscription ${plan.stripeSubscriptionId} as CANCELED due to cancel_at_period_end`
+          if (plan.stripeSubscriptionId) {
+            const subscription = await stripe.subscriptions.retrieve(
+              plan.stripeSubscriptionId
             );
-
-            await this.activatePendingPlan(plan.userId.toString(), now);
+            if (
+              subscription.status === "active" &&
+              subscription.latest_invoice &&
+              plan.currentPeriodEnd &&
+              now > plan.currentPeriodEnd
+            ) {
+              const invoice = await stripe.invoices.retrieve(
+                subscription.latest_invoice as string
+              );
+              if (invoice.status !== "paid") {
+                await this._userPlanRepository.update(plan._id.toString(), {
+                  status: PlanStatus.PAST_DUE,
+                });
+                await this._userRepository.update(plan.userId.toString(), {
+                  isPremium: false,
+                });
+                await this._roomRepository.archiveExcessRooms(plan.userId.toString());
+                logger.info(
+                  `Cron: Marked subscription ${plan.stripeSubscriptionId} as PAST_DUE due to overdue invoice`
+                );
+              }
+            } else if (
+              plan.cancelAtPeriodEnd &&
+              plan.currentPeriodEnd &&
+              now >= plan.currentPeriodEnd
+            ) {
+              await this._userPlanRepository.update(plan._id.toString(), {
+                status: PlanStatus.CANCELED,
+              });
+              await this._userRepository.update(plan.userId.toString(), {
+                planId: null,
+                isPremium: false,
+              });
+              await this._roomRepository.archiveExcessRooms(plan.userId.toString());
+              logger.info(
+                `Cron: Marked subscription ${plan.stripeSubscriptionId} as CANCELED due to cancel_at_period_end`
+              );
+              await this.activatePendingPlan(plan.userId.toString(), now);
+            }
           }
         }
       }
 
-      const pastDuePlans = await this._userPlanRepository.findAllByQuery({
+       const pastDuePlans = await this._userPlanRepository.findAllByQuery({
         status: PlanStatus.PAST_DUE,
       });
 
@@ -1129,8 +1154,36 @@ export class PlanService implements IPlanService {
               const invoice = await stripe.invoices.retrieve(
                 subscription.latest_invoice as string
               );
-
-              if (invoice.attempt_count >= 3) {
+              if (invoice.status === "paid") {
+                await this._userPlanRepository.update(plan._id.toString(), {
+                  status: PlanStatus.ACTIVE,
+                  currentPeriodEnd: new Date(
+                    subscription.items.data[0].current_period_end * 1000
+                  ),
+                });
+                const planDetails = await this._planRepository.findById(
+                  plan.planId.toString()
+                );
+                if (!planDetails) {
+                  logger.error(
+                    `Cron: Plan ${plan.planId} not found for past_due plan activation`
+                  );
+                  continue;
+                }
+                await this._userRepository.update(plan.userId.toString(), {
+                  planId: plan.planId,
+                  isPremium: planDetails.price > 0,
+                });
+                if (planDetails.price > 0) {
+                  await this._roomRepository.restoreArchivedRooms(plan.userId.toString());
+                  logger.info(
+                    `Cron: Restored archived rooms for user ${plan.userId} after PAST_DUE plan reactivated`
+                  );
+                }
+                logger.info(
+                  `Cron: Reactivated PAST_DUE subscription ${plan.stripeSubscriptionId} after payment`
+                );
+              } else if (invoice.attempt_count >= 3) {
                 await stripe.subscriptions.cancel(plan.stripeSubscriptionId);
                 await this._userPlanRepository.update(plan._id.toString(), {
                   status: PlanStatus.CANCELED,
@@ -1139,6 +1192,7 @@ export class PlanService implements IPlanService {
                   planId: null,
                   isPremium: false,
                 });
+                await this._roomRepository.archiveExcessRooms(plan.userId.toString());
                 logger.info(
                   `Cron: Canceled PAST_DUE subscription ${plan.stripeSubscriptionId} after ${invoice.attempt_count} failed attempts`
                 );
@@ -1159,53 +1213,63 @@ export class PlanService implements IPlanService {
             const subscription = await stripe.subscriptions.retrieve(
               plan.stripeSubscriptionId
             );
-            await this._userPlanRepository.update(plan._id.toString(), {
-              status: PlanStatus.ACTIVE,
-              currentPeriodEnd: new Date(
-                subscription.items.data[0].current_period_end * 1000
-              ),
-            });
-
-            const planDetails = await this._planRepository.findById(
-              plan.planId.toString()
-            );
-            if (!planDetails) {
-              logger.error(
-                `Cron: Plan ${plan.planId} not found for pending plan activation`
-              );
-              continue;
-            }
-
-            await this._userRepository.update(plan.userId.toString(), {
-              planId: plan.planId,
-              isPremium: planDetails.price > 0,
-            });
-
-            logger.info(
-              `Cron: Activated pending subscription ${plan.stripeSubscriptionId} for user ${plan.userId}`
-            );
-            const existingActivePlan =
-              await this._userPlanRepository.findByQuery({
-                userId: plan.userId,
+            if (subscription.status === "active") {
+              await this._userPlanRepository.update(plan._id.toString(), {
                 status: PlanStatus.ACTIVE,
-                _id: { $ne: plan._id },
+                currentPeriodEnd: new Date(
+                  subscription.items.data[0].current_period_end * 1000
+                ),
               });
 
-            if (existingActivePlan && existingActivePlan.stripeSubscriptionId) {
-              await stripe.subscriptions.update(
-                existingActivePlan.stripeSubscriptionId,
-                { cancel_at_period_end: true }
+              const planDetails = await this._planRepository.findById(
+                plan.planId.toString()
               );
-              await this._userPlanRepository.update(
-                existingActivePlan._id.toString(),
-                {
-                  status: PlanStatus.CANCELED,
-                  cancelAtPeriodEnd: true,
-                }
-              );
+              if (!planDetails) {
+                logger.error(
+                  `Cron: Plan ${plan.planId} not found for pending plan activation`
+                );
+                continue;
+              }
+
+              await this._userRepository.update(plan.userId.toString(), {
+                planId: plan.planId,
+                isPremium: planDetails.price > 0,
+              });
+
+              if (planDetails.price > 0) {
+                await this._roomRepository.restoreArchivedRooms(plan.userId.toString());
+                logger.info(
+                  `Cron: Restored archived rooms for user ${plan.userId} after pending plan activation`
+                );
+              }
+
               logger.info(
-                `Cron: Set existing subscription ${existingActivePlan.stripeSubscriptionId} to cancel at period end`
+                `Cron: Activated pending subscription ${plan.stripeSubscriptionId} for user ${plan.userId}`
               );
+
+              const existingActivePlan =
+                await this._userPlanRepository.findByQuery({
+                  userId: plan.userId,
+                  status: PlanStatus.ACTIVE,
+                  _id: { $ne: plan._id },
+                });
+
+              if (existingActivePlan && existingActivePlan.stripeSubscriptionId) {
+                await stripe.subscriptions.update(
+                  existingActivePlan.stripeSubscriptionId,
+                  { cancel_at_period_end: true }
+                );
+                await this._userPlanRepository.update(
+                  existingActivePlan._id.toString(),
+                  {
+                    status: PlanStatus.CANCELED,
+                    cancelAtPeriodEnd: true,
+                  }
+                );
+                logger.info(
+                  `Cron: Set existing subscription ${existingActivePlan.stripeSubscriptionId} to cancel at period end`
+                );
+              }
             }
           }
         }

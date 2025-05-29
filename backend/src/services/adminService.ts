@@ -12,13 +12,29 @@ import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { IPlan } from "../models/PlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
+import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
+import { IRecordingRepository } from "../interfaces/repositories/IRecordingRepository";
+import { AdminDashboardRecentMeetingDTO } from "../dto/meetingDTO";
+import { MeetingMapper } from "../mappers/meetingMapper";
+import logger from "../utils/logger";
+import { TransactionDTO } from "../dto/transactionDTO";
+import { PaymentMapper, PopulatedPayment } from "../mappers/paymentMapper";
 
 export interface DashboardStats {
   users: number;
   subscriptions: { planId: string; planName: string; count: number }[];
   totalRevenue: number;
   planTrends: { planId: string; planName: string; count: number }[];
-  // meetings: number;
+  totalMeetings: number;
+  activeMeetings: number;
+  totalRecordings: number;
+  recentMeetings: AdminDashboardRecentMeetingDTO[];
+}
+
+export interface MeetingStats {
+  totalMeetings: number;
+  totalDuration: number;
+  totalParticipants: number;
 }
 
 export class AdminService implements IAdminService {
@@ -26,7 +42,9 @@ export class AdminService implements IAdminService {
     private _userRepository: IUserRepository,
     private _planRepository: IPlanRepository,
     private _userPlanRepository: IUserPlanRepository,
-    private _paymentRepository: IPaymentRepository
+    private _paymentRepository: IPaymentRepository,
+    private _meetingRepository: IMeetingRepository,
+    private _recordingRepository: IRecordingRepository
   ) {}
 
   async listUsers(
@@ -164,47 +182,139 @@ export class AdminService implements IAdminService {
 
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      const [userCount, subscriptionCounts, totalRevenue, activePlans] = await Promise.all([
+      const [
+        userCount,
+        subscriptionCounts,
+        totalRevenue,
+        activePlans,
+        allMeetings,
+        allRecordings,
+      ] = await Promise.all([
         this._userRepository.countDocuments({
           isArchived: false,
           isBlocked: false,
         }),
         this._userPlanRepository.getSubscriptionCounts(),
         this._paymentRepository.getTotalRevenue(),
-        this._planRepository.listActivePlans()
+        this._planRepository.findAll(),
+        this._meetingRepository.findAll(),
+        this._recordingRepository.findAll(),
       ]);
+
+      const planTrends = activePlans.map((plan) => ({
+        planId: plan._id!.toString(),
+        planName: plan.name,
+        count: subscriptionCounts
+          .filter((sub) => sub.planId.toString() === plan._id!.toString())
+          .reduce((acc, sub) => acc + sub.count, 0),
+      }));
+      const total = subscriptionCounts.reduce((acc, sub) => {
+        acc += sub.count;
+        return acc;
+      }, 0);
+      planTrends.map((trend) => {
+        return trend.planName === "Free"
+          ? (trend.count = userCount - total)
+          : trend.count;
+      });
+
+      const recentMeetings = allMeetings.slice(0, 5);
+      const mappedRecentMeetings =
+        await MeetingMapper.toAdminDashboardRecentMeetingDTOList(
+          recentMeetings
+        );
 
       return {
         users: userCount,
         subscriptions: subscriptionCounts,
         totalRevenue,
-        planTrends : activePlans.map((plan) => ({
-          planId: plan._id!.toString(),
-          planName: plan.name,
-          count: subscriptionCounts.filter((sub) => sub.planId.toString() === plan._id!.toString()).reduce((acc, sub) => acc + sub.count, 0),
-        })),
+        planTrends,
+        totalMeetings: allMeetings.length,
+        activeMeetings: allMeetings.filter(
+          (meeting) => meeting.status === "ongoing"
+        ).length,
+        totalRecordings: allRecordings.length,
+        recentMeetings: mappedRecentMeetings,
       };
     } catch {
       throw new InternalServerError("Failed to fetch dashboard stats");
     }
   }
 
+  async getMeetingStats(): Promise<MeetingStats> {
+    try {
+      const { totalMeetings, totalDuration, totalParticipants } =
+        await this._meetingRepository.getUniqueParticipantsCountAndDuration();
+      return {
+        totalMeetings,
+        totalDuration,
+        totalParticipants,
+      };
+    } catch (err) {
+      logger.error("Error fetching meeting stats:", err);
+      throw new InternalServerError("Failed to fetch dashboard stats");
+    }
+  }
+
   async getRevenueData(
     timeframe?: string,
-    startDate?: Date,
-    endDate?: Date
+    startDate?: string,
+    endDate?: string
   ): Promise<{ labels: (string | number)[]; totalPrices: number[] }> {
     try {
-      const [{ labels, totalPrices }] = await Promise.all([
-        this._paymentRepository.getRevenueData(timeframe),
-      ]);
+      let stDate: Date | undefined;
+      let edDate: Date | undefined;
+      if (timeframe === "Custom" && startDate && endDate) {
+        stDate = new Date(startDate);
+        edDate = new Date(endDate);
+        if (
+          isNaN(stDate.getTime()) ||
+          isNaN(edDate.getTime()) ||
+          stDate > edDate
+        ) {
+          throw new InternalServerError("Invalid or incorrect date range");
+        }
+      }
+      const { labels, totalPrices } = await this._paymentRepository.getRevenueData(timeframe, stDate, edDate)
 
       return {
         labels,
         totalPrices,
       };
-    } catch {
-      throw new InternalServerError("Failed to fetch dashboard stats");
+    } catch (error) {
+      logger.error("Error fetching revenue data:", error);
+      throw new InternalServerError("Failed to fetch revenue stats");
+    }
+  }
+  
+  async getTransactions(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    data: TransactionDTO[];
+    totalItems: number;
+    totalPages: number;
+  }> {
+    try {
+      if (page < 1 || limit < 1) {
+        throw new InternalServerError("Page and limit must be positive numbers");
+      }
+
+      const { data: payments, totalItems, totalPages } =
+        await this._paymentRepository.getRecentTransactions(page, limit);
+
+      const mappedData = PaymentMapper.toTransactionDTOList(payments as PopulatedPayment[]);
+
+      return {
+        data: mappedData,
+        totalItems,
+        totalPages,
+      };
+    } catch (error) {
+      logger.error("Error fetching transactions:", error);
+      throw error instanceof InternalServerError
+        ? error
+        : new InternalServerError("Failed to fetch transactions");
     }
   }
 }

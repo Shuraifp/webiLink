@@ -17,3 +17,12 @@ export const fetchRooms = async () => {
     throw err
   }
 }
+
+export const deleteRoom = async (roomId:string) => {
+  try {
+    const res = await userApiWithAuth.delete('/rooms/' + roomId)
+    return res.data
+  } catch (err) {
+    throw err
+  }
+}

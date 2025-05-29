@@ -1,18 +1,17 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IRoom extends Document {
-  userId: mongoose.Types.ObjectId; 
+  userId: mongoose.Types.ObjectId;
   name: string;
   slug: string;
   isPremiumUser: boolean;
-  isActive: boolean; 
+  isActive: boolean;
   settings?: {
     background?: string;
-    logo?: string; 
-    theme?: string; 
+    logo?: string;
+    theme?: string;
   };
   createdAt: Date;
-  deletedAt?: Date; 
 }
 
 const roomSchema = new Schema<IRoom>(
@@ -50,13 +49,9 @@ const roomSchema = new Schema<IRoom>(
       type: Date,
       default: Date.now,
     },
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
   },
   {
-    timestamps: { createdAt: "createdAt", updatedAt: false },
+    timestamps: true,
   }
 );
 
