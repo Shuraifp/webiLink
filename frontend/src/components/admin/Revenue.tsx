@@ -7,11 +7,6 @@ import { Line } from "react-chartjs-2";
 import toast from "react-hot-toast";
 import RevenuePDFExport from "./ReportDownloader";
 
-interface RevenueData {
-  month: string;
-  revenue: number;
-}
-
 export interface Transaction {
   transactionId: string;
   username: string;
@@ -25,7 +20,7 @@ export function Revenue() {
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [labels, setLabels] = useState([]);
-  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [revenueData, setRevenueData] = useState<number[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState<string>("");
   const [page, setPage] = useState(1);
