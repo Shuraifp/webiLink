@@ -12,7 +12,8 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-
+console.log(accessToken)
+console.log(refreshToken)
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
@@ -23,7 +24,6 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
   if (isHomePage || isPlansPage) {
-    console.time("Home Page or Plans Page");
     let user;
     let response;
     // User
@@ -43,7 +43,6 @@ export async function middleware(req: NextRequest) {
     if (user && response) {
       response.headers.set("x-user", JSON.stringify(user));
     }
-    console.timeEnd("Home Page or Plans Page");
     return response;
   }
 
@@ -56,7 +55,6 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isUserProtectedPage) {
-    console.time("User Protected Page");
     let user;
     let response;
     if (!accessToken) {
@@ -80,7 +78,6 @@ export async function middleware(req: NextRequest) {
     }
 
     response.headers.set("x-user", JSON.stringify(user));
-    console.timeEnd("User Protected Page");
     return response;
   }
   if (isAdminProtectedPage) {
