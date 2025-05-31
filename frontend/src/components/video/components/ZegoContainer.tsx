@@ -906,7 +906,7 @@ export default function MeetingComponent({
 
       let dropUpMenu = dropUpButtonRef.current.querySelector(
         ".drop-up-menu"
-      ) as HTMLElement;
+      ) as HTMLDivElement;
       if (!dropUpMenu) {
         dropUpMenu = document.createElement("div");
         dropUpMenu.className = "drop-up-menu";
