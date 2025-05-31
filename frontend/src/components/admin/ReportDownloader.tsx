@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { Transaction } from "./Revenue";
 
+type Format = "comprehensive" | "summary"
+
 export default function RevenuePDFExport({
   revenue,
   transactions,
@@ -23,9 +25,9 @@ export default function RevenuePDFExport({
   customEndDate?: string;
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [exportFormat, setExportFormat] = useState("comprehensive");
+  const [exportFormat, setExportFormat] = useState("comprehensive" as Format);
 
-  const generatePDF = async (format) => {
+  const generatePDF = async (format: Format) => {
     setIsGenerating(true);
 
     try {
