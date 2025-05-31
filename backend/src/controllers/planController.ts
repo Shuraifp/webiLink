@@ -165,7 +165,6 @@ export class PlanController {
         sig,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
-      console.log(event.type)
       await this._planService.handleWebhook(event);
       res
         .status(HttpStatus.OK)

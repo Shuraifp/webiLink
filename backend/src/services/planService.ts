@@ -269,6 +269,26 @@ export class PlanService implements IPlanService {
       const price = await stripe.prices.retrieve(priceId);
       if (!price.active) throw new BadRequestError("Price is inactive");
 
+      const existingActivePlan = await this._userPlanRepository.findByQuery({
+        userId,
+        status: PlanStatus.ACTIVE,
+      });
+      if (existingActivePlan) {
+        const createdAt = existingActivePlan.createdAt;
+        const now = new Date();
+
+        const isSameDay =
+          createdAt?.getFullYear() === now.getFullYear() &&
+          createdAt.getMonth() === now.getMonth() &&
+          createdAt.getDate() === now.getDate();
+
+        if (isSameDay) {
+          throw new BadRequestError(
+            "you can only create one subscription per day. Please try again tomorrow."
+          );
+        }
+      }
+
       const existingPendingPlan = await this._userPlanRepository.findByQuery({
         userId,
         status: PlanStatus.PENDING,
@@ -366,6 +386,7 @@ export class PlanService implements IPlanService {
         throw new InternalServerError("Failed to create checkout session");
       return session.url;
     } catch (error) {
+      logger.info(error);
       if (error instanceof stripe.errors.StripeError) {
         throw new BadRequestError(`Stripe error: ${error.message}`);
       }
@@ -904,7 +925,7 @@ export class PlanService implements IPlanService {
     try {
       const userPlan = await this._userPlanRepository.findByQuery({
         userId,
-        status: PlanStatus.ACTIVE,
+        status: { $ne: PlanStatus.CANCELED },
       });
       if (!userPlan) {
         // throw new NotFoundError("No active plan found for user");
@@ -1110,7 +1131,9 @@ export class PlanService implements IPlanService {
                 await this._userRepository.update(plan.userId.toString(), {
                   isPremium: false,
                 });
-                await this._roomRepository.archiveExcessRooms(plan.userId.toString());
+                await this._roomRepository.archiveExcessRooms(
+                  plan.userId.toString()
+                );
                 logger.info(
                   `Cron: Marked subscription ${plan.stripeSubscriptionId} as PAST_DUE due to overdue invoice`
                 );
@@ -1127,7 +1150,9 @@ export class PlanService implements IPlanService {
                 planId: null,
                 isPremium: false,
               });
-              await this._roomRepository.archiveExcessRooms(plan.userId.toString());
+              await this._roomRepository.archiveExcessRooms(
+                plan.userId.toString()
+              );
               logger.info(
                 `Cron: Marked subscription ${plan.stripeSubscriptionId} as CANCELED due to cancel_at_period_end`
               );
@@ -1137,7 +1162,7 @@ export class PlanService implements IPlanService {
         }
       }
 
-       const pastDuePlans = await this._userPlanRepository.findAllByQuery({
+      const pastDuePlans = await this._userPlanRepository.findAllByQuery({
         status: PlanStatus.PAST_DUE,
       });
 
@@ -1175,7 +1200,9 @@ export class PlanService implements IPlanService {
                   isPremium: planDetails.price > 0,
                 });
                 if (planDetails.price > 0) {
-                  await this._roomRepository.restoreArchivedRooms(plan.userId.toString());
+                  await this._roomRepository.restoreArchivedRooms(
+                    plan.userId.toString()
+                  );
                   logger.info(
                     `Cron: Restored archived rooms for user ${plan.userId} after PAST_DUE plan reactivated`
                   );
@@ -1192,7 +1219,9 @@ export class PlanService implements IPlanService {
                   planId: null,
                   isPremium: false,
                 });
-                await this._roomRepository.archiveExcessRooms(plan.userId.toString());
+                await this._roomRepository.archiveExcessRooms(
+                  plan.userId.toString()
+                );
                 logger.info(
                   `Cron: Canceled PAST_DUE subscription ${plan.stripeSubscriptionId} after ${invoice.attempt_count} failed attempts`
                 );
@@ -1237,7 +1266,9 @@ export class PlanService implements IPlanService {
               });
 
               if (planDetails.price > 0) {
-                await this._roomRepository.restoreArchivedRooms(plan.userId.toString());
+                await this._roomRepository.restoreArchivedRooms(
+                  plan.userId.toString()
+                );
                 logger.info(
                   `Cron: Restored archived rooms for user ${plan.userId} after pending plan activation`
                 );
@@ -1254,7 +1285,10 @@ export class PlanService implements IPlanService {
                   _id: { $ne: plan._id },
                 });
 
-              if (existingActivePlan && existingActivePlan.stripeSubscriptionId) {
+              if (
+                existingActivePlan &&
+                existingActivePlan.stripeSubscriptionId
+              ) {
                 await stripe.subscriptions.update(
                   existingActivePlan.stripeSubscriptionId,
                   { cancel_at_period_end: true }

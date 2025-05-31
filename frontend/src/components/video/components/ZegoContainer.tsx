@@ -110,35 +110,6 @@ export default function MeetingComponent({
 
   const socket = useMemo(() => socketRef.current, [socketRef]);
 
-  // const isUserMuted = useCallback(() => {
-  //   if (!meetingContainerRef.current) return false;
-
-  //   const footerMiddle = meetingContainerRef.current.querySelector(
-  //     "#ZegoRoomFooterMiddle"
-  //   ) as HTMLElement | null;
-  //   if (!footerMiddle) {
-  //     console.log("ZegoRoomFooterMiddle not found");
-  //     return false;
-  //   }
-
-  //   const micButton = footerMiddle.querySelector("#zegoMicButton") as HTMLButtonElement | null;
-  //   if (!micButton) {
-  //     console.log("zegoMicButton not found");
-  //     return false;
-  //   }
-  //   const classes = micButton.className.split(" ");
-  //   console.log(classes)
-  //   if (classes.length < 2) {
-  //     console.log("zegoMicButton does not have expected number of classes");
-  //     return false;
-  //   }
-
-  //   const secondClass = classes[1];
-  //   const isMuted = secondClass !== "false";
-  //   console.log(`User mute status: ${isMuted} (second class: ${secondClass})`);
-  //   return isMuted;
-  // }, [meetingContainerRef]);
-
   const handleSpeechResult = useCallback(
     (event: SpeechRecognitionEvent) => {
       const lastResult = event.results[event.results.length - 1];

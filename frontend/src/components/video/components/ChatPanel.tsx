@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
 import { ChatMessage } from "@/types/chatRoom";
-import { CornerDownRight, CornerDownLeft, X, Search } from "lucide-react";
+import { CornerDownRight, CornerDownLeft, X, Search, Smile } from "lucide-react";
 import { MeetingActionType } from "@/lib/MeetingContext";
+import Picker from "emoji-picker-react";
+import { set } from "lodash";
 
 interface Props {
   socketRef: Socket | null;
@@ -17,8 +19,10 @@ export default function ChatPanel({ socketRef }: Props) {
   const [selectedRecipient, setSelectedRecipient] = useState<string>("everyone");
   const [recipientSearch, setRecipientSearch] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
 
   const currentBreakoutRoom = state.breakoutRooms.find((room) =>
     room.participants.includes(state.currentUserId)
@@ -43,6 +47,7 @@ export default function ChatPanel({ socketRef }: Props) {
   }, [dropdownRef]);
 
   const sendMessage = () => {
+    setShowEmojiPicker(false);
     if (!input.trim() || !socketRef) return;
     socketRef.emit("chat-message", {
       roomId: state.roomId,
@@ -52,6 +57,10 @@ export default function ChatPanel({ socketRef }: Props) {
         selectedRecipient === "everyone" ? undefined : selectedRecipient,
     });
     setInput("");
+  };
+
+  const onEmojiClick = (emojiObject: { emoji: string }) => {
+    setInput((prev) => prev + emojiObject.emoji);
   };
 
   const getMessageLabel = (msg: ChatMessage) => {
@@ -225,21 +234,42 @@ export default function ChatPanel({ socketRef }: Props) {
           )}
         </div>
         
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-            className="flex-1 bg-gray-700 text-white p-2 rounded-lg focus:outline-none"
-            placeholder="Type a message..."
-          />
+        <div className="flex gap-2 relative items-center">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+              className="w-full bg-gray-700 txet-sm text-white p-2 rounded-full focus:outline-none pr-10"
+              placeholder="Type a message or emoji..."
+            />
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+          </div>
           <button
             onClick={sendMessage}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
           >
             Send
           </button>
+          {showEmojiPicker && (
+            <div
+              className="absolute bottom-full right-0 mb-2 z-10"
+              ref={emojiPickerRef}
+            >
+              <Picker
+                onEmojiClick={onEmojiClick}
+                theme="dark"
+                emojiStyle="native"
+                pickerStyle={{ width: "200px" }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

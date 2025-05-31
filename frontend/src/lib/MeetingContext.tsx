@@ -61,6 +61,8 @@ export enum MeetingActionType {
   SET_RAISED_HANDS = "SET_RAISED_HANDS",
   ADD_CAPTION = "ADD_CAPTION",
   SET_CAPTIONS = "SET_CAPTIONS",
+  INCREMENT_UNREAD_MESSAGES = "INCREMENT_UNREAD_MESSAGES",
+  RESET_UNREAD_MESSAGES = "RESET_UNREAD_MESSAGES",
 }
 
 export type MeetingAction =
@@ -138,6 +140,12 @@ export type MeetingAction =
   | {
       type: MeetingActionType.SET_CAPTIONS;
       payload: Caption[];
+    }
+  | {
+      type: MeetingActionType.INCREMENT_UNREAD_MESSAGES;
+    }
+  | {
+      type: MeetingActionType.RESET_UNREAD_MESSAGES;
     };
 
 export interface MeetingState {
@@ -162,6 +170,7 @@ export interface MeetingState {
   timer: TimerState;
   raisedHands: { userId: string; username: string }[];
   captions: Caption[];
+  unreadMessages: number;
 }
 
 export const initialState: MeetingState = {
@@ -186,6 +195,7 @@ export const initialState: MeetingState = {
   timer: { isRunning: false, duration: 0, timeLeft: 0 },
   raisedHands: [],
   captions: [],
+  unreadMessages: 0,
 };
 
 const meetingReducer = (
@@ -362,6 +372,16 @@ const meetingReducer = (
       return {
         ...state,
         captions: action.payload,
+      };
+    case MeetingActionType.INCREMENT_UNREAD_MESSAGES:
+      return {
+        ...state,
+        unreadMessages: state.unreadMessages + 1,
+      };
+    case MeetingActionType.RESET_UNREAD_MESSAGES:
+      return {
+        ...state,
+        unreadMessages: 0,
       };
     default:
       return state;

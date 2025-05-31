@@ -5,6 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'
 import { errorHandler } from './middlewares/errorHandler';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -54,6 +55,7 @@ app.post(
   planController.handleWebhook.bind(planController)
 );
 
+app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors({
   origin:[process.env.FRONTEND_URL!],

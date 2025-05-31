@@ -15,6 +15,7 @@
     "chart.js": "^4.4.9",
     "cloudinary": "^2.6.0",
     "cookie": "^1.0.2",
+    "emoji-picker-react": "^4.12.2",
     "firebase": "^11.5.0",
     "formidable": "^3.5.4",
     "jose": "^6.0.10",

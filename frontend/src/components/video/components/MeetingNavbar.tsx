@@ -7,6 +7,7 @@ import BreakoutRoomManager from "./BreakoutRoomManager";
 import { Socket } from "socket.io-client";
 import Timer from "./Timer";
 import { Role } from "@/types/chatRoom";
+import { useEffect } from "react";
 
 interface Props {
   handleLayoutChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -24,6 +25,12 @@ const MeetingNavbar = ({ socketRef }: Props) => {
       dispatch({ type: MeetingActionType.OPEN_SIDEBAR, payload: { panel } });
     }
   };
+
+  useEffect(() => {
+    if(state.activePanel === PanelType.CHAT){
+      dispatch({ type: MeetingActionType.RESET_UNREAD_MESSAGES})
+    }
+  },[state.activePanel,dispatch])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -76,6 +83,11 @@ const MeetingNavbar = ({ socketRef }: Props) => {
           }}
         >
           <MessageCircle size={20} />
+          {state.unreadMessages > 0 && state.activePanel !== PanelType.CHAT && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {state.unreadMessages}
+            </span>
+          )}
         </button>
         <button
           className={`text-gray-300 hover:text-white cursor-pointer ${
