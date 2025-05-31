@@ -12,8 +12,8 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-console.log(accessToken)
-console.log(refreshToken)
+console.log('accessto :',accessToken)
+console.log('refreshto :',refreshToken)
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
