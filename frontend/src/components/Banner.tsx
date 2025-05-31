@@ -9,9 +9,7 @@ interface BannerProps {
 }
 
 const Banner: React.FC<BannerProps> = ({ user }) => {
-  if (user) {
-    console.log(user);
-  }
+
   return (
     <section className="bg-pink-100 py-12 md:py-20">
       <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between">

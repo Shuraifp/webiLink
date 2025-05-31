@@ -12,6 +12,10 @@ interface NavbarProps {
 export default function Navbar({ user }: NavbarProps) {
   const router = useRouter();
 
+  if (user) {
+    console.log('navbar :',user);
+  }
+
   const handleLogout = async () => {
     try {
       await logout();
