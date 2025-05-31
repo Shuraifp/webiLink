@@ -34,7 +34,7 @@ const ChangePassword: React.FC = () => {
       } else {
         setError(data.message || "Failed to change password.");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to change password. Please try again.");
     }
   };

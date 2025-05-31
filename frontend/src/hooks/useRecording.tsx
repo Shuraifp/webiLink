@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Socket } from "socket.io-client";
 import { userApiWithAuth } from "@/lib/api/axios";
+import { AxiosError } from "axios";
 
 interface RecordingEventPayload {
   roomId: string;
@@ -100,7 +101,7 @@ export const useRecording = ({
         }
       };
 
-      mediaRecorder.onerror = (event: any) => {
+      mediaRecorder.onerror = (event) => {
         console.error("MediaRecorder error:", event);
         setError({
           message: "Recording error occurred",
@@ -150,12 +151,18 @@ export const useRecording = ({
           });
 
           setRecordingURL(uploadedUrl);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error processing recording:", error);
-          setError({
-            message: error.message || "Failed to save recording",
-            code: error.code || "UPLOAD_ERROR",
-          });
+          if (error instanceof Error) {
+            setError({
+              message: error.message || "Failed to save recording",
+            });
+          } else {
+            setError({
+              message: String(error) || "Failed to save recording",
+              code: "UPLOAD_ERROR",
+            });
+          }
         } finally {
           setProcessingRecording(false);
         }
@@ -182,19 +189,9 @@ export const useRecording = ({
         recordingId: newRecordingId,
         timestamp: new Date().toISOString(),
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error starting screen recording:", error);
-      if (error.name === "NotAllowedError") {
-        setError({
-          message: "Permission to record screen was denied",
-          code: "PERMISSION_DENIED",
-        });
-      } else {
-        setError({
-          message: error.message || "Could not start recording",
-          code: error.name,
-        });
-      }
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -256,17 +253,27 @@ export const useRecording = ({
       if (!res.data.url) {
         throw new Error("No URL returned from backend");
       }
-console.log(res)
+      console.log(res);
       return res.data.url;
-    } catch (error: any) {
-      console.error("Upload error:", error.response?.data || error.message);
-      throw {
-        message:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to upload recording",
-        code: "BACKEND_UPLOAD_ERROR",
-      };
+    } catch (error) {
+      console.error(
+        "Upload error:",
+        (error as AxiosError).response?.data ||
+          (error as Error).message ||
+          error
+      );
+      let message = "Failed to upload recording";
+      const code = "BACKEND_UPLOAD_ERROR";
+
+      if (error instanceof AxiosError) {
+        message = error.response?.data?.message || error.message || message;
+      } else if (error instanceof Error) {
+        message = error.message || message;
+      } else {
+        message = String(error) || message;
+      }
+
+      throw { message, code };
     }
   };
 

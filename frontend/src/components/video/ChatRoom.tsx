@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { userApiWithAuth } from "@/lib/api/axios";
+import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 
 function randomID(len: number) {
   let result = "";
@@ -32,7 +33,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
   const { roomId } = useParams() as { roomId: string };
   const socket = useRef<Socket>(getSocket());
   const meetingContainerRef = useRef<HTMLDivElement | null>(null);
-  const zpRef = useRef<any>(null);
+  const zpRef = useRef<InstanceType<typeof ZegoUIKitPrebuilt> | null>(null);
   const hasJoinedRef = useRef(false);
 
   console.log(state);

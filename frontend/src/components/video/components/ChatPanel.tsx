@@ -7,10 +7,23 @@ import { ChatMessage } from "@/types/chatRoom";
 import { CornerDownRight, CornerDownLeft, X, Search, Smile } from "lucide-react";
 import { MeetingActionType } from "@/lib/MeetingContext";
 import Picker from "emoji-picker-react";
-import { set } from "lodash";
 
 interface Props {
   socketRef: Socket | null;
+}
+
+enum Theme {
+  LIGHT = 'light',
+  DARK = 'dark',
+  AUTO = 'auto',
+}
+
+enum EmojiStyle {
+  APPLE = 'apple',
+  GOOGLE = 'google',
+  TWITTER = 'twitter',
+  FACEBOOK = 'facebook',
+  NATIVE = 'native',
 }
 
 export default function ChatPanel({ socketRef }: Props) {
@@ -264,9 +277,9 @@ export default function ChatPanel({ socketRef }: Props) {
             >
               <Picker
                 onEmojiClick={onEmojiClick}
-                theme="dark"
-                emojiStyle="native"
-                pickerStyle={{ width: "200px" }}
+                theme={Theme.DARK}
+                emojiStyle={EmojiStyle.NATIVE}
+                width="200px"
               />
             </div>
           )}
