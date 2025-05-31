@@ -48,6 +48,7 @@ export const io = new Server(server, {
     credentials: true,
   },
 })
+app.use(morgan('dev'));
 
 app.post(
   "/api/plans/webhook",
@@ -55,7 +56,6 @@ app.post(
   planController.handleWebhook.bind(planController)
 );
 
-app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors({
   origin:[process.env.FRONTEND_URL!],

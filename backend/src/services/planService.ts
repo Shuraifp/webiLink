@@ -300,9 +300,6 @@ export class PlanService implements IPlanService {
         );
       }
 
-      // const isRecurring = !!price.recurring;
-      // const checkoutMode = isRecurring ? "subscription" : "payment";
-
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -375,7 +372,7 @@ export class PlanService implements IPlanService {
               }
             );
           } catch (error) {
-            throw new Error(`Failed to update existing subscription: ${error}`);
+            throw new BadRequestError(`Failed to update existing subscription: ${error}`);
           }
         }
       }
