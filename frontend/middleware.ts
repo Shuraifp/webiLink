@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { parse } from "cookie";
-import { JWTPayload } from "./types/type";
+import { JWTPayload } from "./src/types/type";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
