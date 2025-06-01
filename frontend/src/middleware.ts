@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { parse } from "cookie";
-import { JWTPayload } from "./src/types/type";
+import { JWTPayload } from "./types/type";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -13,8 +13,8 @@ export async function middleware(req: NextRequest) {
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
   console.log('req :',req)
-console.log('accessto :',accessToken)
-console.log('refreshto :',refreshToken)
+console.log('access token :',accessToken)
+console.log('refresh token :',refreshToken)
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
