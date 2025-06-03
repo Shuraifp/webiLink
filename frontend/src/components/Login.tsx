@@ -40,6 +40,7 @@ const Login: React.FC = () => {
       });
       router.replace("/host");
     } catch (err) {
+      console.log(err)
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
       } else {
