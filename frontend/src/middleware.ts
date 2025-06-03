@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-  console.log('req :',req)
+  
 console.log('access token :',accessToken)
 console.log('refresh token :',refreshToken)
   const isHomePage = pathname === "/";
