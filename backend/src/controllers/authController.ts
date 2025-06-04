@@ -5,6 +5,8 @@ import { JWTPayload, successResponse, UserDataForCookies } from "../types/type";
 export class AuthController {
   constructor(private _authService: IAuthService) {}
 
+  private readonly domains = ["webilink.duckdns.org", "webi-link.vercel.app"];
+
   async signUp(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, email, password } = req.body;
@@ -234,7 +236,8 @@ export class AuthController {
     if (refreshToken) {
       res.cookie("webiRefreshToken", refreshToken, {
         ...clientCookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000, 
+        domain: this.domains[1],
       });
     }
 
@@ -248,6 +251,7 @@ export class AuthController {
     res.cookie("webiAuthStatus", JSON.stringify(authStatus), {
       ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
+      domain: this.domains[1],
     });
 
     const safeUserData: UserDataForCookies = {
@@ -261,6 +265,7 @@ export class AuthController {
     res.cookie("webiUser", JSON.stringify(safeUserData), {
       ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
+      domain: this.domains[1],
     });
   }
 
@@ -300,6 +305,7 @@ export class AuthController {
       res.cookie("webiAdminRefreshToken", refreshToken, {
         ...clientCookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: this.domains[1],
       });
     }
 
@@ -314,6 +320,7 @@ export class AuthController {
     res.cookie("webiAdminStatus", JSON.stringify(adminAuthStatus), {
       ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
+      domain: this.domains[1],
     });
 
     const safeUserData: UserDataForCookies = {
@@ -327,6 +334,7 @@ export class AuthController {
     res.cookie("webiUser", JSON.stringify(safeUserData), {
       ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
+      domain: this.domains[1],
     });
   }
 
