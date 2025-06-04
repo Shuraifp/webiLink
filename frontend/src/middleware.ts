@@ -18,9 +18,11 @@ export async function middleware(req: NextRequest) {
   const webiAdminRefreshToken = req.cookies.get("webiAdminRefreshToken")?.value;
   const webiUser = req.cookies.get("webiUser")?.value;
 
-  console.log('webiAuthStatus:', webiAuthStatus);
-  console.log('webiRefreshToken exists:', !!webiRefreshToken);
-  console.log('webiUser:', webiUser);
+  console.log("webiAuthStatus:", webiAuthStatus);
+  console.log("webiAdminStatus:", webiAdminStatus);
+  console.log("webiRefreshToken exists:", !!webiRefreshToken);
+  console.log("webiAdminRefreshToken exists:", !!webiAdminRefreshToken);
+  console.log("webiUser:", webiUser);
 
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
