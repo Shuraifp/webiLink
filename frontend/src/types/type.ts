@@ -30,7 +30,6 @@ export interface UserData {
     email: string | null;
     avatar?: string;
     role: string | null;
-    // googleId?: string | null;
 }
 
 export interface JWTPayload {

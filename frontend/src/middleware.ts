@@ -1,20 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-import { parse } from "cookie";
-import { JWTPayload } from "./types/type";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+export interface UserData {
+  id: string | null;
+  username: string | null;
+  email: string | null;
+  avatar?: string;
+  role: string | null;
+}
 
 export async function middleware(req: NextRequest) {
-  const accessToken = req.cookies.get("accessToken")?.value;
-  const adminAccessToken = req.cookies.get("adminAccessToken")?.value;
-  const refreshToken = req.cookies.get("refreshToken")?.value;
-  const adminRefreshToken = req.cookies.get("adminRefreshToken")?.value;
   const { pathname } = req.nextUrl;
-  
-console.log('access token :',accessToken)
-console.log('refresh token :',refreshToken)
+
+  const webiAuthStatus = req.cookies.get("webiAuthStatus")?.value;
+  const webiAdminStatus = req.cookies.get("webiAdminStatus")?.value;
+  const webiRefreshToken = req.cookies.get("webiRefreshToken")?.value;
+  const webiAdminRefreshToken = req.cookies.get("webiAdminRefreshToken")?.value;
+  const webiUser = req.cookies.get("webiUser")?.value;
+
+  console.log('webiAuthStatus:', webiAuthStatus);
+  console.log('webiRefreshToken exists:', !!webiRefreshToken);
+  console.log('webiUser:', webiUser);
+
   const isHomePage = pathname === "/";
   const isPlansPage = pathname === "/pricing";
   const isUserNonAuthPage = ["/login", "/signup"].includes(pathname);
@@ -24,54 +31,95 @@ console.log('refresh token :',refreshToken)
   const isAdminProtectedPage =
     pathname.startsWith("/admin") && pathname !== "/admin/auth/login";
 
-  if (isHomePage || isPlansPage) {
-    let user;
-    let response;
-    // User
-    if (!accessToken) {
-      if (!refreshToken) {
-        return NextResponse.next();
-      }
-      const refreshResult = await refreshUserAccessToken(req);
-      if (refreshResult && refreshResult.accessToken) {
-        response = refreshResult.response;
-        user = await decodeAndVerifyToken(refreshResult.accessToken);
-      }
-    } else {
-      user = await decodeAndVerifyToken(accessToken);
-      response = NextResponse.next();
+  let userAuthStatus: { isAuthenticated: boolean; userId: string; role: string; expiresAt: number } | null = null;
+  let adminAuthStatus: { isAuthenticated: boolean; isAdmin: boolean; expiresAt: number } | null = null;
+  let userData: UserData | null = null;
+
+  try {
+    if (webiAuthStatus) {
+      userAuthStatus = JSON.parse(webiAuthStatus);
     }
-    if (user && response) {
+    if (webiAdminStatus) {
+      adminAuthStatus = JSON.parse(webiAdminStatus);
+    }
+    if (webiUser) {
+      userData = JSON.parse(webiUser) as UserData;
+    }
+  } catch (error) {
+    console.error("Error parsing cookies:", error);
+  }
+
+  if (isHomePage || isPlansPage) {
+    let response = NextResponse.next();
+    let user: UserData | null = userData;
+
+    if (userAuthStatus && userAuthStatus.isAuthenticated) {
+      if (isTokenExpired(userAuthStatus)) {
+        const refreshResult = await refreshUserAccessToken(req, webiRefreshToken);
+        if (refreshResult && refreshResult.success) {
+          response = refreshResult.response;
+          const setCookieHeader = response.headers.get("set-cookie");
+          if (setCookieHeader) {
+            user = extractUserDataFromSetCookie(setCookieHeader);
+          }
+        }
+      }
+    } else if (webiRefreshToken) {
+      // No auth status but refresh token exists, try to refresh
+      const refreshResult = await refreshUserAccessToken(req, webiRefreshToken);
+      if (refreshResult && refreshResult.success) {
+        response = refreshResult.response;
+        const setCookieHeader = response.headers.get("set-cookie");
+        if (setCookieHeader) {
+          user = extractUserDataFromSetCookie(setCookieHeader);
+        }
+      }
+    }
+
+    if (user) {
       response.headers.set("x-user", JSON.stringify(user));
     }
     return response;
   }
 
-  if (accessToken && isUserNonAuthPage) {
+  // Redirect authenticated users away from auth pages
+  if (userAuthStatus?.isAuthenticated && !isTokenExpired(userAuthStatus) && isUserNonAuthPage) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (adminAccessToken && isAdminNonAuthPage) {
+  if (adminAuthStatus?.isAuthenticated && !isTokenExpired(adminAuthStatus) && isAdminNonAuthPage) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
+  // Handle user protected pages
   if (isUserProtectedPage) {
-    let user;
-    let response;
-    if (!accessToken) {
-      if (!refreshToken) {
+    let response = NextResponse.next();
+    let user: UserData | null = userData;
+
+    if (userAuthStatus?.isAuthenticated) {
+      if (isTokenExpired(userAuthStatus)) {
+        const refreshResult = await refreshUserAccessToken(req, webiRefreshToken);
+        if (!refreshResult || !refreshResult.success) {
+          return NextResponse.redirect(new URL("/login", req.url));
+        }
+        response = refreshResult.response;
+        const setCookieHeader = response.headers.get("set-cookie");
+        if (setCookieHeader) {
+          user = extractUserDataFromSetCookie(setCookieHeader);
+        }
+      }
+    } else if (webiRefreshToken) {
+      const refreshResult = await refreshUserAccessToken(req, webiRefreshToken);
+      if (!refreshResult || !refreshResult.success) {
         return NextResponse.redirect(new URL("/login", req.url));
       }
-
-      const refreshResult = await refreshUserAccessToken(req);
-      if (!refreshResult || !refreshResult.accessToken) {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
       response = refreshResult.response;
-      user = await decodeAndVerifyToken(refreshResult.accessToken);
+      const setCookieHeader = response.headers.get("set-cookie");
+      if (setCookieHeader) {
+        user = extractUserDataFromSetCookie(setCookieHeader);
+      }
     } else {
-      user = await decodeAndVerifyToken(accessToken);
-      response = NextResponse.next();
+      return NextResponse.redirect(new URL("/login", req.url));
     }
 
     if (!user) {
@@ -81,23 +129,32 @@ console.log('refresh token :',refreshToken)
     response.headers.set("x-user", JSON.stringify(user));
     return response;
   }
+
+  // Handle admin protected pages
   if (isAdminProtectedPage) {
-    let admin;
-    let response;
-    if (!adminAccessToken) {
-      if (!adminRefreshToken) {
+    let admin = null;
+    let response = NextResponse.next();
+
+    if (adminAuthStatus?.isAuthenticated) {
+      if (isTokenExpired(adminAuthStatus)) {
+        const refreshResult = await refreshAdminAccessToken(req, webiAdminRefreshToken);
+        if (!refreshResult || !refreshResult.success) {
+          return NextResponse.redirect(new URL("/admin/auth/login", req.url));
+        }
+        response = refreshResult.response;
+        admin = { isAdmin: true };
+      } else {
+        admin = { isAdmin: true };
+      }
+    } else if (webiAdminRefreshToken) {
+      const refreshResult = await refreshAdminAccessToken(req, webiAdminRefreshToken);
+      if (!refreshResult || !refreshResult.success) {
         return NextResponse.redirect(new URL("/admin/auth/login", req.url));
       }
-      const refreshResponse = await refreshAdminAccessToken(req);
-      if (!refreshResponse || !refreshResponse.adminAccessToken) {
-        return NextResponse.redirect(new URL("/admin/auth/login", req.url));
-      }
-      const newAdminAccessToken = refreshResponse.adminAccessToken;
-      response = refreshResponse.response;
-      admin = await decodeAndVerifyToken(newAdminAccessToken!);
+      response = refreshResult.response;
+      admin = { isAdmin: true };
     } else {
-      admin = await decodeAndVerifyToken(adminAccessToken);
-      response = NextResponse.next();
+      return NextResponse.redirect(new URL("/admin/auth/login", req.url));
     }
 
     if (!admin) {
@@ -111,27 +168,31 @@ console.log('refresh token :',refreshToken)
   return NextResponse.next();
 }
 
-// Utils
+// Utility functions
 
-async function decodeAndVerifyToken(token: string) {
-  try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload  } = await jwtVerify(token, secret) as { payload: JWTPayload}
-    return {
-      id: payload._id,
-      username: payload.username,
-      email: payload.email,
-      avatar: payload.avatar
-    };
-  } catch (error) {
-    console.error("Token verification failed:", error);
-    return null;
-  }
+function isTokenExpired(authStatus: { expiresAt: number }): boolean {
+  return Date.now() > authStatus.expiresAt;
 }
 
-async function refreshUserAccessToken(req: NextRequest) {
-  const refreshToken = req.cookies.get("refreshToken")?.value;
-  if (!refreshToken) return null;
+function extractUserDataFromSetCookie(setCookieHeader: string): UserData | null {
+  try {
+    const cookies = setCookieHeader.split(",");
+    for (const cookie of cookies) {
+      if (cookie.includes("webiUser=")) {
+        const match = cookie.match(/webiUser=([^;]+)/);
+        if (match) {
+          return JSON.parse(decodeURIComponent(match[1])) as UserData;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error extracting user data:", error);
+  }
+  return null;
+}
+
+async function refreshUserAccessToken(req: NextRequest, refreshToken?: string) {
+  if (!refreshToken) return { success: false, response: NextResponse.next() };
 
   try {
     const res = await fetch(
@@ -141,32 +202,35 @@ async function refreshUserAccessToken(req: NextRequest) {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Cookie: `refreshToken=${refreshToken}`,
+          Cookie: `refreshToken=${refreshToken};webiRefreshToken=${refreshToken}`,
         },
+        body: JSON.stringify({ refreshToken }),
       }
     );
 
-    if (!res.ok) throw new Error("Failed to refresh token server");
+    if (!res.ok) {
+      console.error("Failed to refresh token, status:", res.status);
+      return { success: false, response: NextResponse.next() };
+    }
 
-    const setCookie = res.headers.get("set-cookie");
-    if (!setCookie) return null;
-
-    const cookie = parse(setCookie);
-    const newAccessToken = cookie.accessToken;
+    const setCookieHeaders = res.headers.get("set-cookie");
+    if (!setCookieHeaders) {
+      console.error("No set-cookie headers in refresh response");
+      return { success: false, response: NextResponse.next() };
+    }
 
     const nextResponse = NextResponse.next();
-    nextResponse.headers.set("Set-Cookie", setCookie);
+    nextResponse.headers.set("Set-Cookie", setCookieHeaders);
 
-    return { response: nextResponse, accessToken: newAccessToken };
+    return { success: true, response: nextResponse };
   } catch (error) {
-    console.error("Error refreshing token:", error);
-    return null;
+    console.error("Error refreshing user token:", error);
+    return { success: false, response: NextResponse.next() };
   }
 }
 
-async function refreshAdminAccessToken(req: NextRequest) {
-  const refreshToken = req.cookies.get("adminRefreshToken")?.value;
-  if (!refreshToken) return null;
+async function refreshAdminAccessToken(req: NextRequest, refreshToken?: string) {
+  if (!refreshToken) return { success: false, response: NextResponse.next() };
 
   try {
     const res = await fetch(
@@ -176,25 +240,30 @@ async function refreshAdminAccessToken(req: NextRequest) {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Cookie: `adminRefreshToken=${refreshToken}`,
+          Cookie: `adminRefreshToken=${refreshToken};webiAdminRefreshToken=${refreshToken}`,
         },
+        body: JSON.stringify({ refreshToken }),
       }
     );
 
-    if (!res.ok) throw new Error("Failed to refresh token");
+    if (!res.ok) {
+      console.error("Failed to refresh admin token, status:", res.status);
+      return { success: false, response: NextResponse.next() };
+    }
 
-    const setCookie = res.headers.get("set-cookie");
-    if (!setCookie) return null;
-    const cookie = parse(setCookie);
-    const newAccessToken = cookie.adminAccessToken;
+    const setCookieHeaders = res.headers.get("set-cookie");
+    if (!setCookieHeaders) {
+      console.error("No set-cookie headers in admin refresh response");
+      return { success: false, response: NextResponse.next() };
+    }
 
     const nextResponse = NextResponse.next();
-    nextResponse.headers.set("Set-Cookie", setCookie);
+    nextResponse.headers.set("Set-Cookie", setCookieHeaders);
 
-    return { response: nextResponse, adminAccessToken: newAccessToken };
+    return { success: true, response: nextResponse };
   } catch (error) {
     console.error("Error refreshing admin token:", error);
-    return null;
+    return { success: false, response: NextResponse.next() };
   }
 }
 

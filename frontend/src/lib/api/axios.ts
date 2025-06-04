@@ -1,9 +1,9 @@
 import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-console.log("API Base URL:", BASE_URL);
+
 export const apiWithoutAuth = axios.create({
-    baseURL: 'https://webilink.duckdns.org/api',
+    baseURL: BASE_URL,
     headers: { "Content-Type": "application/json" },
     withCredentials: true,
 });

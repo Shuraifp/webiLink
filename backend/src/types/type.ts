@@ -47,7 +47,15 @@ export interface JWTPayload {
   _id: string;
   username: string;
   email: string;
-  role: string;
+  role: UserRole;
   avatar: string;
+}
+
+export interface UserDataForCookies {
+    id: string | null;
+    username: string | null;
+    email: string | null;
+    avatar?: string;
+    role: string | null;
 }
 

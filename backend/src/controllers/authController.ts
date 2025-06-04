@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../interfaces/services/IAuthService";
-import { successResponse } from "../types/type";
+import { JWTPayload, successResponse, UserDataForCookies } from "../types/type";
 
 export class AuthController {
   constructor(private _authService: IAuthService) {}
@@ -29,7 +29,18 @@ export class AuthController {
       const { accessToken, refreshToken, user } =
         await this._authService.googleSignIn(username, email, avatar, googleId);
 
-      this.setAuthCookies(res, accessToken, refreshToken);
+      this.setAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken,
+        refreshToken
+      );
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
       next(error);
@@ -44,7 +55,18 @@ export class AuthController {
         password
       );
 
-      this.setAuthCookies(res, accessToken, refreshToken);
+      this.setAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken,
+        refreshToken
+      );
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
       next(error);
@@ -57,7 +79,18 @@ export class AuthController {
       const { accessToken, refreshToken, user } =
         await this._authService.adminLogin(email, password);
 
-      this.setAdminAuthCookies(res, accessToken, refreshToken);
+      this.setAdminAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken,
+        refreshToken
+      );
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
       next(error);
@@ -70,7 +103,18 @@ export class AuthController {
       const { accessToken, refreshToken, user } =
         await this._authService.verifyOtp(email, otp);
 
-      this.setAuthCookies(res, accessToken, refreshToken);
+      this.setAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken,
+        refreshToken
+      );
       res.status(200).json({ username: user.username, email: user.email });
     } catch (error) {
       next(error);
@@ -108,7 +152,17 @@ export class AuthController {
         refreshToken
       );
 
-      this.setAuthCookies(res, accessToken);
+      this.setAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken
+      );
       res.status(200).json({ user, tokenNew: accessToken });
     } catch (error) {
       next(error);
@@ -128,7 +182,17 @@ export class AuthController {
         refreshToken
       );
 
-      this.setAdminAuthCookies(res, accessToken);
+      this.setAdminAuthCookies(
+        res,
+        {
+          _id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar: user.profile?.avatar ?? "",
+          role: user.role!,
+        },
+        accessToken
+      );
       res.status(200).json({ user, tokenNew: accessToken });
     } catch (error) {
       next(error);
@@ -137,60 +201,151 @@ export class AuthController {
 
   private setAuthCookies(
     res: Response,
+    user: JWTPayload,
     accessToken: string,
     refreshToken?: string
   ) {
+    const cookieOptions: import("express").CookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
+
+    const clientCookieOptions: import("express").CookieOptions = {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
+
     if (refreshToken) {
       res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        ...cookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
 
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    if (refreshToken) {
+      res.cookie("webiRefreshToken", refreshToken, {
+        ...clientCookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    const authStatus = {
+      isAuthenticated: true,
+      userId: user._id,
+      role: user.role,
+      expiresAt: Date.now() + 15 * 60 * 1000,
+    };
+
+    res.cookie("webiAuthStatus", JSON.stringify(authStatus), {
+      ...clientCookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    const safeUserData: UserDataForCookies = {
+      id: user._id || null,
+      username: user.username || null,
+      email: user.email || null,
+      avatar: user.avatar,
+      role: user.role || null,
+    };
+
+    res.cookie("webiUser", JSON.stringify(safeUserData), {
+      ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
     });
   }
 
   private setAdminAuthCookies(
     res: Response,
+    user: JWTPayload,
     accessToken: string,
     refreshToken?: string
   ) {
+    const cookieOptions: import("express").CookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
+
+    const clientCookieOptions: import("express").CookieOptions = {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
+
     if (refreshToken) {
       res.cookie("adminRefreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        ...cookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
+
     res.cookie("adminAccessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    if (refreshToken) {
+      res.cookie("webiAdminRefreshToken", refreshToken, {
+        ...clientCookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    const adminAuthStatus = {
+      isAuthenticated: true,
+      userId: user._id,
+      role: user.role,
+      expiresAt: Date.now() + 15 * 60 * 1000,
+      isAdmin: true,
+    };
+
+    res.cookie("webiAdminStatus", JSON.stringify(adminAuthStatus), {
+      ...clientCookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    const safeUserData: UserDataForCookies = {
+      id: user._id || null,
+      username: user.username || null,
+      email: user.email || null,
+      avatar: user.avatar,
+      role: user.role || null,
+    };
+
+    res.cookie("webiUser", JSON.stringify(safeUserData), {
+      ...clientCookieOptions,
       maxAge: 15 * 60 * 1000,
     });
   }
 
   async userLogout(req: Request, res: Response, next: NextFunction) {
     try {
-      res.clearCookie("accessToken", {
+      const cookieOptions: import("express").CookieOptions = {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
-      });
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      };
 
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-      });
+      const clientCookieOptions: import("express").CookieOptions = {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      };
+
+      res.clearCookie("accessToken", cookieOptions);
+      res.clearCookie("refreshToken", cookieOptions);
+
+      res.clearCookie("webiRefreshToken", clientCookieOptions);
+      res.clearCookie("webiAuthStatus", clientCookieOptions);
+      res.clearCookie("webiUser", clientCookieOptions);
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {
@@ -200,17 +355,24 @@ export class AuthController {
 
   async adminLogout(req: Request, res: Response, next: NextFunction) {
     try {
-      res.clearCookie("adminAccessToken", {
+      const cookieOptions: import("express").CookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-      });
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      };
 
-      res.clearCookie("adminRefreshToken", {
-        httpOnly: true,
+      const clientCookieOptions: import("express").CookieOptions = {
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-      });
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      };
+
+      res.clearCookie("adminAccessToken", cookieOptions);
+      res.clearCookie("adminRefreshToken", cookieOptions);
+
+      res.clearCookie("webiAdminRefreshToken", clientCookieOptions);
+      res.clearCookie("webiAdminStatus", clientCookieOptions);
+      res.clearCookie("webiUser", clientCookieOptions);
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {
