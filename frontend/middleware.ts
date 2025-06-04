@@ -12,6 +12,12 @@ export interface UserData {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  const cookieHeader = req.headers.get("cookie");
+  console.log("[Middleware] Cookie header:", cookieHeader || "No cookies");
+
+  // Log all cookies
+  console.log("[Middleware] All cookies:", req.cookies.getAll());
+
   const webiAuthStatus = req.cookies.get("webiAuthStatus")?.value;
   const webiAdminStatus = req.cookies.get("webiAdminStatus")?.value;
   const webiRefreshToken = req.cookies.get("webiRefreshToken")?.value;
