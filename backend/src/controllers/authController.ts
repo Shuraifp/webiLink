@@ -209,12 +209,14 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     };
 
     const clientCookieOptions: import("express").CookieOptions = {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     };
 
     if (refreshToken) {
@@ -272,12 +274,14 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     };
 
     const clientCookieOptions: import("express").CookieOptions = {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     };
 
     if (refreshToken) {
@@ -332,12 +336,14 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
       };
 
       const clientCookieOptions: import("express").CookieOptions = {
         httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
       };
 
       res.clearCookie("accessToken", cookieOptions);
@@ -359,12 +365,14 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
       };
 
       const clientCookieOptions: import("express").CookieOptions = {
         httpOnly: false,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
       };
 
       res.clearCookie("adminAccessToken", cookieOptions);
