@@ -1,21 +1,21 @@
 "use client"
 
-import { logout } from "@/lib/api/user/authApi";
+import { logoutUser } from "@/lib/api/user/authApi";
 import { UserData } from "@/types/type";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavbarProps {
   user: UserData | null;
 }
 
 export default function Navbar({ user }: NavbarProps) {
-  const router = useRouter();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await logout();
-      router.replace("/login");
+      await logoutUser();
+      logout()
     } catch (error) {
       console.error("Logout failed:", error);
     }

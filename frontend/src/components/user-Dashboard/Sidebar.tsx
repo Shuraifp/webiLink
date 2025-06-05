@@ -14,9 +14,9 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { useState, useRef, Dispatch, SetStateAction } from "react";
-import { logout } from "@/lib/api/user/authApi";
-import { useRouter } from "next/navigation";
+import { logoutUser } from "@/lib/api/user/authApi";
 import { UserData } from "@/types/type";
+import { useAuth } from "@/context/AuthContext";
 
 const Sidebar: React.FC<{
   user: UserData | null;
@@ -24,14 +24,14 @@ const Sidebar: React.FC<{
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
 }> = ({ user, onSectionChange, selectedSection, setPrevSection }) => {
-  const router = useRouter();
+  const { logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     try {
-      await logout();
-      router.push("/login");
+      await logoutUser();
+      logout();
     } catch (error) {
       console.error("Logout failed:", error);
     }

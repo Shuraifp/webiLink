@@ -62,7 +62,7 @@ export const verifyOtp = async (email: string, otp: string) => {
   }
 };
 
-export const logout = async () => {
+export const logoutUser = async () => {
   try {
     const res = await userApiWithAuth.post("/auth/user-logout");
     return res.data;
