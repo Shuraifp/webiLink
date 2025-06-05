@@ -5,11 +5,12 @@ import Image from "next/image";
 import googleLogo from "../../public/logos/google.png";
 import { useRouter } from "next/navigation";
 import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
-import { AuthInput } from "../types/type";  
+import { AuthInput } from "../types/type";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signup, resendOtp, verifyOtp } from "@/lib/api/user/authApi";
 import { googleSignIn } from "@/lib/api/user/authApi";
+import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 
 const Signup: React.FC = () => {
@@ -18,6 +19,7 @@ const Signup: React.FC = () => {
     email: "",
     password: "",
   });
+  const { login } = useAuth();
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -35,10 +37,6 @@ const Signup: React.FC = () => {
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const router = useRouter();
 
-
-
-
-
   const togglePassword = () => setShowPassword(!showPassword);
   const toggleConfirmPassword = () =>
     setShowConfirmPassword(!showConfirmPassword);
@@ -47,13 +45,14 @@ const Signup: React.FC = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const userData = result.user;
-      await googleSignIn({
-              username: userData?.displayName ?? "",
-              email: userData?.email ?? "",
-              avatar: userData?.photoURL ?? "",
-              googleId: userData?.uid ?? "",
-            });
-            router.replace("/host");
+      const res = await googleSignIn({
+        username: userData?.displayName ?? "",
+        email: userData?.email ?? "",
+        avatar: userData?.photoURL ?? "",
+        googleId: userData?.uid ?? "",
+      });
+      login(res.data.webiUser, res.data.webiAuthStatus);
+      router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
@@ -134,19 +133,20 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleVerifyOtp = async (e:React.FormEvent) => {
-    e.preventDefault()
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await verifyOtp(user.email,otp)
-      router.replace('/host')
-    } catch (err){
+      const res = await verifyOtp(user.email, otp);
+      login(res.webiUser, res.webiAuthStatus);
+      router.replace("/host");
+    } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);
       } else {
         setError("An unexpected error occurred.");
       }
     }
-  }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -191,7 +191,7 @@ const Signup: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={showOtpInput? handleVerifyOtp : handleEmailSignup}>
+        <form onSubmit={showOtpInput ? handleVerifyOtp : handleEmailSignup}>
           <div className="mb-4">
             <label
               htmlFor="username"
@@ -310,11 +310,18 @@ const Signup: React.FC = () => {
                 className="w-full py-3 px-4 border border-gray-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="Enter OTP"
               />
-              <p className="text-sm text-center text-blue-500">Resend OTP in {timer} seconds</p>
-              <div className="flex justify-center py-2"><button onClick={handleResendOtp} disabled={isResendDisabled}
-              className="text-red-500">
-                Resend OTP
-              </button></div>
+              <p className="text-sm text-center text-blue-500">
+                Resend OTP in {timer} seconds
+              </p>
+              <div className="flex justify-center py-2">
+                <button
+                  onClick={handleResendOtp}
+                  disabled={isResendDisabled}
+                  className="text-red-500"
+                >
+                  Resend OTP
+                </button>
+              </div>
             </div>
           )}
 

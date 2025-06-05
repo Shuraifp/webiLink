@@ -12,6 +12,7 @@ import {
   Lobster,
   Oswald,
 } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -78,7 +79,7 @@ export default function RootLayout({
               ${lobster.variable} ${oswald.variable}
               `}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

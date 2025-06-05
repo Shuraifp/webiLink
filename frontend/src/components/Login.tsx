@@ -7,7 +7,8 @@ import googleLogo from "../../public/logos/google.png";
 import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
 import Link from "next/link";
 import { AuthInput } from "../types/type";
-import { login, googleSignIn, forgotPassword } from "@/lib/api/user/authApi";
+import { useAuth } from "@/context/AuthContext";
+import { loginUser, googleSignIn, forgotPassword } from "@/lib/api/user/authApi";
 import axios from "axios";
 
 const Login: React.FC = () => {
@@ -16,7 +17,7 @@ const Login: React.FC = () => {
     email: "",
     password: "",
   });
-
+  const { login } = useAuth();
   const [resetEmail, setResetEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState("");
@@ -32,12 +33,13 @@ const Login: React.FC = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const userData = result.user;
 
-      await googleSignIn({
+      const res = await googleSignIn({
         username: userData?.displayName ?? "",
         email: userData?.email ?? "",
         avatar: userData?.photoURL ?? "",
         googleId: userData?.uid ?? "",
       });
+      login(res.webiUser, res.webiAuthStatus)
       router.replace("/host");
     } catch (err) {
       console.log(err)
@@ -53,8 +55,8 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
     try {
-      await login(user.email, user.password);
-      console.log('success')
+      const res = await loginUser(user.email, user.password);
+      login(res.webiUser, res.webiAuthStatus)
       router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {

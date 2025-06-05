@@ -1,0 +1,150 @@
+"use client";
+
+import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { refreshAdminToken } from "@/lib/api/admin/authApi";
+import { refreshUserToken } from "@/lib/api/user/authApi";
+import { AuthStatus, USER_ROLE, UserData } from "@/types/type";
+
+interface AuthState {
+  user: UserData | null;
+  authStatus: AuthStatus | null;
+  isLoading: boolean;
+}
+
+interface AdminState {
+  admin: UserData | null;
+  adminStatus: AuthStatus | null;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<{
+  auth: AuthState;
+  admin: AdminState;
+  login: (
+    user: UserData,
+    authStatus: AuthStatus,
+    refreshToken?: string
+  ) => void;
+  logout: () => void;
+  loginAdmin: (
+    user: UserData,
+    authStatus: AuthStatus,
+    refreshToken?: string
+  ) => void;
+  logoutAdmin: () => void;
+}>({
+  auth: { user: null, authStatus: null, isLoading: true },
+  admin: { admin: null, adminStatus: null, isLoading: true },
+  login: () => {},
+  logout: () => {},
+  loginAdmin: () => {},
+  logoutAdmin: () => {},
+});
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [auth, setAuth] = useState<AuthState>({
+    user: null,
+    authStatus: null,
+    isLoading: true,
+  });
+  const [admin, setAdmin] = useState<AdminState>({
+    admin: null,
+    adminStatus: null,
+    isLoading: true,
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("webiUser");
+    const storedAuthStatus = localStorage.getItem("webiAuthStatus");
+    const storedAdmin = localStorage.getItem("webiAdmin");
+    const storedAdminStatus = localStorage.getItem("webiAdminStatus");
+    if (storedUser && storedAuthStatus) {
+      try {
+        const user = JSON.parse(storedUser) as UserData;
+        const authStatus = JSON.parse(storedAuthStatus) as AuthStatus;
+        if (authStatus.expiresAt > Date.now()) {
+          setAuth({ user, authStatus, isLoading: false });
+        } else {
+          refreshToken("user").catch(() => logout());
+        }
+      } catch {
+        logout();
+      }
+    } else {
+      setAuth({ user: null, authStatus: null, isLoading: false });
+    }
+
+    if (storedAdmin && storedAdminStatus) {
+      try {
+        const user = JSON.parse(storedAdmin) as UserData;
+        const authStatus = JSON.parse(storedAdminStatus) as AuthStatus;
+        if (authStatus.expiresAt > Date.now()) {
+          setAdmin({ admin:user, adminStatus:authStatus, isLoading: false });
+        } else {
+          refreshToken("admin").catch(() => logoutAdmin());
+        }
+      } catch {
+        logoutAdmin();
+      }
+    } else {
+      setAdmin({ admin: null, adminStatus: null, isLoading: false });
+    }
+  }, []);
+
+  const login = (user: UserData, authStatus: AuthStatus) => {
+    localStorage.setItem("webiUser", JSON.stringify(user));
+    localStorage.setItem("webiAuthStatus", JSON.stringify(authStatus));
+    setAuth({ user, authStatus, isLoading: false });
+  };
+  
+  const loginAdmin = (user: UserData, authStatus: AuthStatus) => {
+    localStorage.setItem("webiAdmin", JSON.stringify(user));
+    localStorage.setItem("webiAdminStatus", JSON.stringify(authStatus));
+    setAdmin({ admin:user, adminStatus:authStatus, isLoading: false });
+  };
+
+  const logout = () => {
+    localStorage.removeItem("webiUser");
+    localStorage.removeItem("webiAuthStatus");
+    setAuth({ user: null, authStatus: null, isLoading: false });
+    router.push("/login");
+  };
+  
+  const logoutAdmin = () => {
+    localStorage.removeItem("webiAdmin");
+    localStorage.removeItem("webiAdminStatus");
+    setAdmin({ admin: null, adminStatus: null, isLoading: false });
+    router.push("/admin/auth/login");
+  };
+
+  const refreshToken = async (userRole: (typeof USER_ROLE)[keyof typeof USER_ROLE]) => {
+    try {
+      if(userRole === "admin"){
+        const res = await refreshAdminToken();
+        console.log("Refreshing admin token");
+        loginAdmin(res.webiAdmin, res.webiAdminStatus);
+      } else if(userRole === "user") {
+        const res = await refreshUserToken();
+        console.log("Refreshing user token");
+        login(res.webiUser, res.webiAuthStatus);
+      }
+    } catch (error) {
+      console.error("Failed to refresh token:", error);
+      if (userRole === "admin") {
+        logoutAdmin();
+      } else {
+        logout();
+      }
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ auth, admin, login, logout, loginAdmin, logoutAdmin }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);

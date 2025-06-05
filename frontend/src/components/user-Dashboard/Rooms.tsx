@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { useConfirmationModal } from "./ConfirmationModal";
 
 interface RoomsProps {
-  user: UserData;
+  user: UserData | null;
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
@@ -231,7 +231,7 @@ export default function DashboardPage({
           >
             <div className="flex items-center gap-3">
               <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
-                {user.username
+                {user?.username
                   ?.split(" ")
                   .map((a) => a[0].toUpperCase())
                   .join("")}
@@ -242,7 +242,7 @@ export default function DashboardPage({
                 </p>
                 <p className="text-gray-800 font-medium">{room.name}</p>
                 <p className="text-gray-500 text-sm">
-                  {user.username}
+                  {user?.username}
                   {!room.isActive && " (Archived)"}
                 </p>
               </div>

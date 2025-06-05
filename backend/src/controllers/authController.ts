@@ -1,11 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { IAuthService } from "../interfaces/services/IAuthService";
-import { JWTPayload, successResponse, UserDataForCookies } from "../types/type";
+import { JWTPayload, successResponse, TOKEN_EXPIRY, UserDataForCookies } from "../types/type";
 
 export class AuthController {
   constructor(private _authService: IAuthService) {}
-
-  private readonly domains = ["webilink.duckdns.org", "webi-link.vercel.app"];
 
   async signUp(req: Request, res: Response, next: NextFunction) {
     try {
@@ -30,9 +28,7 @@ export class AuthController {
 
       const { accessToken, refreshToken, user } =
         await this._authService.googleSignIn(username, email, avatar, googleId);
-
-      this.setAuthCookies(
-        res,
+      const authData = this.getAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -43,7 +39,10 @@ export class AuthController {
         accessToken,
         refreshToken
       );
-      res.status(200).json({ username: user.username, email: user.email });
+      this.setAuthCookies(res, accessToken, refreshToken);
+      res
+        .status(200)
+        .json({ username: user.username, email: user.email, ...authData });
     } catch (error) {
       next(error);
     }
@@ -56,9 +55,7 @@ export class AuthController {
         email,
         password
       );
-
-      this.setAuthCookies(
-        res,
+      const authData = this.getAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -69,7 +66,10 @@ export class AuthController {
         accessToken,
         refreshToken
       );
-      res.status(200).json({ username: user.username, email: user.email });
+      this.setAuthCookies(res, accessToken, refreshToken);
+      res
+        .status(200)
+        .json({ username: user.username, email: user.email, ...authData });
     } catch (error) {
       next(error);
     }
@@ -80,9 +80,7 @@ export class AuthController {
       const { email, password } = req.body;
       const { accessToken, refreshToken, user } =
         await this._authService.adminLogin(email, password);
-
-      this.setAdminAuthCookies(
-        res,
+      const adminAuthData = this.getAdminAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -93,7 +91,12 @@ export class AuthController {
         accessToken,
         refreshToken
       );
-      res.status(200).json({ username: user.username, email: user.email });
+      this.setAdminAuthCookies(res, accessToken, refreshToken);
+      res.status(200).json({
+        username: user.username,
+        email: user.email,
+        ...adminAuthData,
+      });
     } catch (error) {
       next(error);
     }
@@ -104,9 +107,7 @@ export class AuthController {
       const { email, otp } = req.body;
       const { accessToken, refreshToken, user } =
         await this._authService.verifyOtp(email, otp);
-
-      this.setAuthCookies(
-        res,
+      const authData = this.getAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -117,7 +118,10 @@ export class AuthController {
         accessToken,
         refreshToken
       );
-      res.status(200).json({ username: user.username, email: user.email });
+      this.setAuthCookies(res, accessToken, refreshToken);
+      res
+        .status(200)
+        .json({ username: user.username, email: user.email, ...authData });
     } catch (error) {
       next(error);
     }
@@ -153,9 +157,7 @@ export class AuthController {
       const { accessToken, user } = await this._authService.refreshToken(
         refreshToken
       );
-
-      this.setAuthCookies(
-        res,
+      const authData = this.getAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -165,7 +167,8 @@ export class AuthController {
         },
         accessToken
       );
-      res.status(200).json({ user, tokenNew: accessToken });
+      this.setAuthCookies(res, accessToken);
+      res.status(200).json({...authData });
     } catch (error) {
       next(error);
     }
@@ -183,9 +186,7 @@ export class AuthController {
       const { accessToken, user } = await this._authService.refreshToken(
         refreshToken
       );
-
-      this.setAdminAuthCookies(
-        res,
+      const authData = this.getAdminAuthData(
         {
           _id: user.id,
           username: user.username,
@@ -195,27 +196,71 @@ export class AuthController {
         },
         accessToken
       );
-      res.status(200).json({ user, tokenNew: accessToken });
+      this.setAdminAuthCookies(res, accessToken);
+      res.status(200).json({...authData });
     } catch (error) {
       next(error);
     }
   }
 
+  private getAuthData(
+    user: JWTPayload,
+    accessToken: string,
+    refreshToken?: string
+  ) {
+    const authStatus = {
+      isAuthenticated: true,
+      userId: user._id,
+      role: user.role,
+      expiresAt: Date.now() + TOKEN_EXPIRY.ACCESS_TOKEN,
+    };
+    const safeUserData: UserDataForCookies = {
+      id: user._id || null,
+      username: user.username || null,
+      email: user.email || null,
+      avatar: user.avatar,
+      role: user.role || null,
+    };
+    return {
+      webiAuthStatus: authStatus,
+      webiUser: safeUserData,
+      webiRefreshToken: refreshToken || null,
+    };
+  }
+
+  private getAdminAuthData(
+    user: JWTPayload,
+    accessToken: string,
+    refreshToken?: string
+  ) {
+    const adminAuthStatus = {
+      isAuthenticated: true,
+      userId: user._id,
+      role: user.role,
+      expiresAt: Date.now() + TOKEN_EXPIRY.ACCESS_TOKEN,
+      isAdmin: true,
+    };
+    const safeUserData: UserDataForCookies = {
+      id: user._id || null,
+      username: user.username || null,
+      email: user.email || null,
+      avatar: user.avatar,
+      role: user.role || null,
+    };
+    return {
+      webiAdminStatus: adminAuthStatus,
+      webiAdmin: safeUserData,
+      webiAdminRefreshToken: refreshToken || null,
+    };
+  }
+
   private setAuthCookies(
     res: Response,
-    user: JWTPayload,
     accessToken: string,
     refreshToken?: string
   ) {
     const cookieOptions: import("express").CookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      path: "/",
-    };
-
-    const clientCookieOptions: import("express").CookieOptions = {
-      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
@@ -232,58 +277,15 @@ export class AuthController {
       ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
-
-    if (refreshToken) {
-      res.cookie("webiRefreshToken", refreshToken, {
-        ...clientCookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, 
-        domain: this.domains[1],
-      });
-    }
-
-    const authStatus = {
-      isAuthenticated: true,
-      userId: user._id,
-      role: user.role,
-      expiresAt: Date.now() + 15 * 60 * 1000,
-    };
-
-    res.cookie("webiAuthStatus", JSON.stringify(authStatus), {
-      ...clientCookieOptions,
-      maxAge: 15 * 60 * 1000,
-      domain: this.domains[1],
-    });
-
-    const safeUserData: UserDataForCookies = {
-      id: user._id || null,
-      username: user.username || null,
-      email: user.email || null,
-      avatar: user.avatar,
-      role: user.role || null,
-    };
-
-    res.cookie("webiUser", JSON.stringify(safeUserData), {
-      ...clientCookieOptions,
-      maxAge: 15 * 60 * 1000,
-      domain: this.domains[1],
-    });
   }
 
   private setAdminAuthCookies(
     res: Response,
-    user: JWTPayload,
     accessToken: string,
     refreshToken?: string
   ) {
     const cookieOptions: import("express").CookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      path: "/",
-    };
-
-    const clientCookieOptions: import("express").CookieOptions = {
-      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
@@ -300,42 +302,6 @@ export class AuthController {
       ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
-
-    if (refreshToken) {
-      res.cookie("webiAdminRefreshToken", refreshToken, {
-        ...clientCookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: this.domains[1],
-      });
-    }
-
-    const adminAuthStatus = {
-      isAuthenticated: true,
-      userId: user._id,
-      role: user.role,
-      expiresAt: Date.now() + 15 * 60 * 1000,
-      isAdmin: true,
-    };
-
-    res.cookie("webiAdminStatus", JSON.stringify(adminAuthStatus), {
-      ...clientCookieOptions,
-      maxAge: 15 * 60 * 1000,
-      domain: this.domains[1],
-    });
-
-    const safeUserData: UserDataForCookies = {
-      id: user._id || null,
-      username: user.username || null,
-      email: user.email || null,
-      avatar: user.avatar,
-      role: user.role || null,
-    };
-
-    res.cookie("webiUser", JSON.stringify(safeUserData), {
-      ...clientCookieOptions,
-      maxAge: 15 * 60 * 1000,
-      domain: this.domains[1],
-    });
   }
 
   async userLogout(req: Request, res: Response, next: NextFunction) {
@@ -347,19 +313,8 @@ export class AuthController {
         path: "/",
       };
 
-      const clientCookieOptions: import("express").CookieOptions = {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        path: "/",
-      };
-
       res.clearCookie("accessToken", cookieOptions);
       res.clearCookie("refreshToken", cookieOptions);
-
-      res.clearCookie("webiRefreshToken", clientCookieOptions);
-      res.clearCookie("webiAuthStatus", clientCookieOptions);
-      res.clearCookie("webiUser", clientCookieOptions);
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {
@@ -376,19 +331,8 @@ export class AuthController {
         path: "/",
       };
 
-      const clientCookieOptions: import("express").CookieOptions = {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        path: "/",
-      };
-
       res.clearCookie("adminAccessToken", cookieOptions);
       res.clearCookie("adminRefreshToken", cookieOptions);
-
-      res.clearCookie("webiAdminRefreshToken", clientCookieOptions);
-      res.clearCookie("webiAdminStatus", clientCookieOptions);
-      res.clearCookie("webiUser", clientCookieOptions);
 
       res.status(200).json(successResponse("Logout successful"));
     } catch (error) {

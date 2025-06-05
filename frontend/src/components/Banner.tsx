@@ -5,7 +5,7 @@ import Link from "next/link";
 import { UserData } from "@/types/type";
 
 interface BannerProps {
-  user?: UserData;
+  user: UserData | null;
 }
 
 const Banner: React.FC<BannerProps> = ({ user }) => {

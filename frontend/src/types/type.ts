@@ -4,6 +4,11 @@ export interface AuthInput {
     email: string,
 }
 
+export const USER_ROLE = {
+    USER: 'user',
+    ADMIN: 'admin',
+} as const;
+
 export interface AuthGoogleInput {
     username: string,
     email: string,
@@ -30,6 +35,14 @@ export interface UserData {
     email: string | null;
     avatar?: string;
     role: string | null;
+}
+
+export interface AuthStatus {
+  isAuthenticated: boolean;
+  userId: string;
+  role: string;
+  expiresAt: number;
+  isAdmin?: boolean;
 }
 
 export interface JWTPayload {

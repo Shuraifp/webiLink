@@ -1,16 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { logout } from "@/lib/api/admin/authApi";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LogoutButton() {
-  const router = useRouter();
+  const { logoutAdmin } = useAuth();
 
   const handleLogout = async () => {
     try {
       await logout();
-      router.push("/admin/auth/login");
+      logoutAdmin();
     } catch (err: unknown) {
       console.log(err);
     }

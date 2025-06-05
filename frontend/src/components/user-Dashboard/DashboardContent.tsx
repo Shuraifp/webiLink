@@ -8,10 +8,10 @@ import Settings from "@/components/user-Dashboard/Settings";
 import Subscription from "@/components/user-Dashboard/Subscription";
 import Upgrade from "@/components/user-Dashboard/Upgrade";
 import { ThemeProvider } from "@/lib/ThemeContext";
-import { UserData } from "@/types/type";
 import { useSearchParams } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import Profile from "./Profile";
+import { useRouter } from "next/navigation";
 import Recordings from "./Recordings";
 // import {
 //   fetchNotifications,
@@ -21,10 +21,8 @@ import Recordings from "./Recordings";
 import Dashboard from "./Overview";
 import History from "./History";
 import { ConfirmationModalProvider } from "./ConfirmationModal";
+import { useAuth } from "@/context/AuthContext";
 
-interface DashboardContentProps {
-  user: UserData;
-}
 
 // interface Notification {
 //   _id: string;
@@ -34,7 +32,10 @@ interface DashboardContentProps {
 //   metadata?: { paymentUrl?: string };
 // }
 
-const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
+const DashboardContent: React.FC = () => {
+  const router = useRouter();
+  const { auth } = useAuth();
+  const user = auth?.user;
   const searchParams = useSearchParams();
   const initialSection = searchParams.get("section") || "overview";
   const [selectedSection, setSelectedSection] = useState(initialSection);
@@ -47,6 +48,20 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
       setSelectedSection(searchParams.get("section")!);
     }
   }, [searchParams]);
+
+  if (!auth.authStatus?.isAuthenticated) {
+    router.push("/login");
+    return null;
+  }
+
+  if (auth.isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+        <div className="w-16 h-16 border-5 border-t-transparent border-b-transparent border-yellow-400 rounded-full animate-spin" />
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   // useEffect(() => {
   //   const loadNotifications = async () => {
@@ -150,7 +165,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ user }) => {
                     ? "Profile"
                     : selectedSection === "recordings"
                     ? "Recordings"
-                    : `Welcome, ${user.username}`}
+                    : `Welcome, ${user?.username}`}
                 </h2>
                 {/* <div className="relative flex">
                   <button

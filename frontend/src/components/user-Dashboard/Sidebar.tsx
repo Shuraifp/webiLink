@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { UserData } from "@/types/type";
 
 const Sidebar: React.FC<{
-  user: UserData;
+  user: UserData | null;
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
@@ -64,9 +64,9 @@ const Sidebar: React.FC<{
             onClick={() => setShowDropdown(!showDropdown)}
             className="w-14 h-14 cursor-pointer rounded-full bg-gray-500 flex items-center justify-center text-2xl font-bold text-white border-2 border-gray-400 hover:scale-105 transition-all"
           >
-            {user.avatar !== "" ? (
+            {user?.avatar !== "" ? (
               <img
-                src={user.avatar}
+                src={user?.avatar}
                 alt="Avatar"
                 className="w-full h-full rounded-full border-white relative z-10"
               />

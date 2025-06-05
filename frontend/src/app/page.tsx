@@ -1,18 +1,17 @@
+"use client"
+
 import Navbar from "../components/Navbar";
 import Banner from "../components/Banner";
-import { headers } from "next/headers";
+import { useAuth } from "../context/AuthContext";
 
-export default async function Home() {
-  const headersList = await headers();
-  const userData = headersList.get("x-user");
-  let user;
-  if (userData) {
-    user = JSON.parse(userData);
-  }
+export default function Home() {
+  const { auth } = useAuth();
+  const userData = auth.user;
+
   return (
     <div>
-      <Navbar {...(userData && { user })} />
-      <Banner {...(userData && { user })} />
+      <Navbar user = {userData} />
+      <Banner user = {userData} />
     </div>
   );
 }

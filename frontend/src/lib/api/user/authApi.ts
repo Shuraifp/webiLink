@@ -1,7 +1,7 @@
 import { apiWithoutAuth, userApiWithAuth } from "../axios";
 import { AuthGoogleInput } from "@/types/type";
 
-export const login = async (email: string, password: string) => {
+export const loginUser = async (email: string, password: string) => {
   try {
     const res = await apiWithoutAuth.post("/auth/login", { email, password });
     return res.data;
@@ -30,7 +30,6 @@ export const signup = async (
 export const googleSignIn = async (data: AuthGoogleInput) => {
   try {
     const res = await apiWithoutAuth.post("/auth/google-signin", { ...data });
-    console.log("hii");
     return res.data;
   } catch (error) {
     throw error;
@@ -89,4 +88,13 @@ export const resetPassword = async (token: string, newPassword: string) => {
       throw error;
     }
   };
+
+export const refreshUserToken = async () => {
+  try {
+    const res = await userApiWithAuth.post("/auth/refresh-userToken");
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+}
   

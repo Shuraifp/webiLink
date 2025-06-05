@@ -6,15 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface NavbarProps {
-  user?: UserData;
+  user: UserData | null;
 }
 
 export default function Navbar({ user }: NavbarProps) {
   const router = useRouter();
-
-  if (user) {
-    console.log('navbar :',user);
-  }
 
   const handleLogout = async () => {
     try {

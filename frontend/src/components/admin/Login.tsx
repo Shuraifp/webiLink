@@ -2,10 +2,12 @@
 import { useState } from "react";
 import { login } from "@/lib/api/admin/authApi";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 
 export default function LogIn() {
-  const router = useRouter()
+  const { loginAdmin } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,8 +28,9 @@ export default function LogIn() {
     setError("");
 
     try {
-      await login(email,password)
-      router.push('/admin')
+      const res = await login(email, password);
+      loginAdmin(res.webiAdmin, res.webiAdminStatus);
+      router.push("/admin");
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err?.response?.data.message);

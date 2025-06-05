@@ -1,7 +1,6 @@
 import { IUser } from "../models/userModel";
 
 
-
 export enum HttpStatus {
   OK = 200,
   CREATED = 201,
@@ -16,6 +15,11 @@ export enum UserRole {
   ADMIN = "admin",
   USER = "user",
 }
+
+export const TOKEN_EXPIRY = {
+  ACCESS_TOKEN: 15 * 60 * 1000,
+  REFRESH_TOKEN: 7 * 24 * 60 * 60 * 1000,
+} as const;
 
 export interface LoginResponse {
   accessToken: string;
