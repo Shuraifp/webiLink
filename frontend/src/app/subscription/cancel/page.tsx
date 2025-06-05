@@ -8,7 +8,7 @@ export default function Cancel() {
 
   return (
     <>
-      <Navbar />
+      <Navbar user={null} />
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
         <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 transform transition-all duration-500 hover:scale-105">
           <div className="flex justify-center mb-6">
