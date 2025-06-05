@@ -67,7 +67,7 @@ const ResetPasswordPage: React.FC = () => {
 
   return (
     <>
-      <Navbar />
+      <Navbar user={null} />
       <div
         className="min-h-screen flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: `url(${BackgroundIMG.src})` }}
