@@ -51,7 +51,7 @@ const Signup: React.FC = () => {
         avatar: userData?.photoURL ?? "",
         googleId: userData?.uid ?? "",
       });
-      login(res.data.webiUser, res.data.webiAuthStatus);
+      login(res.webiUser, res.webiAuthStatus);
       router.replace("/host");
     } catch (err) {
       if (axios.isAxiosError(err)) {
