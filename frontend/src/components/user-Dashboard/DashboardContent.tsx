@@ -17,6 +17,7 @@ import Dashboard from "./Overview";
 import History from "./History";
 import { ConfirmationModalProvider } from "./ConfirmationModal";
 import { useAuth } from "@/context/AuthContext";
+import { Menu } from "lucide-react";
 
 const DashboardLoading = () => (
   <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -33,6 +34,13 @@ const DashboardWithSearchParams: React.FC = () => {
   const initialSection = searchParams.get("section") || "overview";
   const [selectedSection, setSelectedSection] = useState(initialSection);
   const [prevSection, setPrevSection] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!auth.authStatus?.isAuthenticated && !auth.isLoading) {
+      router.push("/login");
+    }
+  }, [auth.authStatus, auth.isLoading, router]);
 
   useEffect(() => {
     if (searchParams.get("section")) {
@@ -41,13 +49,16 @@ const DashboardWithSearchParams: React.FC = () => {
   }, [searchParams]);
 
   if (!auth.authStatus?.isAuthenticated) {
-    router.push("/login");
     return null;
   }
 
   if (auth.isLoading) {
     return <DashboardLoading />;
   }
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   const renderContent = () => {
     switch (selectedSection) {
@@ -100,22 +111,45 @@ const DashboardWithSearchParams: React.FC = () => {
 
   return (
     <div className="flex host-root min-h-screen bg-gray-200">
-      <Sidebar
-        user={user}
-        onSectionChange={setSelectedSection}
-        selectedSection={selectedSection}
-        setPrevSection={setPrevSection}
-      />
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 md:static md:w-64`}
+      >
+        <Sidebar
+          user={user}
+          onSectionChange={setSelectedSection}
+          selectedSection={selectedSection}
+          setPrevSection={setPrevSection}
+          closeSidebar={() => setIsSidebarOpen(false)}
+        />
+      </div>
+
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black opacity-50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
       <div className="flex-1 h-screen overflow-y-scroll">
         <main className="">
           <div className="p-8 pt-7 pb-5 flex items-center justify-between">
-            <h2 className="text-3xl font-bold raleway items-center flex-1 text-gray-800">
-              {selectedSection === "profile"
-                ? "Profile"
-                : selectedSection === "recordings"
-                ? "Recordings"
-                : `Welcome, ${user?.username}`}
-            </h2>
+            <div className="flex items-center gap-4">
+              <button
+                className="md:hidden text-gray-800 focus:outline-none cursor-pointer"
+                onClick={toggleSidebar}
+              >
+                <Menu size={24} />
+              </button>
+              <h2 className="text-3xl font-bold raleway items-center flex-1 text-gray-800">
+                {selectedSection === "profile"
+                  ? "Profile"
+                  : selectedSection === "recordings"
+                  ? "Recordings"
+                  : `Welcome, ${user?.username}`}
+              </h2>
+            </div>
             {selectedSection !== "profile" && (
               <p className="border-b-1 border-gray-400 border-dashed"></p>
             )}

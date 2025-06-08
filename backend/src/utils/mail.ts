@@ -4,7 +4,7 @@ import logger from "./logger";
 dotenv.config();
 
 
-const transporter = nodemailer.createTransport({
+const otpTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.NODEMAILER_EMAIL_USER,
@@ -21,7 +21,7 @@ export class MailService implements IMailService {
 
   async sendOtp(to: string, otp: string, subject: string = "Your OTP Code"): Promise<void> {
     try {
-      await transporter.sendMail({
+      await otpTransporter.sendMail({
         from: `"OTP Service" <${process.env.NODEMAILER_EMAIL_USER}>`,
         to,
         subject,
@@ -37,7 +37,7 @@ export class MailService implements IMailService {
   
   async sendOtpEmail(to: string, text: string, subject: string): Promise<void> {
     try {
-      await transporter.sendMail({
+      await otpTransporter.sendMail({
         from: process.env.NODEMAILER_EMAIL_USER,
         to,
         subject,

@@ -18,7 +18,7 @@ const userService = new UserService(userRepository, meetingRepository)
 const jwtService = new JwtService;
 const mailServide = new MailService;
 const authService = new AuthService(userRepository, jwtService, mailServide)
-const userController = new UserController(userService, authService)
+const userController = new UserController(userService, authService, mailServide)
 
 const router = Router()
 
@@ -27,6 +27,9 @@ router.patch('/profile', isValidUser, userController.updateProfile.bind(userCont
 router.patch('/change-password', isValidUser, userController.changePassword.bind(userController))
 router.get('/isPremium', isValidUser, userController.checkPremium.bind(userController))
 router.get('/dashboard-stats', isValidUser, userController.getDashboardStats.bind(userController))
+
+// public routes
+router.post('/support/contact', userController.requestSupport.bind(userController))
 
 
 export default router;

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import React from "react";
-import bannerIMG from "../../public/images/bannerIMG.jpg";
+import bannerIMG from "../../public/images/bannerIMG.png";
 import Link from "next/link";
 import { UserData } from "@/types/type";
 
@@ -9,20 +9,19 @@ interface BannerProps {
 }
 
 const Banner: React.FC<BannerProps> = ({ user }) => {
-
   return (
     <section className="bg-pink-100 py-12 md:py-20">
-      <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
-        <div className="md:w-1/2 mb-8 md:mb-0">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-5">
+      <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="md:w-1/2 mb-8 md:mb-0 text-center md:text-left">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-5">
             Engaging and collaborative web communication
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 mb-6">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6">
             Simplified online meeting software with enterprise-grade security –
             perfect for a work-wherever world.
           </p>
           {!user ? (
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center md:justify-start">
               <Link
                 href="/pricing"
                 className="bg-yellow-400 text-black font-semibold py-3 px-6 cursor-pointer rounded-lg hover:bg-yellow-500 transition"
@@ -37,10 +36,13 @@ const Banner: React.FC<BannerProps> = ({ user }) => {
               </Link>
             </div>
           ) : (
-            <div className="flex space-x-4">
-              <Link href="/host" className="bg-yellow-400 text-gray-900 font-semibold py-3 px-6 cursor-pointer rounded-lg shadow-md hover:bg-yellow-500 transition">
-  Go Live Now
-</Link>
+            <div className="flex justify-center md:justify-start">
+              <Link
+                href="/host"
+                className="bg-yellow-400 text-gray-900 font-semibold py-3 px-6 cursor-pointer rounded-lg shadow-md hover:bg-yellow-500 transition"
+              >
+                Go Live Now
+              </Link>
             </div>
           )}
         </div>
@@ -53,9 +55,9 @@ const Banner: React.FC<BannerProps> = ({ user }) => {
             <Image
               src={bannerIMG}
               alt="Webinar screenshot"
-              width={600}
-              height={400}
-              className="rounded-lg shadow-lg"
+              width={300}
+              height={200}
+              className="rounded-lg shadow-lg w-full h-auto"
             />
 
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
@@ -64,7 +66,6 @@ const Banner: React.FC<BannerProps> = ({ user }) => {
                 aria-label="Play video"
                 role="button"
               >
-                {/* Play Triangle */}
                 <div className="w-0 h-0 border-l-[24px] border-l-amber-300 border-y-[16px] border-y-transparent"></div>
               </div>
             </div>

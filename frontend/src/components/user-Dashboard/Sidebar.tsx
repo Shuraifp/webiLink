@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   Settings,
-  // Megaphone,
   Building,
   CreditCard,
   Rocket,
@@ -23,7 +22,8 @@ const Sidebar: React.FC<{
   onSectionChange: Dispatch<SetStateAction<string>>;
   selectedSection: string;
   setPrevSection: Dispatch<SetStateAction<string>>;
-}> = ({ user, onSectionChange, selectedSection, setPrevSection }) => {
+  closeSidebar: () => void;
+}> = ({ user, onSectionChange, selectedSection, setPrevSection, closeSidebar }) => {
   const { logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,10 +50,11 @@ const Sidebar: React.FC<{
     const curSec = selectedSection;
     onSectionChange(sec);
     setPrevSection(curSec);
+    closeSidebar();
   };
 
   return (
-    <aside className=" bg-white shadow-md min-h-screen">
+    <aside className="bg-white shadow-md min-h-screen">
       <div className="p-4 flex items-center justify-between gap-12 bg-white shadow-sm">
         <Link href={"/"} className="text-4xl font-bold lobster cursor-pointer">
           <span className="text-yellow-500">w</span>ebiLink
@@ -95,7 +96,7 @@ const Sidebar: React.FC<{
             onClick={() => handleSectionChange("dashboard")}
             className={getStyle("dashboard")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg w-full">
               <LayoutDashboard size={24} />
               Overview
             </button>
@@ -106,7 +107,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("profile")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg w-full">
               <User size={24} />
               Profile
             </button>
@@ -117,7 +118,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("rooms")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg w-full">
               <Building size={24} />
               Rooms
             </button>
@@ -128,7 +129,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("recordings")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg w-full">
               <Video size={24} />
               Recordings
             </button>
@@ -137,7 +138,7 @@ const Sidebar: React.FC<{
             onClick={() => handleSectionChange("history")}
             className={getStyle("history")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer rounded-lg w-full">
               <Clock size={24} />
               History
             </button>
@@ -148,7 +149,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("settings")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer">
+            <button className="flex items-center gap-2 px-4 py-2 cursor-pointer w-full">
               <Settings size={24} />
               Settings
             </button>
@@ -159,7 +160,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("subscription")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition w-full">
               <CreditCard size={24} />
               Subscription
             </button>
@@ -170,7 +171,7 @@ const Sidebar: React.FC<{
             }}
             className={getStyle("upgrade")}
           >
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg transition cursor-pointer">
+            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg transition cursor-pointer w-full">
               <Rocket size={24} />
               Upgrade to Pro
             </button>
@@ -180,7 +181,7 @@ const Sidebar: React.FC<{
           className="flex items-center gap-2 hover:bg-red-100 mx-2 rounded-lg bg-red-50 text-gray-800 cursor-pointer transition-all"
           onClick={handleLogout}
         >
-          <button className="flex items-center gap-2 px-4 py-2 cursor-pointer">
+          <button className="flex items-center gap-2 px-4 py-2 cursor-pointer w-full">
             <LogOut size={24} />
             Logout
           </button>

@@ -9,7 +9,7 @@ export default function Settings() {
     <>
       <h1 className="text-xl raleway font-semibold my-2 ml-1 text-gray-600">Settings</h1>
       <div className="flex items-center gap-4 p-4 pt-6">
-        <label htmlFor="theme-toggle" className="text-lg">
+        <label htmlFor="theme-toggle" className="text-xl">
           Theme: {theme === "light" ? "Light" : "Dark"}
         </label>
         <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">

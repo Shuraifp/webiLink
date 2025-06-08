@@ -3,11 +3,13 @@ import { successResponse } from "../types/type";
 import { IUserService } from "../interfaces/services/IUserService";
 import { HttpStatus } from "../types/type";
 import { IAuthService } from "../interfaces/services/IAuthService";
+import { IMailService } from "../utils/mail";
 
 export class UserController {
   constructor(
     private _userService: IUserService,
-    private _authService: IAuthService
+    private _authService: IAuthService,
+    private _mailService: IMailService
   ) {}
 
   async getUser(
@@ -37,7 +39,9 @@ export class UserController {
       res
         .status(HttpStatus.OK)
         .json(
-          successResponse("checked for user subscription status", {isPremiumUser})
+          successResponse("checked for user subscription status", {
+            isPremiumUser,
+          })
         );
     } catch (error) {
       next(error);
@@ -82,6 +86,45 @@ export class UserController {
     }
   }
 
+  async requestSupport(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { name, email, message } = req.body;
+
+      if (!name || !email || !message) {
+        res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message: "Name, email, and message are required",
+        });
+        return;
+      }
+      const subject = `${String(name)
+        .split(" ")
+        .map((n) => n.split("")[0].toUpperCase() + n.slice(1))
+        .join(" ")} requesting for support`;
+      const text = `
+        Name: ${name}
+        Email: ${email}
+        Message: ${message}
+      `;
+
+      await this._mailService.sendOtpEmail(
+        "msharraf258@gmail.com",
+        text,
+        subject
+      );
+
+      res
+        .status(HttpStatus.OK)
+        .json(successResponse("Support request sent successfully"));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async changePassword(
     req: Request,
     res: Response,
@@ -103,7 +146,11 @@ export class UserController {
     }
   }
 
-  async getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getDashboardStats(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const userId = req.user?._id as string;
       const stats = await this._userService.getDashboardStats(userId);

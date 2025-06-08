@@ -150,10 +150,10 @@ export default function DashboardPage({
         My rooms
       </p>
       {showWarning && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg shadow-md flex items-center justify-between">
-          <div className="flex items-center">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-lg shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center flex-1">
             <svg
-              className="w-6 h-6 text-red-500 mr-2"
+              className="w-6 h-6 text-red-500 mr-2 mt-0.5 sm:mt-0 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -166,33 +166,36 @@ export default function DashboardPage({
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-gray-800 text-sm">
-              Your premium plan is past due. Please renew your subscription to
-              regain access to all premium features and archived rooms.{" "}
-              <div
-                onClick={handleUpgradePlan}
-                className="text-indigo-600 hover:text-indigo-800 font-medium"
-              >
-                Upgrade Now
-              </div>
-            </p>
+            <div className="flex-1">
+              <p className="text-gray-800 text-sm">
+                Your premium plan is past due. Please renew your subscription to
+                regain access to all premium features and archived rooms.{" "}
+                <span
+                  onClick={handleUpgradePlan}
+                  className="text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer block sm:inline mt-1 sm:mt-0"
+                >
+                  Upgrade Now
+                </span>
+              </p>
+            </div>
           </div>
           <button
             onClick={() => setShowWarning(false)}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="text-gray-500 hover:text-gray-700 focus:outline-none flex-shrink-0 self-start sm:self-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
       )}
+
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-20 min-h-screen flex justify-center items-center"
+          className="fixed inset-0 z-20 min-h-screen flex justify-center items-center px-4"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
         >
-          <div className="bg-white w-96 py-8 px-4 rounded-lg shadow-lg max-w-sm">
+          <div className="bg-white w-full max-w-md py-8 px-4 rounded-lg shadow-lg">
             <div className="flex justify-between items-center mb-5">
-              <p className="text-2xl raleway ml-2 font-semibold text-center text-gray-700">
+              <p className="text-xl sm:text-2xl raleway ml-2 font-semibold text-center text-gray-700">
                 Join Video Room
               </p>
               <button
@@ -225,50 +228,58 @@ export default function DashboardPage({
         {rooms?.map((room, ind) => (
           <div
             key={ind}
-            className={`bg-white p-4 rounded-lg shadow-md flex items-center justify-between ${
+            className={`bg-white p-4 rounded-lg shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
               !room.isActive ? "opacity-70" : ""
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm font-medium">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-lg text-sm font-medium flex-shrink-0">
                 {user?.username
                   ?.split(" ")
                   .map((a) => a[0].toUpperCase())
                   .join("")}
               </div>
-              <div>
-                <p className="text-gray-500 text-sm">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-500 text-sm sm:text-base break-words">
                   {process.env.NEXT_PUBLIC_DOMAIN + "/" + room.slug}
                 </p>
-                <p className="text-gray-800 font-medium">{room.name}</p>
-                <p className="text-gray-500 text-sm">
+                <p
+                  className="text-gray-800 font-medium text-base sm:text-lg truncate"
+                  title={room.name}
+                >
+                  {room.name}
+                </p>
+                <p className="text-gray-500 text-sm sm:text-base">
                   {user?.username}
                   {!room.isActive && " (Archived)"}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => handleCopyLink(room.slug)}
-                className={`px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition ${
+                className={`px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm ${
                   copied[room.slug] || !room.isActive ? "" : "cursor-pointer"
                 }`}
                 disabled={!room.isActive}
               >
                 {copied[room.slug] ? "Copied!" : "Copy link"}
               </button>
+
               <button
                 onClick={() => handleStartMeeting(room.slug)}
-                className={`px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition ${
+                className={`px-3 sm:px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition text-sm ${
                   !room.isActive ? "cursor-not-allowed" : "cursor-pointer"
                 }`}
                 disabled={!room.isActive}
               >
                 Start meeting
               </button>
+
               <button
                 onClick={() => handleDeleteRoom(room._id)}
-                className={`p-2 text-gray-500 hover:text-gray-700 ${
+                className={`p-2 text-gray-500 hover:text-gray-700 self-center sm:self-auto ${
                   deleteLoading[room._id]
                     ? "cursor-not-allowed"
                     : "cursor-pointer"
@@ -297,6 +308,7 @@ export default function DashboardPage({
             </div>
           </div>
         ))}
+
         {rooms.length === 0 && (
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center min-h-[200px] text-center">
             <svg
@@ -332,7 +344,7 @@ export default function DashboardPage({
       <div className="mt-6">
         <button
           onClick={handleJoinRoom}
-          className="px-4 py-1 text-lg text-white rounded-lg bg-gray-500 hover:bg-gray-600 cursor-pointer transition w-full"
+          className="px-4 py-2 text-base sm:text-lg text-white rounded-lg bg-gray-500 hover:bg-gray-600 cursor-pointer transition w-full"
         >
           Enter a Room
         </button>
@@ -341,7 +353,7 @@ export default function DashboardPage({
       {rooms.length > 0 && (
         <button
           onClick={() => handleSectionChange("create-meeting")}
-          className="fixed bottom-6 z-10 right-6 px-6 py-3 cursor-pointer bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105"
+          className="fixed bottom-6 z-10 right-6 px-4 sm:px-6 py-2 sm:py-3 cursor-pointer bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition transform hover:scale-105 text-sm sm:text-base"
         >
           + Create Room
         </button>
