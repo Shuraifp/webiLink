@@ -252,9 +252,7 @@ export class PlanService implements IPlanService {
     planId: string
   ): Promise<string> {
     try {
-      const plan = await this._planRepository.findByQuery({
-        _id: planId,
-      });
+      const plan = await this._planRepository.findById(planId);
       if (!plan) throw new NotFoundError("Plan not found");
 
       if (plan.isArchived) throw new BadRequestError("Plan is archived");

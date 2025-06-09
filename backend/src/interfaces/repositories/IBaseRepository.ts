@@ -1,4 +1,4 @@
-import { Document, Types } from "mongoose";
+import { Document } from "mongoose";
 
 export interface IBaseRepository<T extends Document> {
   create(data: Partial<T>): Promise<T>;
