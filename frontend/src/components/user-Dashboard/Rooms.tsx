@@ -46,7 +46,7 @@ export default function DashboardPage({
   const panelRef = useRef<HTMLDivElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement | null>(null);
   const { confirm } = useConfirmationModal();
-
+  console.log(copied)
   useEffect(() => {
     const getRooms = async () => {
       setLoading(true);
