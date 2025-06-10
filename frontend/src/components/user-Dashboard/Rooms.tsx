@@ -1,14 +1,15 @@
 "use client";
 
 import { UserData } from "@/types/type";
-import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { Dispatch, SetStateAction, useState, useEffect, useRef } from "react";
+import { X, Share2, MessageCircle, Send, Mail, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchRooms, deleteRoom } from "@/lib/api/user/roomApi";
 import { isPremiumUser } from "@/lib/api/user/planApi";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useConfirmationModal } from "./ConfirmationModal";
+import { createPortal } from "react-dom";
 
 interface RoomsProps {
   user: UserData | null;
@@ -41,6 +42,9 @@ export default function DashboardPage({
     {}
   );
   const [showWarning, setShowWarning] = useState<boolean>(false);
+  const [sharePanelSlug, setSharePanelSlug] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement | null>(null);
   const { confirm } = useConfirmationModal();
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function DashboardPage({
       setLoading(true);
       try {
         const res = await fetchRooms();
+        console.log("Fetched rooms:", res);
         setRooms(res);
         const hasInactiveRooms = res.some((room: Room) => !room.isActive);
         setShowWarning(hasInactiveRooms);
@@ -86,12 +91,15 @@ export default function DashboardPage({
   };
 
   const handleCopyLink = (slug: string) => {
-    navigator.clipboard.writeText(slug);
+    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${slug}`;
+    navigator.clipboard.writeText(roomUrl);
     setCopied((prev) => ({ ...prev, [slug]: true }));
+    toast.success("Link copied to clipboard!");
 
     setTimeout(() => {
       setCopied((prev) => ({ ...prev, [slug]: false }));
     }, 2000);
+    setSharePanelSlug(null); // Close panel
   };
 
   const handleStartMeeting = (slug: string) => {
@@ -104,7 +112,7 @@ export default function DashboardPage({
 
   const handleDeleteRoom = async (roomId: string) => {
     confirm(
-      "Are you sure you want to delete this room?. once you deleted then it will be lost for ever",
+      "Are you sure you want to delete this room? Once deleted, it will be lost forever",
       async () => {
         try {
           setDeleteLoading((prev) => ({ ...prev, [roomId]: true }));
@@ -134,6 +142,26 @@ export default function DashboardPage({
     onSectionChange(sec);
     setPrevSection(curSec);
   };
+
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     console.log("Click event target:", event.target);
+  //     if (
+  //       panelRef.current &&
+  //       !panelRef.current.contains(event.target as Node) &&
+  //       shareButtonRef.current &&
+  //       !shareButtonRef.current.contains(event.target as Node)
+  //     ) {
+  //       console.log("Closing share panel due to outside click");
+  //       setSharePanelSlug(null);
+  //     }
+  //   };
+  //   document.addEventListener("click", handleClickOutside);
+  //   return () => document.removeEventListener("click", handleClickOutside);
+  // }, []);
+
+  const activeRoom = rooms.find((room) => room.slug === sharePanelSlug);
+  const isSharePanelOpen = sharePanelSlug && activeRoom && activeRoom.isActive;
 
   if (loading) {
     return (
@@ -224,7 +252,106 @@ export default function DashboardPage({
         </div>
       )}
 
-      <div className="space-y-4 max-h-[55vh] no-scrollbar overflow-y-auto mt-4">
+      {isSharePanelOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex justify-end">
+            <div
+              ref={panelRef}
+              className="bg-white w-full max-w-xs h-full border-2 border-yellow-400 p-6 shadow-xl transform transition-transform duration-300 translate-x-0"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Share Room
+                </h3>
+                <button
+                  onClick={() => setSharePanelSlug(null)}
+                  className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+                      `Join my video meeting: ${activeRoom.name}\n${roomUrl}`
+                    )}`;
+                    window.open(whatsappUrl, "_blank");
+                    setSharePanelSlug(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+                >
+                  <div className="p-1 rounded bg-green-500 text-white">
+                    <MessageCircle className="w-3 h-3" />
+                  </div>
+                  WhatsApp
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
+                    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(
+                      roomUrl
+                    )}&text=${encodeURIComponent(
+                      `Join my video meeting: ${activeRoom.name}`
+                    )}`;
+                    window.open(telegramUrl, "_blank");
+                    setSharePanelSlug(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+                >
+                  <div className="p-1 rounded bg-blue-500 text-white">
+                    <Send className="w-3 h-3" />
+                  </div>
+                  Telegram
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
+                    const emailUrl = `mailto:?subject=${encodeURIComponent(
+                      `Join my video meeting: ${activeRoom.name}`
+                    )}&body=${encodeURIComponent(
+                      `Hi,\n\nYou're invited to join my video meeting: ${activeRoom.name}\n\nClick here to join: ${roomUrl}\n\nSee you there!`
+                    )}`;
+                    window.location.href = emailUrl;
+                    setSharePanelSlug(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+                >
+                  <div className="p-1 rounded bg-gray-500 text-white">
+                    <Mail className="w-3 h-3" />
+                  </div>
+                  Email
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleCopyLink(activeRoom.slug);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+                >
+                  <div className="p-1 rounded bg-purple-500 text-white">
+                    <Copy className="w-3 h-3" />
+                  </div>
+                  Copy Link
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      <div className="space-y-4 mt-4">
         {rooms?.map((room, ind) => (
           <div
             key={ind}
@@ -258,13 +385,22 @@ export default function DashboardPage({
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <button
-                onClick={() => handleCopyLink(room.slug)}
-                className={`px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm ${
-                  copied[room.slug] || !room.isActive ? "" : "cursor-pointer"
+                ref={shareButtonRef}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Opening share panel for", room.slug);
+                  setSharePanelSlug(room.slug);
+                }}
+                className={`px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm flex items-center gap-2 ${
+                  !room.isActive
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
                 }`}
                 disabled={!room.isActive}
               >
-                {copied[room.slug] ? "Copied!" : "Copy link"}
+                <Share2 className="w-4 h-4" />
+                Share
               </button>
 
               <button
