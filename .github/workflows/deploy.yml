@@ -22,7 +22,7 @@ jobs:
         port: 22
         script: |
           # Navigate to your project directory
-          cd /home/ubuntu
+          cd /home/ubuntu/webiLink/backend
           
           # Pull latest changes
           git pull origin main
@@ -35,14 +35,14 @@ jobs:
           docker rmi webilink-backend:latest || true
           
           # Build new image
-          docker build -t webilink-backend:latest ./webiLink/backend
+          docker build -t webilink-backend:latest .
           
           # Run new container with same name and settings
           docker run -d \
             --name webilink-container \
             --restart unless-stopped \
             -p 5000:5000 \
-            --env-file ./webiLink/backend/.env \
+            --env-file .env \
             webilink-backend:latest
           
           # Wait for container to start
