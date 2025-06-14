@@ -800,73 +800,71 @@ export default function MeetingComponent({
   }, [state.raisedHands, state.currentUserId]);
 
   useEffect(() => {
-    if (
-      recordButtonRef.current &&
-      lastRecordingState.current !== isRecording
-    ) {
-      const recordSvg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
-          isRecording ? "#FF0000" : "white"
-        }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          ${
-            isRecording
-              ? `<rect x="6" y="6" width="12" height="12" />`
-              : `<circle cx="12" cy="12" r="10" />`
-          }
-        </svg>
-      `;
-      recordButtonRef.current.innerHTML = recordSvg;
-      recordButtonRef.current.style.backgroundColor = isRecording
-        ? "#555566"
-        : "#333445";
+  if (!recordButtonRef.current) return;
 
-      if (isRecording) {
-        const indicator = document.createElement("div");
-        indicator.className = "recording-indicator";
-        indicator.style.position = "absolute";
-        indicator.style.top = "-5px";
-        indicator.style.right = "-5px";
-        indicator.style.width = "10px";
-        indicator.style.height = "10px";
-        indicator.style.backgroundColor = "#FF0000";
-        indicator.style.borderRadius = "50%";
-        indicator.style.animation = "pulse 1s infinite";
+  if (lastRecordingState.current !== isRecording) {
+    const recordSvg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${
+        isRecording ? "#FF0000" : "white"
+      }" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        ${
+          isRecording
+            ? `<rect x="6" y="6" width="12" height="12" />`
+            : `<circle cx="12" cy="12" r="10" />`
+        }
+      </svg>
+    `;
+    recordButtonRef.current.innerHTML = recordSvg;
+    recordButtonRef.current.style.backgroundColor = isRecording
+      ? "#555566"
+      : "#333445";
 
-        const timer = document.createElement("span");
-        timer.className = "recording-timer";
-        timer.style.position = "absolute";
-        timer.style.bottom = "-20px";
-        timer.style.fontSize = "12px";
-        timer.style.color = "#FF0000";
-        timer.textContent = formatTime(recordingTime);
+    const indicator = recordButtonRef.current.querySelector(".recording-indicator");
+    const timer = recordButtonRef.current.querySelector(".recording-timer");
+    if (indicator) indicator.remove();
+    if (timer) timer.remove();
 
-        recordButtonRef.current.appendChild(indicator);
-        recordButtonRef.current.appendChild(timer);
-      } else {
-        const indicator = recordButtonRef.current.querySelector(
-          ".recording-indicator"
-        );
-        const timer = recordButtonRef.current.querySelector(
-          ".recording-timer"
-        );
-        if (indicator) indicator.remove();
-        if (timer) timer.remove();
-      }
+    if (isRecording) {
+      const indicator = document.createElement("div");
+      indicator.className = "recording-indicator";
+      indicator.style.position = "absolute";
+      indicator.style.top = "-5px";
+      indicator.style.right = "-5px";
+      indicator.style.width = "10px";
+      indicator.style.height = "10px";
+      indicator.style.backgroundColor = "#FF0000";
+      indicator.style.borderRadius = "50%";
+      indicator.style.animation = "pulse 1s infinite";
 
-      lastRecordingState.current = isRecording;
+      const timer = document.createElement("span");
+      timer.className = "recording-timer";
+      timer.style.position = "absolute";
+      timer.style.bottom = "-20px";
+      timer.style.fontSize = "12px";
+      timer.style.color = "#FF0000";
+      timer.textContent = formatTime(recordingTime);
+
+      recordButtonRef.current.appendChild(indicator);
+      recordButtonRef.current.appendChild(timer);
     }
-  }, [isRecording, recordingTime, formatTime]);
 
-  useEffect(() => {
-    if (isRecording && recordButtonRef.current) {
-      const timer = recordButtonRef.current.querySelector(
-        ".recording-timer"
-      ) as HTMLSpanElement;
-      if (timer) {
-        timer.textContent = formatTime(recordingTime);
-      }
+    lastRecordingState.current = isRecording;
+  } else if (isRecording) {
+    const timer = recordButtonRef.current.querySelector(".recording-timer") as HTMLSpanElement;
+    if (timer) {
+      timer.textContent = formatTime(recordingTime);
     }
-  }, [isRecording, recordingTime, formatTime]);
+  }
+
+  return () => {
+    if (recordButtonRef.current) {
+      const indicator = recordButtonRef.current.querySelector(".recording-indicator");
+      const timer = recordButtonRef.current.querySelector(".recording-timer");
+      if (indicator) indicator.remove();
+      if (timer) timer.remove();
+    }
+  };
+}, [isRecording, recordingTime, formatTime]);
 
   useEffect(() => {
     if (captionButtonRef.current) {

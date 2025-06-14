@@ -6,42 +6,37 @@ import { Socket } from "socket.io-client";
 import { userApiWithAuth } from "@/lib/api/axios";
 import { AxiosError } from "axios";
 
-interface RecordingEventPayload {
-  roomId: string;
-  userId: string;
-  username: string;
-  recordingId: string;
-  timestamp: string;
-  duration?: number;
-  shareableLink?: string;
-}
-
+// interface RecordingEventPayload {
+//   roomId: string;
+//   userId: string;
+//   username: string;
+//   recordingId: string;
+//   timestamp: string;
+//   duration?: number;
+//   shareableLink?: string;
+// }
 interface UseRecordingProps {
   socketRef: React.RefObject<Socket>;
   roomId: string;
   currentUserId: string;
   currentUsername: string;
 }
-
-interface RecordingError {
-  message: string;
-  code?: string;
-}
-
+// interface RecordingError {
+//   message: string;
+//   code?: string;
+// }
 export const useRecording = ({
-  socketRef,
   roomId,
   currentUserId,
   currentUsername,
 }: UseRecordingProps) => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingTime, setRecordingTime] = useState<number>(0);
-  const [processingRecording, setProcessingRecording] =
-    useState<boolean>(false);
-  const [recordingURL, setRecordingURL] = useState<string | null>(null);
-  const [recordingId, setRecordingId] = useState<string | null>(null);
-  const [error, setError] = useState<RecordingError | null>(null);
-
+  // const [processingRecording, setProcessingRecording] =
+  //   useState<boolean>(false);
+  // const [recordingURL, setRecordingURL] = useState<string | null>(null);
+  // const [recordingId, setRecordingId] = useState<string | null>(null);
+  // const [error, setError] = useState<RecordingError | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,23 +53,23 @@ export const useRecording = ({
     };
   }, []);
 
-  const emitSocketEvent = (
-    eventName: string,
-    payload: RecordingEventPayload
-  ): void => {
-    try {
-      if (!socketRef.current?.connected) {
-        console.warn("Socket is not connected, event not sent:", eventName);
-        return;
-      }
-      socketRef.current.emit(eventName, payload);
-    } catch (error) {
-      console.error(`Error emitting socket event ${eventName}:`, error);
-    }
-  };
+  // const emitSocketEvent = (
+  //   eventName: string,
+  //   payload: RecordingEventPayload
+  // ): void => {
+  //   try {
+  //     if (!socketRef.current?.connected) {
+  //       console.warn("Socket is not connected, event not sent:", eventName);
+  //       return;
+  //     }
+  //     socketRef.current.emit(eventName, payload);
+  //   } catch (error) {
+  //     console.error(`Error emitting socket event ${eventName}:`, error);
+  //   }
+  // };
 
   const startRecording = async (): Promise<void> => {
-    setError(null);
+    // setError(null);
     recordedChunksRef.current = [];
 
     try {
@@ -90,7 +85,7 @@ export const useRecording = ({
       streamRef.current = stream;
 
       const newRecordingId = uuidv4();
-      setRecordingId(newRecordingId);
+      // setRecordingId(newRecordingId);
 
       const mimeType = getSupportedMimeType();
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -103,28 +98,24 @@ export const useRecording = ({
 
       mediaRecorder.onerror = (event) => {
         console.error("MediaRecorder error:", event);
-        setError({
-          message: "Recording error occurred",
-          code: "MEDIA_RECORDER_ERROR",
-        });
-        stopRecording();
+        // stopRecording();
       };
 
       mediaRecorder.onstop = async () => {
-        setProcessingRecording(true);
+        // setProcessingRecording(true);
         setIsRecording(false);
         if (timerRef.current) {
           clearInterval(timerRef.current);
         }
 
-        if (recordedChunksRef.current.length === 0) {
-          setProcessingRecording(false);
-          setError({
-            message: "No recording data was captured",
-            code: "NO_DATA",
-          });
-          return;
-        }
+        // if (recordedChunksRef.current.length === 0) {
+        //   setProcessingRecording(false);
+        //   setError({
+        //     message: "No recording data was captured",
+        //     code: "NO_DATA",
+        //   });
+        //   return;
+        // }
 
         const blob = new Blob(recordedChunksRef.current, { type: mimeType });
 
@@ -138,33 +129,33 @@ export const useRecording = ({
             throw new Error("Failed to get URL after upload");
           }
 
-          const shareableLink = generateShareableLink(newRecordingId);
+          // const shareableLink = generateShareableLink(newRecordingId);
 
-          emitSocketEvent("recording-complete", {
-            roomId,
-            userId: currentUserId,
-            username: currentUsername,
-            recordingId: newRecordingId,
-            timestamp: new Date().toISOString(),
-            duration: recordingTime,
-            shareableLink,
-          });
+          // emitSocketEvent("recording-complete", {
+          //   roomId,
+          //   userId: currentUserId,
+          //   username: currentUsername,
+          //   recordingId: newRecordingId,
+          //   timestamp: new Date().toISOString(),
+          //   duration: recordingTime,
+          //   shareableLink,
+          // });
 
-          setRecordingURL(uploadedUrl);
+          // setRecordingURL(uploadedUrl);
         } catch (error) {
           console.error("Error processing recording:", error);
-          if (error instanceof Error) {
-            setError({
-              message: error.message || "Failed to save recording",
-            });
-          } else {
-            setError({
-              message: String(error) || "Failed to save recording",
-              code: "UPLOAD_ERROR",
-            });
-          }
+          // if (error instanceof Error) {
+          //   setError({
+          //     message: error.message || "Failed to save recording",
+          //   });
+          // } else {
+          //   setError({
+          //     message: String(error) || "Failed to save recording",
+          //     code: "UPLOAD_ERROR",
+          //   });
+          // }
         } finally {
-          setProcessingRecording(false);
+          // setProcessingRecording(false);
         }
       };
 
@@ -182,13 +173,13 @@ export const useRecording = ({
         setRecordingTime((prevTime) => prevTime + 1);
       }, 1000);
 
-      emitSocketEvent("recording-started", {
-        roomId,
-        userId: currentUserId,
-        username: currentUsername,
-        recordingId: newRecordingId,
-        timestamp: new Date().toISOString(),
-      });
+      // emitSocketEvent("recording-started", {
+      //   roomId,
+      //   userId: currentUserId,
+      //   username: currentUsername,
+      //   recordingId: newRecordingId,
+      //   timestamp: new Date().toISOString(),
+      // });
     } catch (error) {
       console.error("Error starting screen recording:", error);
 
@@ -211,7 +202,7 @@ export const useRecording = ({
           streamRef.current.getTracks().forEach((track) => track.stop());
         }
         setIsRecording(false);
-        setProcessingRecording(false);
+        // setProcessingRecording(false);
       }
     }
   };
@@ -250,11 +241,10 @@ export const useRecording = ({
         },
       });
 
-      if (!res.data.url) {
+      if (!res.data.data.url) {
         throw new Error("No URL returned from backend");
       }
-      console.log(res);
-      return res.data.url;
+      return res.data.data.url;
     } catch (error) {
       console.error(
         "Upload error:",
@@ -277,10 +267,10 @@ export const useRecording = ({
     }
   };
 
-  const generateShareableLink = (recordingId: string): string => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/shared-recording/${recordingId}`;
-  };
+  // const generateShareableLink = (recordingId: string): string => {
+  //   const baseUrl = window.location.origin;
+  //   return `${baseUrl}/shared-recording/${recordingId}`;
+  // };
 
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -290,26 +280,26 @@ export const useRecording = ({
       .padStart(2, "0")}`;
   };
 
-  const resetRecording = (): void => {
-    setError(null);
-    setRecordingTime(0);
-    setRecordingURL(null);
-    setRecordingId(null);
-  };
+  // const resetRecording = (): void => {
+  //   setError(null);
+  //   setRecordingTime(0);
+  //   setRecordingURL(null);
+  //   setRecordingId(null);
+  // };
 
   return {
     isRecording,
     recordingTime,
-    processingRecording,
-    recordingURL,
-    recordingId,
-    error,
+    // processingRecording,
+    // recordingURL,
+    // recordingId,
+    // error,
     startRecording,
     stopRecording,
     formatTime,
-    resetRecording,
-    generateShareableLink: () =>
-      recordingId ? generateShareableLink(recordingId) : null,
+    // resetRecording,
+  //   generateShareableLink: () =>
+  //     recordingId ? generateShareableLink(recordingId) : null,
   };
 };
 

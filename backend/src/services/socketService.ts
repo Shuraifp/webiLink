@@ -45,23 +45,6 @@ export class SocketService {
     this.setupSocket();
   }
 
-  private logConnectedUsers(event: string = "State Update") {
-    const connectedUsers = Array.from(this.io.sockets.sockets.entries()).map(
-      ([socketId, socket]) => ({
-        socketId,
-        userId: socket.data.userId || "unknown",
-        username: this.users.get(socketId)?.username || "unknown",
-        avatar: this.users.get(socketId)?.avatar || "unknown",
-        rooms: Array.from(socket.rooms).toString(),
-        connected: socket.connected,
-      })
-    );
-    logger.info(`Connected Users (${event}):`, {
-      count: connectedUsers.length,
-      users: connectedUsers,
-    });
-  }
-
   private setupSocket() {
     this.io.on("connection", (socket: Socket) => {
       logger.info(`User connected: ${socket.id}`);
