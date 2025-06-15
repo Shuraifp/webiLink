@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import MeetingNavbar from "./MeetingNavbar";
 import { useReducedState } from "@/hooks/useReducedState";
 import { Socket } from "socket.io-client";
@@ -18,13 +17,8 @@ export default function MeetingRoomUI({
   meetingContainerRef,
   socketRef,
 }: Props) {
-  const [layout, setLayout] = useState("everyone");
   const { state } = useReducedState();
   const navbarHeight = "60px";
-
-  const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLayout(e.target.value);
-  };
 
   return (
     <div className="bg-gray-900 text-white flex flex-col h-screen min-w-screen overflow-hidden relative">
@@ -32,8 +26,6 @@ export default function MeetingRoomUI({
       <SocketManager socketRef={socketRef.current} />
       <div className="w-full">
         <MeetingNavbar
-          layout={layout}
-          handleLayoutChange={handleLayoutChange}
           socketRef={socketRef.current}
         />
       </div>
