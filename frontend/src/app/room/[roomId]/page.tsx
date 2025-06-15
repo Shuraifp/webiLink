@@ -1,5 +1,5 @@
 import ChatRoomWrapper from "@/components/video/ChatRoomWrapper";
-import { MeetingProvider } from "@/lib/MeetingContext";
+import { MeetingProvider } from "@/context/MeetingContext";
 
 
 export default async function HostingPage() {

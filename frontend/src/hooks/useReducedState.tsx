@@ -1,7 +1,7 @@
 "use client"
 
 import { useContext } from "react";
-import { MeetingContext } from "@/lib/MeetingContext";
+import { MeetingContext } from "@/context/MeetingContext";
 
 export const useReducedState = () => {
   const context = useContext(MeetingContext);

@@ -7,7 +7,7 @@ import MeetingRoomUI from "./components/MeetingRoomUi";
 import { useReducedState } from "@/hooks/useReducedState";
 import { Socket } from "socket.io-client";
 import { Role, Status } from "@/types/chatRoom";
-import { MeetingActionType } from "@/lib/MeetingContext";
+import { MeetingActionType } from "@/context/MeetingContext";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";

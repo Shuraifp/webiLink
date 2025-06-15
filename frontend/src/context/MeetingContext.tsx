@@ -22,7 +22,12 @@ export enum PanelType {
   CHAT = "CHAT",
   USERS = "USERS",
   POLLS_AND_QA = "POLLS_AND_QA",
+  NOTES = "NOTES",
 }
+
+export type NoteBlock =
+  | { type: "text"; content: string }
+  | { type: "image"; src: string; };
 
 export const MeetingContext = createContext<MeetingContextType | undefined>(
   undefined
@@ -63,6 +68,8 @@ export enum MeetingActionType {
   SET_CAPTIONS = "SET_CAPTIONS",
   INCREMENT_UNREAD_MESSAGES = "INCREMENT_UNREAD_MESSAGES",
   RESET_UNREAD_MESSAGES = "RESET_UNREAD_MESSAGES",
+  SET_NOTES = "SET_NOTES",
+  CLEAR_NOTES = "CLEAR_NOTES",
 }
 
 export type MeetingAction =
@@ -146,7 +153,12 @@ export type MeetingAction =
     }
   | {
       type: MeetingActionType.RESET_UNREAD_MESSAGES;
-    };
+    }
+  | {
+      type: MeetingActionType.SET_NOTES;
+      payload: NoteBlock[];
+    }
+  | { type: MeetingActionType.CLEAR_NOTES };
 
 export interface MeetingState {
   roomId: string;
@@ -171,6 +183,7 @@ export interface MeetingState {
   raisedHands: { userId: string; username: string }[];
   captions: Caption[];
   unreadMessages: number;
+  notes: NoteBlock[];
 }
 
 export const initialState: MeetingState = {
@@ -196,6 +209,7 @@ export const initialState: MeetingState = {
   raisedHands: [],
   captions: [],
   unreadMessages: 0,
+  notes: [{ type: "text", content: "" }],
 };
 
 const meetingReducer = (
@@ -382,6 +396,16 @@ const meetingReducer = (
       return {
         ...state,
         unreadMessages: 0,
+      };
+    case MeetingActionType.SET_NOTES:
+      return {
+        ...state,
+        notes: action.payload,
+      };
+    case MeetingActionType.CLEAR_NOTES:
+      return {
+        ...state,
+        notes: [{ type: "text", content: "" }],
       };
     default:
       return state;

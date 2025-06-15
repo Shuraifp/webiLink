@@ -3,7 +3,7 @@
   import { useEffect } from "react";
   import { useReducedState } from "@/hooks/useReducedState";
   import { Socket } from "socket.io-client";
-  import { MeetingActionType, PanelType } from "@/lib/MeetingContext";
+  import { MeetingActionType, PanelType } from "@/context/MeetingContext";
   import {
     Caption,
     ChatMessage,

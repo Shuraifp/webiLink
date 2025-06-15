@@ -58,25 +58,27 @@ export const ConfirmationModalProvider = ({
     <ConfirmationModalContext.Provider value={{ confirm, loading, setLoading }}>
       {children}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Confirm Action
+        <div
+          className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+        >
+          <div className="bg-white w-96 py-8 px-4 rounded-lg shadow-lg max-w-sm">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-2xl font-semibold text-gray-700">
+                Confirmation
               </h2>
               <button
                 onClick={handleClose}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="text-red-700 hover:text-red-800 transition-colors"
                 disabled={loading}
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
             <p className="text-gray-600 mb-6">{message}</p>
-            <div className="flex justify-end space-x-3">
+            <div className="flex space-x-2">
               <button
                 onClick={handleClose}
-                className={`px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition-colors ${
+                className={`w-full py-3 rounded-lg text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition-colors ${
                   loading ? "opacity-50 cursor-not-allowed" : ""
                 }`}
                 disabled={loading}
@@ -85,7 +87,7 @@ export const ConfirmationModalProvider = ({
               </button>
               <button
                 onClick={handleConfirm}
-                className={`px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors ${
+                className={`w-full py-3 rounded-lg text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors ${
                   loading ? "opacity-50 cursor-not-allowed" : ""
                 }`}
                 disabled={loading}

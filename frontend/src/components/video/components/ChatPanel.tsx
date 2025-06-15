@@ -5,7 +5,7 @@ import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
 import { ChatMessage } from "@/types/chatRoom";
 import { CornerDownRight, CornerDownLeft, X, Search, Smile } from "lucide-react";
-import { MeetingActionType } from "@/lib/MeetingContext";
+import { MeetingActionType } from "@/context/MeetingContext";
 import Picker from "emoji-picker-react";
 
 interface Props {

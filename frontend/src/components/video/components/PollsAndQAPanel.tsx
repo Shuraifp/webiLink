@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { useReducedState } from "@/hooks/useReducedState";
-import { MeetingActionType } from "@/lib/MeetingContext";
+import { MeetingActionType } from "@/context/MeetingContext";
 import { Socket } from "socket.io-client";
 import PollPanel from "./PollPanel";
 import QAPanel from "./QAPanel";

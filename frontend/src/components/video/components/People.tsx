@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useReducedState } from "@/hooks/useReducedState";
 import { Search, X } from "lucide-react";
-import { MeetingActionType } from "@/lib/MeetingContext";
+import { MeetingActionType } from "@/context/MeetingContext";
 import { Role } from "@/types/chatRoom";
 
 export default function PeoplePanel() {

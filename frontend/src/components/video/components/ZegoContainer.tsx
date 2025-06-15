@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useReducedState } from "@/hooks/useReducedState";
-import { MeetingActionType } from "@/lib/MeetingContext";
+import { MeetingActionType } from "@/context/MeetingContext";
 import Whiteboard from "./Whiteboard";
 import { createPortal } from "react-dom";
 import { Socket } from "socket.io-client";

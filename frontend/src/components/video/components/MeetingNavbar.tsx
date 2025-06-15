@@ -1,8 +1,8 @@
 "use client";
 
-import { User2, MessageCircle, MessageSquare } from "lucide-react";
+import { User2, MessageCircle, MessageSquare, Notebook } from "lucide-react";
 import { useReducedState } from "@/hooks/useReducedState";
-import { MeetingActionType, PanelType } from "@/lib/MeetingContext";
+import { MeetingActionType, PanelType } from "@/context/MeetingContext";
 import BreakoutRoomManager from "./BreakoutRoomManager";
 import { Socket } from "socket.io-client";
 import Timer from "./Timer";
@@ -10,8 +10,6 @@ import { Role } from "@/types/chatRoom";
 import { useEffect } from "react";
 
 interface Props {
-  handleLayoutChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  layout: string;
   socketRef: Socket;
 }
 
@@ -27,10 +25,10 @@ const MeetingNavbar = ({ socketRef }: Props) => {
   };
 
   useEffect(() => {
-    if(state.activePanel === PanelType.CHAT){
-      dispatch({ type: MeetingActionType.RESET_UNREAD_MESSAGES})
+    if (state.activePanel === PanelType.CHAT) {
+      dispatch({ type: MeetingActionType.RESET_UNREAD_MESSAGES });
     }
-  },[state.activePanel,dispatch])
+  }, [state.activePanel, dispatch]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -48,20 +46,20 @@ const MeetingNavbar = ({ socketRef }: Props) => {
     >
       <div className="flex items-center space-x-4">
         <BreakoutRoomManager socketRef={socketRef} />
-        { state.currentUserRole === Role.HOST && <Timer socketRef={socketRef} />}
+        {state.currentUserRole === Role.HOST && <Timer socketRef={socketRef} />}
       </div>
 
-      { state.timer.isRunning && <div className="absolute left-1/2 -translate-x-1/2 bg-gray-900 py-2 px-8 border-2 border-gray-600 rounded-2xl">
-        <span
-          className={`animate-pulse text-blue-400 font-mono text-lg`}
-        >
-          {formatTime(
-            state.timer.isRunning
-              ? state.timer.timeLeft
-              : state.timer.duration || 0
-          )}
-        </span>
-      </div>}
+      {state.timer.isRunning && (
+        <div className="absolute left-1/2 -translate-x-1/2 bg-gray-900 py-2 px-8 border-2 border-gray-600 rounded-2xl">
+          <span className={`animate-pulse text-blue-400 font-mono text-lg`}>
+            {formatTime(
+              state.timer.isRunning
+                ? state.timer.timeLeft
+                : state.timer.duration || 0
+            )}
+          </span>
+        </div>
+      )}
 
       <div className="flex items-center space-x-4">
         <button
@@ -98,6 +96,16 @@ const MeetingNavbar = ({ socketRef }: Props) => {
           }}
         >
           <MessageSquare size={20} />
+        </button>
+        <button
+          className={`text-gray-300 hover:text-white cursor-pointer ${
+            state.activePanel === PanelType.NOTES ? "text-blue-400" : ""
+          }`}
+          onClick={() => {
+            togglePanel(PanelType.NOTES);
+          }}
+        >
+          <Notebook size={20} />
         </button>
       </div>
     </div>
