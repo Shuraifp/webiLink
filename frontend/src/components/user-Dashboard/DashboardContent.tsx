@@ -18,6 +18,7 @@ import History from "./History";
 import { ConfirmationModalProvider } from "./ConfirmationModal";
 import { useAuth } from "@/context/AuthContext";
 import { Menu } from "lucide-react";
+import NotificationDropdown from "../NotificationDropdown";
 
 const DashboardLoading = () => (
   <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -150,9 +151,7 @@ const DashboardWithSearchParams: React.FC = () => {
                   : `Welcome, ${user?.username}`}
               </h2>
             </div>
-            {selectedSection !== "profile" && (
-              <p className="border-b-1 border-gray-400 border-dashed"></p>
-            )}
+              <NotificationDropdown className="md:mr-4" onSectionChange={setSelectedSection} />
           </div>
           <div className="p-8 pt-4">{renderContent()}</div>
         </main>

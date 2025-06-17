@@ -63,7 +63,7 @@ const Sidebar: React.FC<{
         <div className="relative" ref={dropdownRef}>
           <div
             onClick={() => setShowDropdown(!showDropdown)}
-            className="w-14 h-14 cursor-pointer rounded-full bg-gray-500 flex items-center justify-center text-2xl font-bold text-white border-2 border-gray-400 hover:scale-105 transition-all"
+            className="w-14 h-14 rounded-full bg-gray-500 flex items-center justify-center text-2xl font-bold text-white border-2 border-gray-400 hover:scale-105 transition-all"
           >
             {user?.avatar !== "" ? (
               <img

@@ -39,15 +39,17 @@ export class SocketService {
     private meetingService: IMeetingService,
     private meetingRepository: IMeetingRepository
   ) {
-    // this.io = io;
-    // this.roomService = roomService;
-    // this.meetingService = meetingService;
     this.setupSocket();
   }
 
   private setupSocket() {
     this.io.on("connection", (socket: Socket) => {
       logger.info(`User connected: ${socket.id}`);
+
+      socket.on("register-user", ({ userId }: { userId: string }) => {
+        socket.join(`notification-${userId}`);
+        logger.info(`User ${userId} joined notification room: notification-${userId}`);
+      });
 
       socket.onAny((event, args) => {
         logger.info(`socketId: ${socket.id}`);
@@ -175,6 +177,11 @@ export class SocketService {
 
       socket.on("disconnect", () => this.handleDisconnect(socket));
     });
+  }
+
+  public sendNotification(userId: string, notification: { type: string; message: string; data?: any }) {
+    this.io.to(`notification-${userId}`).emit("notification", notification);
+    logger.info(`Notification sent to user ${userId}: ${JSON.stringify(notification)}`);
   }
 
   private async fetchRoomState(socket: Socket, roomId: string) {

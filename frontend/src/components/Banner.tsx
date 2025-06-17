@@ -1,6 +1,6 @@
 import Image from "next/image";
 import React from "react";
-import bannerIMG from "../../public/images/bannerIMG.png";
+import bannerIMG from "../../public/images/bannerIMG.jpg";
 import Link from "next/link";
 import { UserData } from "@/types/type";
 

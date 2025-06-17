@@ -11,28 +11,37 @@ import PaymentModel from "../models/PaymentModel";
 import logger from "../utils/logger";
 import { RoomRepository } from "../repositories/RoomRepository";
 import RoomModel from "../models/RoomModel";
+import { NotificationRepository } from "../repositories/notificationRepository";
+import notificationModel from "../models/notificationModel";
+import { NotificationService } from "../services/notificationService";
 
 const planRepository = new PlanRepository(PlanModel);
 const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
 const paymentRepository = new PaymentRepository(PaymentModel);
+const notificationRepository = new NotificationRepository(notificationModel);
 const roomRepository = new RoomRepository(RoomModel);
+const notificationService = new NotificationService(notificationRepository);
 const planService = new PlanService(
   planRepository,
   userPlanRepository,
   userRepository,
   paymentRepository,
-  roomRepository
+  roomRepository,
+  notificationService
 );
 
-cron.schedule("0 * * * *", async () => {
-  try {
-    logger.info("Cron: Starting subscription status sync");
-    await planService.syncSubscriptionStatuses();
-    logger.info("Cron: Subscription status sync completed");
-  } catch (error) {
-    logger.error(`Cron: Failed to run subscription status sync: ${error}`);
-  }
-});
+let cronTask;
 
-logger.info("Cron job scheduled for subscription status sync");
+if (!cronTask) {
+  cronTask = cron.schedule("0 * * * *", async () => {
+    try {
+      logger.info("Cron: Starting subscription status sync");
+      await planService.syncSubscriptionStatuses();
+      logger.info("Cron: Subscription status sync completed");
+    } catch (error) {
+      logger.error(`Cron: Failed to run subscription status sync: ${error}`);
+    }
+  });
+  logger.info("Cron job scheduled for subscription status sync");
+}

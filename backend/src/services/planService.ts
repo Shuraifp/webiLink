@@ -16,6 +16,7 @@ import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepositor
 import { IPayment } from "../models/PaymentModel";
 import logger from "../utils/logger";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
+import { INotificationService } from "../interfaces/services/INotificationService";
 
 export class PlanService implements IPlanService {
   constructor(
@@ -23,7 +24,8 @@ export class PlanService implements IPlanService {
     private _userPlanRepository: IUserPlanRepository,
     private _userRepository: IUserRepository,
     private _paymentRepository: IPaymentRepository,
-    private _roomRepository: IRoomRepository
+    private _roomRepository: IRoomRepository,
+    private _notificationService: INotificationService
   ) {}
 
   async createPlan(data: Partial<IPlan>): Promise<IPlan> {
@@ -530,6 +532,13 @@ export class PlanService implements IPlanService {
           isPremium,
         });
       }
+
+      await this._notificationService.createNotification(
+          userId,
+          "subscription_welcome",
+          `Welcome to your new ${plan.name} subscription! Enjoy premium features.`,
+          { planId: plan._id!.toString() }
+        );
     } catch (error: any) {
       if (error instanceof stripe.errors.StripeError) {
         throw new BadRequestError(`Stripe error: ${error.message}`);
@@ -1099,6 +1108,7 @@ export class PlanService implements IPlanService {
   async syncSubscriptionStatuses(): Promise<void> {
     try {
       const now = new Date();
+      const warningThreshold = 7 * 24 * 60 * 60 * 1000;
 
       const activePlans = await this._userPlanRepository.findAllByQuery({
         status: PlanStatus.ACTIVE,
@@ -1110,6 +1120,40 @@ export class PlanService implements IPlanService {
             const subscription = await stripe.subscriptions.retrieve(
               plan.stripeSubscriptionId
             );
+            const updateData: Partial<IUserPlan> = {
+              status: subscription.status as PlanStatus,
+              currentPeriodStart: new Date(
+                subscription.items.data[0].current_period_start * 1000
+              ),
+              currentPeriodEnd: new Date(
+                subscription.items.data[0].current_period_end * 1000
+              ),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            };
+            await this._userPlanRepository.update(
+              plan._id.toString(),
+              updateData
+            );
+
+            if (
+              plan.currentPeriodEnd &&
+              plan.currentPeriodEnd.getTime() - now.getTime() <=
+                warningThreshold &&
+              plan.currentPeriodEnd.getTime() > now.getTime() &&
+              !plan.cancelAtPeriodEnd
+            ) {
+              const planDetails = await this._planRepository.findById(
+                plan.planId.toString()
+              );
+              if (planDetails) {
+                await this._notificationService.createNotification(
+                  plan.userId.toString(),
+                  "subscription_expiring",
+                  `Your ${planDetails.name} subscription is expiring on ${plan.currentPeriodEnd.toLocaleDateString()}. Renew now to continue enjoying premium features.`,
+                  { planId: plan.planId.toString() }
+                );
+              }
+            }
             if (
               subscription.status === "active" &&
               subscription.latest_invoice &&

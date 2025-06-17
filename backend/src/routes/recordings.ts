@@ -7,11 +7,16 @@ import { restrictToPremium } from "../middlewares/premiumMiddleware";
 import { authenticateJWT } from "../middlewares/authMiddleware";
 import multer from "multer";
 import { UserRole } from "../types/type";
+import { NotificationRepository } from "../repositories/notificationRepository";
+import notificationModel from "../models/notificationModel";
+import { NotificationService } from "../services/notificationService";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const isPremiumUser = restrictToPremium
 const recordingRepository = new RecordingRepository(recordingModel);
-const recordingService = new RecordingService(recordingRepository);
+const notificationRepository = new NotificationRepository(notificationModel);
+const notificationService = new NotificationService(notificationRepository);
+const recordingService = new RecordingService(recordingRepository, notificationService);
 const recordingController = new RecordingController(recordingService);
 
 const router = Router();

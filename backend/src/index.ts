@@ -15,6 +15,15 @@ import userModel from './models/userModel';
 
 dotenv.config();
 
+let socketService: SocketService | null = null;
+
+export function getSocketService(): SocketService {
+  if (!socketService) {
+    throw new Error('SocketService is not initialized');
+  }
+  return socketService;
+}
+
 async function startServer() {
   await connectDB();
 
@@ -23,7 +32,8 @@ async function startServer() {
   const roomService = new RoomService(roomRepository);
   const meetingRepository = new MeetingRepository(MeetingModel)
   const meetingService = new MeetingService(meetingRepository, roomRepository, userRepository);
-  new SocketService(io, roomService, meetingService, meetingRepository);
+  
+  socketService = new SocketService(io, roomService, meetingService, meetingRepository);
   
   const PORT = process.env.PORT || 8000;
   server.listen(PORT, () => logger.info(`Server running on port ${PORT}`));

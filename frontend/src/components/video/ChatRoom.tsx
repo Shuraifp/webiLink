@@ -8,7 +8,7 @@ import { useReducedState } from "@/hooks/useReducedState";
 import { Socket } from "socket.io-client";
 import { Role, Status } from "@/types/chatRoom";
 import { MeetingActionType } from "@/context/MeetingContext";
-import { disconnectSocket, getSocket } from "@/lib/socket";
+import { getSocket } from "@/lib/socket";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -56,12 +56,23 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         }
     };
   }
-
     checkingSubscriptionStatus();
   }, [dispatch]);
 
   useEffect(() => {
     const currentSocket = socket.current;
+
+    currentSocket.emit("register-user", { userId: user.id });
+
+    currentSocket.on("notification", ({ type, message, data }) => {
+      toast.success(message);
+      console.log(`Notification received: ${type}`, data);
+      // Example: Handle meeting invite notification
+      if (type === "meeting_invite") {
+        // Optionally prompt user to join the meeting
+        // e.g., router.push(`/meeting/${data.roomId}`);
+      }
+    });
 
     const joinRoom = async () => {
       if (hasJoinedRef.current && zpRef.current) {
@@ -94,7 +105,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       const { ZegoUIKitPrebuilt } = await import(
         "@zegocloud/zego-uikit-prebuilt"
       );
-
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         Number(appID),
         serverSecret,
@@ -131,7 +141,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         zpRef.current = null;
         console.log("Zego room hung up and destroyed");
       }
-      disconnectSocket();
       hasJoinedRef.current = false;
       if (meetingContainerRef.current) {
         meetingContainerRef.current.innerHTML = "";

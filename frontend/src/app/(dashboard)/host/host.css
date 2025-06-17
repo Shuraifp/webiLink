@@ -1,5 +1,6 @@
 :where(.host-root) {
   --background: #e5e7eb;
+  --light-bg : #d2d3d6;
   --medium-background: #fcfcfc; 
   --light-background: #f2f4f8;
   --micro-bg: #fdfdff;
@@ -17,6 +18,7 @@
 
 :where(.host-root[data-theme="dark"]) {
   --background: #1f2937;
+  --light-bg :#000000;
   --medium-background: #131a24;
   --light-background: #7f8083;
   --micro-bg: #2c2d30;
@@ -56,6 +58,10 @@
 
 .host-root .bg-white {
   background-color: var(--card-bg);
+}
+
+.host-root .bg-gray-100 {
+  background-color: var(--light-bg);
 }
 
 .host-root .bg-gray-200 {

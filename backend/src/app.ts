@@ -16,6 +16,7 @@ import roomRoutes from './routes/roomRoutes';
 import chatRoomRoutes from './routes/chatRoomRoutes';
 import meetingRoutes from './routes/meetingRoutes';
 import recordingsRouter from './routes/recordings';
+import notificationRoutes from './routes/notificationRoutes';
 import { PlanController } from "./controllers/planController"; 
 import { PlanService } from "./services/planService"; 
 import { PlanRepository } from "./repositories/planRepository";
@@ -28,6 +29,9 @@ import { PaymentRepository } from './repositories/paymentRepository';
 import PaymentModel from './models/PaymentModel';
 import { RoomRepository } from './repositories/RoomRepository';
 import RoomModel from './models/RoomModel';
+import notificationModel from './models/notificationModel';
+import { NotificationRepository } from './repositories/notificationRepository';
+import { NotificationService } from './services/notificationService';
 
 dotenv.config();
 
@@ -36,7 +40,9 @@ const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
 const paymentRepository = new PaymentRepository(PaymentModel)
 const roomRepository = new RoomRepository(RoomModel);
-const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository, roomRepository);
+const notificationRepository = new NotificationRepository(notificationModel);
+const notificationService = new NotificationService(notificationRepository);
+const planService = new PlanService(planRepository, userPlanRepository, userRepository, paymentRepository, roomRepository, notificationService);
 const planController = new PlanController(planService);
 
 const app = express();
@@ -72,6 +78,7 @@ app.use('/api/plans', planRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use("/api/recordings", recordingsRouter);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(errorHandler);
 

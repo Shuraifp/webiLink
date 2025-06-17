@@ -19,20 +19,26 @@ import MeetingModel from "../models/MeetingModel";
 import RecordingModel from "../models/RecordingModel";
 import { MeetingRepository } from "../repositories/meetingRepository";
 import { RecordingRepository } from "../repositories/recordingRepository";
+import { NotificationRepository } from "../repositories/notificationRepository";
+import notificationModel from "../models/notificationModel";
+import { NotificationService } from "../services/notificationService";
 
 const planRepository = new PlanRepository(PlanModel);
 const userPlanRepository = new UserPlanRepository(UserPlanModel);
 const userRepository = new UserRepository(UserModel);
 const paymentRepository = new PaymentRepository(PaymentModel);
+const notificationRepository = new NotificationRepository(notificationModel);
 const roomRepository = new RoomRepository(RoomModel);
 const meetingRepository = new MeetingRepository(MeetingModel);
 const recordingRepository = new RecordingRepository(RecordingModel);
+const notificationService = new NotificationService(notificationRepository);
 const planService = new PlanService(
   planRepository,
   userPlanRepository,
   userRepository,
   paymentRepository,
-  roomRepository
+  roomRepository,
+  notificationService
 );
 const planController = new PlanController(planService);
 

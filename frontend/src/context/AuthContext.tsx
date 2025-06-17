@@ -1,10 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { refreshAdminToken } from "@/lib/api/admin/authApi";
 import { refreshUserToken } from "@/lib/api/user/authApi";
 import { AuthStatus, USER_ROLE, UserData } from "@/types/type";
+import { disconnectSocket, getSocket } from "@/lib/socket";
+import { Socket } from "socket.io-client";
+import toast from "react-hot-toast";
 
 interface AuthState {
   user: UserData | null;
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     adminStatus: null,
     isLoading: true,
   });
+  const socketRef = useRef<Socket>(getSocket());
   const router = useRouter();
 
   useEffect(() => {
@@ -93,6 +97,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (auth.user?.id && typeof window !== "undefined") {
+      if (!socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+
+      socketRef.current.emit("register-user", { userId: auth.user.id });
+
+      socketRef.current.on("notification", ({ type, message, data }) => {
+        toast.success(message);
+        console.log(`Notification received: ${type}`, data);
+        // if (type === "meeting_invite") {
+          // Optionally prompt user to join
+          // router.push(`/meeting/${data.roomId}`);
+        // }
+      });
+
+      socketRef.current.on("connect", () => {
+        socketRef.current?.emit("register-user", { userId: auth.user!.id });
+      });
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off("notification");
+        disconnectSocket();
+        // socketRef.current = null;
+      }
+    };
+  }, [auth.user?.id]);
+
   const login = (user: UserData, authStatus: AuthStatus) => {
     localStorage.setItem("webiUser", JSON.stringify(user));
     localStorage.setItem("webiAuthStatus", JSON.stringify(authStatus));
@@ -109,6 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("webiUser");
     localStorage.removeItem("webiAuthStatus");
     setAuth({ user: null, authStatus: null, isLoading: false });
+    if (socketRef.current) {
+      disconnectSocket();
+      // socketRef.current = null;
+    }
     router.push("/login");
   };
   
