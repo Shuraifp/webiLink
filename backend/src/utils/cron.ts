@@ -34,7 +34,7 @@ const planService = new PlanService(
 let cronTask;
 
 if (!cronTask) {
-  cronTask = cron.schedule("0 * * * *", async () => {
+  cronTask = cron.schedule("0 0 * * *", async () => {
     try {
       logger.info("Cron: Starting subscription status sync");
       await planService.syncSubscriptionStatuses();

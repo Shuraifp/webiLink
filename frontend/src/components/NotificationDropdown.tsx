@@ -24,7 +24,7 @@ export default function NotificationDropdown({
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = 10;
 
   useEffect(() => {
     if (auth.user?.id) {
@@ -167,7 +167,7 @@ export default function NotificationDropdown({
             {notifications.length === 0 ? (
               <p className="text-gray-600">No notifications</p>
             ) : (
-              <ul className="space-y-2 max-h-80 overflow-y-auto">
+              <ul className="space-y-2 max-h-80 overflow-y-auto no-scrollbar">
                 {notifications.map((notification) => (
                   <li
                     key={notification._id}

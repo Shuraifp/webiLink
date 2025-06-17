@@ -73,7 +73,7 @@ const MeetingNavbar = ({ socketRef }: Props) => {
           <User2 size={20} />
         </button>
         <button
-          className={`text-gray-300 hover:text-white cursor-pointer ${
+          className={`text-gray-300 hover:text-white relative cursor-pointer ${
             state.activePanel === PanelType.CHAT ? "text-blue-400" : ""
           }`}
           onClick={() => {

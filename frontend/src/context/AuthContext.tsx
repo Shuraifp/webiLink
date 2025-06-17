@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = JSON.parse(storedAdmin) as UserData;
         const authStatus = JSON.parse(storedAdminStatus) as AuthStatus;
         if (authStatus.expiresAt > Date.now()) {
-          setAdmin({ admin:user, adminStatus:authStatus, isLoading: false });
+          setAdmin({ admin: user, adminStatus: authStatus, isLoading: false });
         } else {
           refreshToken("admin").catch(() => logoutAdmin());
         }
@@ -98,33 +98,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (auth.user?.id && typeof window !== "undefined") {
-      if (!socketRef.current.connected) {
-        socketRef.current.connect();
-      }
+    if (!auth.user?.id || typeof window === "undefined") return;
 
-      socketRef.current.emit("register-user", { userId: auth.user.id });
-
-      socketRef.current.on("notification", ({ type, message, data }) => {
-        toast.success(message);
-        console.log(`Notification received: ${type}`, data);
-        // if (type === "meeting_invite") {
-          // Optionally prompt user to join
-          // router.push(`/meeting/${data.roomId}`);
-        // }
-      });
-
-      socketRef.current.on("connect", () => {
-        socketRef.current?.emit("register-user", { userId: auth.user!.id });
-      });
+    const socket = socketRef.current;
+    if (!socket.connected) {
+      socket.connect();
     }
 
+    const handleNotification = ({
+      type,
+      message,
+      data,
+    }: {
+      type: string;
+      message: string;
+      data?: {
+        recordingId?: string;
+        planId?: string;
+      };
+    }) => {
+      toast.success(message);
+      console.log(`Notification received: ${type}`, data);
+    };
+
+    const handleConnect = () => {
+      socket.emit("register-user", { userId: auth.user!.id });
+    };
+
+    socket.on("notification", handleNotification);
+    socket.on("connect", handleConnect);
+
     return () => {
-      if (socketRef.current) {
-        socketRef.current.off("notification");
-        disconnectSocket();
-        // socketRef.current = null;
-      }
+      socket.off("notification", handleNotification);
+      socket.off("connect", handleConnect);
+      disconnectSocket();
     };
   }, [auth.user?.id]);
 
@@ -133,11 +140,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("webiAuthStatus", JSON.stringify(authStatus));
     setAuth({ user, authStatus, isLoading: false });
   };
-  
+
   const loginAdmin = (user: UserData, authStatus: AuthStatus) => {
     localStorage.setItem("webiAdmin", JSON.stringify(user));
     localStorage.setItem("webiAdminStatus", JSON.stringify(authStatus));
-    setAdmin({ admin:user, adminStatus:authStatus, isLoading: false });
+    setAdmin({ admin: user, adminStatus: authStatus, isLoading: false });
   };
 
   const logout = () => {
@@ -150,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     router.push("/login");
   };
-  
+
   const logoutAdmin = () => {
     localStorage.removeItem("webiAdmin");
     localStorage.removeItem("webiAdminStatus");
@@ -158,19 +165,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/admin/auth/login");
   };
 
-  const refreshToken = async (userRole: (typeof USER_ROLE)[keyof typeof USER_ROLE]) => {
+  const refreshToken = async (
+    userRole: (typeof USER_ROLE)[keyof typeof USER_ROLE]
+  ) => {
     try {
-      if(userRole === "admin"){
+      if (userRole === "admin") {
         const res = await refreshAdminToken();
-        console.log("Refreshing admin token");
         loginAdmin(res.webiAdmin, res.webiAdminStatus);
-      } else if(userRole === "user") {
+      } else if (userRole === "user") {
         const res = await refreshUserToken();
-        console.log("Refreshing user token");
         login(res.webiUser, res.webiAuthStatus);
       }
-    } catch (error) {
-      console.error("Failed to refresh token:", error);
+    } catch {
       if (userRole === "admin") {
         logoutAdmin();
       } else {
@@ -180,7 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ auth, admin, login, logout, loginAdmin, logoutAdmin }}>
+    <AuthContext.Provider
+      value={{ auth, admin, login, logout, loginAdmin, logoutAdmin }}
+    >
       {children}
     </AuthContext.Provider>
   );

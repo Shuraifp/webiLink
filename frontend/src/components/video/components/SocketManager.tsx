@@ -67,7 +67,7 @@
           type: MeetingActionType.ADD_MESSAGE,
           payload: message,
         });
-        if (state.activePanel !== PanelType.CHAT) {
+        if (state.activePanel !== PanelType.CHAT && message.userId !== state.currentUserId) {
           dispatch({ type: MeetingActionType.INCREMENT_UNREAD_MESSAGES });
         }
       }

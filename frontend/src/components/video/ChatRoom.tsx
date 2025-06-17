@@ -28,7 +28,7 @@ function randomID(len: number) {
 }
 
 export default function MeetingRoom({ user }: { user: UserData }) {
-  const router = useRouter()
+  const router = useRouter();
   const { state, dispatch } = useReducedState();
   const { roomId } = useParams() as { roomId: string };
   const socket = useRef<Socket>(getSocket());
@@ -46,7 +46,10 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       try {
         const res = await userApiWithAuth.get("/users/isPremium");
         if (res.data.data.isPremiumUser) {
-          dispatch({type: MeetingActionType.SET_ISPREMIUM, payload: res.data.data.isPremiumUser})
+          dispatch({
+            type: MeetingActionType.SET_ISPREMIUM,
+            payload: res.data.data.isPremiumUser,
+          });
         }
       } catch (err) {
         if (axios.isAxiosError(err)) {
@@ -54,25 +57,13 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         } else {
           toast.error("An unexpected error occurred.");
         }
+      }
     };
-  }
     checkingSubscriptionStatus();
   }, [dispatch]);
 
   useEffect(() => {
     const currentSocket = socket.current;
-
-    currentSocket.emit("register-user", { userId: user.id });
-
-    currentSocket.on("notification", ({ type, message, data }) => {
-      toast.success(message);
-      console.log(`Notification received: ${type}`, data);
-      // Example: Handle meeting invite notification
-      if (type === "meeting_invite") {
-        // Optionally prompt user to join the meeting
-        // e.g., router.push(`/meeting/${data.roomId}`);
-      }
-    });
 
     const joinRoom = async () => {
       if (hasJoinedRef.current && zpRef.current) {
@@ -95,7 +86,9 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         avatar: user.avatar,
         isMuted: false,
       });
+    };
 
+    const startStreaming = async () => {
       const appID = process.env.NEXT_PUBLIC_ZEGO_APP_ID;
       const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET;
       if (!appID || !serverSecret) {
@@ -154,6 +147,10 @@ export default function MeetingRoom({ user }: { user: UserData }) {
         type: MeetingActionType.SET_CURRENT_USER,
         payload: { userId: "", username: "", avatar: "", role: Role.JOINEE },
       });
+      currentSocket.emit("leave-room", {
+        roomId,
+        userId: user.id,
+      });
     };
 
     if (typeof window !== "undefined") {
@@ -165,6 +162,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       currentSocket.on(
         "set-current-user",
         ({ userId, username, avatar, role }) => {
+          startStreaming();
           dispatch({
             type: MeetingActionType.SET_CURRENT_USER,
             payload: { userId, username, avatar, role },
@@ -186,28 +184,25 @@ export default function MeetingRoom({ user }: { user: UserData }) {
           type: MeetingActionType.SET_STATUS,
           payload: Status.WAITING,
         });
+        cleanup();
         router.replace("/host");
       });
 
-      currentSocket.onAny((event, args) => {
-        console.log(`Received event: ${event} ${args}`);
-      });
-
-      currentSocket.on("host-joined", () => {
-        if (state.status === Status.WAITING || state.status === Status.LEFT || state.status === Status.CONNECTING) {
-          console.log("Reconnecting after host joined", {
-            roomId,
-            userId: user.id,
-          });
-          currentSocket.emit("join-room", {
-            roomId,
-            userId: user.id,
-            username: user.username,
-            avatar: user.avatar,
-            isMuted: false,
-          });
-        }
-      });
+      // currentSocket.on("host-joined", () => {
+      //   if (
+      //     state.status === Status.WAITING ||
+      //     state.status === Status.LEFT ||
+      //     state.status === Status.CONNECTING
+      //   ) {
+      //     currentSocket.emit("join-room", {
+      //       roomId,
+      //       userId: user.id,
+      //       username: user.username,
+      //       avatar: user.avatar,
+      //       isMuted: false,
+      //     });
+      //   }
+      // });
 
       currentSocket.on(
         "breakout-room-update",
@@ -220,16 +215,7 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       );
     }
 
-    currentSocket.on("user-left", (userId: string) => {
-        console.log(`User ${userId} left the room`);
-      });
-
-      currentSocket.on("user-disconnected", (userId: string) => {
-        console.log(`User ${userId} disconnected from the room`);
-      });
-
     currentSocket.on("host-left", () => {
-      console.log("Host has left the meeting. You will be disconnected.");
       currentSocket.emit("leave-room", {
         roomId,
         userId: user.id,
@@ -241,7 +227,6 @@ export default function MeetingRoom({ user }: { user: UserData }) {
       if (typeof window !== "undefined") {
         currentSocket.off("set-current-user");
         currentSocket.off("error");
-        currentSocket.off("host-joined");
         currentSocket.off("waiting-for-host");
         currentSocket.off("breakout-room-update");
         currentSocket.off("host-left");
