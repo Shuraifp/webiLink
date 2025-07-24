@@ -33,7 +33,6 @@ export default function PlanManagementPage() {
     },
     features: [],
     isArchived: false,
-    stripeProductId: "",
     stripePriceId: "",
   });
   console.log(newPlan);
@@ -90,7 +89,6 @@ export default function PlanManagementPage() {
         },
         features: [],
         isArchived: false,
-        stripeProductId: "",
         stripePriceId: "",
       });
       toast.success("Plan was created successfully");
@@ -157,7 +155,6 @@ export default function PlanManagementPage() {
         },
         features: [],
         isArchived: false,
-        stripeProductId: "",
         stripePriceId: "",
       });
       toast.success("Plan was updated successfully");

@@ -5,7 +5,6 @@ import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { IAuthService } from "../interfaces/services/IAuthService";
 import { IJwtService } from "../utils/jwt";
 import { IMailService } from "../utils/mail";
-import { IUser } from "../models/userModel";
 import { LoginResponse, UserRole } from "../types/type";
 import {
   BadRequestError,
@@ -15,6 +14,8 @@ import {
   InternalServerError,
 } from "../utils/errors";
 import logger from "../utils/logger";
+import { UserDTO } from "../dto/userDTO";
+import { UserMapper } from "../mappers/userMapper";
 
 export class AuthService implements IAuthService {
   constructor(
@@ -27,7 +28,7 @@ export class AuthService implements IAuthService {
     username: string,
     email: string,
     password: string
-  ): Promise<IUser> {
+  ): Promise<UserDTO> {
     const existingUser = await this._userRepository.findByEmail(email);
     if (existingUser && existingUser.isVerified)
       throw new BadRequestError("User already exists");
@@ -53,7 +54,7 @@ export class AuthService implements IAuthService {
         }
       );
       if (!success) throw new InternalServerError("Failed to update user OTP");
-      return existingUser;
+      return UserMapper.toUserDTO(existingUser);
     }
 
     const newUser = await this._userRepository.create({
@@ -67,7 +68,7 @@ export class AuthService implements IAuthService {
     });
 
     if (!newUser) throw new InternalServerError("Failed to create user");
-    return newUser;
+    return UserMapper.toUserDTO(newUser);
   }
 
   async googleSignIn(
@@ -156,7 +157,7 @@ export class AuthService implements IAuthService {
     return { accessToken, refreshToken, user: updatedUser };
   }
 
-  async verifyAccessToken(token: string): Promise<IUser> {
+  async verifyAccessToken(token: string): Promise<UserDTO> {
     const { decoded, error } = this._jwtService.verifyAccessToken(token);
 
     if (error || !decoded || !decoded._id)
@@ -166,12 +167,12 @@ export class AuthService implements IAuthService {
     if (!user) throw new NotFoundError("User not found");
     if (user.isBlocked) throw new ForbiddenError("User is blocked");
 
-    return user;
+    return UserMapper.toUserDTO(user);
   }
 
   async refreshToken(refreshToken: string): Promise<{
     accessToken: string;
-    user: IUser;
+    user: UserDTO;
   }> {
     const { decoded, error } =
       this._jwtService.verifyRefreshToken(refreshToken);
@@ -184,7 +185,7 @@ export class AuthService implements IAuthService {
 
     const accessToken = this._jwtService.generateAccessToken(user);
 
-    return { accessToken, user };
+    return { accessToken, user: UserMapper.toUserDTO(user) };
   }
 
   async requestPasswordReset(email: string): Promise<void> {

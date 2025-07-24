@@ -1,6 +1,6 @@
+import { PlanDTO } from "../../dto/planDTO";
 import { TransactionDTO } from "../../dto/transactionDTO";
-import { IPlan } from "../../models/PlanModel";
-import { IUser } from "../../models/userModel";
+import { UserDTO } from "../../dto/userDTO";
 import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
 import { DashboardStats, MeetingStats } from "../../services/adminService";
 
@@ -9,14 +9,14 @@ export interface IAdminService {
     page: number,
     limit: number
   ): Promise<{
-    data: IUser[];
+    data: UserDTO[];
     totalItems: number;
     totalPages: number;
   }>;
-  blockUser(userId: string): Promise<IUser>;
-  unblockUser(userId: string): Promise<IUser>;
-  softDeleteUser(userId: string): Promise<IUser>;
-  restoreUser(userId: string): Promise<IUser>;
+  blockUser(userId: string): Promise<UserDTO>;
+  unblockUser(userId: string): Promise<UserDTO>;
+  softDeleteUser(userId: string): Promise<UserDTO>;
+  restoreUser(userId: string): Promise<UserDTO>;
   listSubscriptions({
     page,
     limit,
@@ -28,7 +28,7 @@ export interface IAdminService {
     search?: string;
     status?: PlanStatus;
   }): Promise<{
-    data: { userPlan: IUserPlan; plan: IPlan; user: IUser }[];
+    data: { userPlan: IUserPlan; plan: PlanDTO; user: UserDTO }[];
     totalItems: number;
     totalPages: number;
   }>;

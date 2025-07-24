@@ -17,6 +17,8 @@ import { IPayment } from "../models/PaymentModel";
 import logger from "../utils/logger";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { INotificationService } from "../interfaces/services/INotificationService";
+import { PlanMapper } from "../mappers/planMapper";
+import { PlanDTO } from "../dto/planDTO";
 
 export class PlanService implements IPlanService {
   constructor(
@@ -28,7 +30,7 @@ export class PlanService implements IPlanService {
     private _notificationService: INotificationService
   ) {}
 
-  async createPlan(data: Partial<IPlan>): Promise<IPlan> {
+  async createPlan(data: Partial<IPlan>): Promise<PlanDTO> {
     try {
       if (!data.name || data.price! < 0) {
         throw new BadRequestError("Invalid plan data");
@@ -86,7 +88,7 @@ export class PlanService implements IPlanService {
 
       const plan = await this._planRepository.create(planData);
       if (!plan) throw new InternalServerError("Failed to create plan");
-      return plan;
+      return PlanMapper.toPlanDTO(plan);
     } catch (error) {
       throw error instanceof BadRequestError
         ? error
@@ -94,12 +96,12 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async listActivePlans(): Promise<IPlan[]> {
+  async listActivePlans(): Promise<PlanDTO[]> {
     try {
       const plans = await this._planRepository.listActivePlans();
       if (!plans || plans.length === 0)
         throw new NotFoundError("No active plans found");
-      return plans;
+      return PlanMapper.toPlanDTOList(plans);
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
@@ -109,12 +111,12 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async listArchivedPlans(): Promise<IPlan[]> {
+  async listArchivedPlans(): Promise<PlanDTO[]> {
     try {
       const plans = await this._planRepository.listArchivedPlans();
       if (!plans || plans.length === 0)
         throw new NotFoundError("No active plans found");
-      return plans;
+      return PlanMapper.toPlanDTOList(plans);
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
@@ -124,14 +126,14 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async archivePlan(planId: string): Promise<IPlan | null> {
+  async archivePlan(planId: string): Promise<PlanDTO | null> {
     try {
       const archivedPlan = await this._planRepository.archive(
         new Types.ObjectId(planId)
       );
       if (!archivedPlan)
         throw new InternalServerError("Failed to archive plan");
-      return archivedPlan;
+      return PlanMapper.toPlanDTO(archivedPlan);
     } catch (error) {
       throw error instanceof InternalServerError
         ? error
@@ -139,13 +141,13 @@ export class PlanService implements IPlanService {
     }
   }
 
-  async restorePlan(planId: string): Promise<IPlan | null> {
+  async restorePlan(planId: string): Promise<PlanDTO | null> {
     try {
       const updatedPlan = await this._planRepository.restore(
         new Types.ObjectId(planId)
       );
       if (!updatedPlan) throw new NotFoundError("Plan not found");
-      return updatedPlan;
+      return PlanMapper.toPlanDTO(updatedPlan);
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
@@ -156,7 +158,7 @@ export class PlanService implements IPlanService {
   async updatePlan(
     planId: string,
     data: Partial<IPlan>
-  ): Promise<IPlan | null> {
+  ): Promise<PlanDTO | null> {
     try {
       if (!data.name || data.price! < 0 || !data.price) {
         throw new BadRequestError("Invalid plan data");
@@ -240,7 +242,7 @@ export class PlanService implements IPlanService {
       const updatedPlan = await this._planRepository.update(planId, planData);
       if (!updatedPlan)
         throw new NotFoundError("Plan updation failed. try again!");
-      return updatedPlan;
+      return PlanMapper.toPlanDTO(updatedPlan);
     } catch (error) {
       throw error instanceof BadRequestError || error instanceof NotFoundError
         ? error
@@ -925,7 +927,7 @@ export class PlanService implements IPlanService {
 
   async getUserPlan(
     userId: string
-  ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
+  ): Promise<{ userPlan: IUserPlan; plan: PlanDTO } | null> {
     try {
       const userPlan = await this._userPlanRepository.findByQuery({
         userId,
@@ -943,7 +945,7 @@ export class PlanService implements IPlanService {
         throw new NotFoundError("Plan not found");
       }
 
-      return { userPlan, plan };
+      return { userPlan, plan: PlanMapper.toPlanDTO(plan) };
     } catch (error) {
       throw error instanceof NotFoundError
         ? error
@@ -953,7 +955,7 @@ export class PlanService implements IPlanService {
 
   async getPendingPlan(
     userId: string
-  ): Promise<{ userPlan: IUserPlan; plan: IPlan } | null> {
+  ): Promise<{ userPlan: IUserPlan; plan: PlanDTO } | null> {
     try {
       const userPlan = await this._userPlanRepository.findByQuery({
         userId,
@@ -970,7 +972,7 @@ export class PlanService implements IPlanService {
         throw new NotFoundError("Plan not found");
       }
 
-      return { userPlan, plan };
+      return { userPlan, plan: PlanMapper.toPlanDTO(plan) };
     } catch (error) {
       throw error instanceof NotFoundError
         ? error

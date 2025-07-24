@@ -16,7 +16,6 @@ export interface Plan {
   };
   features: string[];
   isArchived: boolean;
-  stripeProductId: string;
   stripePriceId: string;  
 }
 

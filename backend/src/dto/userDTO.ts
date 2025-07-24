@@ -1,3 +1,5 @@
+import { UserRole } from "../types/type";
+
 export interface DashboardStatsDTO {
   totalMeetings: number;
   hostedMeetings: number;
@@ -17,4 +19,26 @@ export interface DashboardStatsDTO {
     type: 'hosted' | 'attended';
     hostName?: string;
   }[];
+}
+
+export interface UserDTO {
+  _id: string;
+  username: string;
+  email: string;
+  role?: UserRole;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+    backgroundImage?: string;
+    bio?: string;
+    jobTitle?: string;
+    company?: string;
+  };
+  isBlocked: boolean;
+  isArchived: boolean;
+  isPremium: boolean;
+  planId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

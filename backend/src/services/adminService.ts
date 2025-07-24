@@ -1,5 +1,4 @@
 import { IAdminService } from "../interfaces/services/IAdminService";
-import { IUser } from "../models/userModel";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { UserRole } from "../types/type";
 import {
@@ -9,7 +8,6 @@ import {
 } from "../utils/errors";
 import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
 import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
-import { IPlan } from "../models/PlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
@@ -19,6 +17,10 @@ import { MeetingMapper } from "../mappers/meetingMapper";
 import logger from "../utils/logger";
 import { TransactionDTO } from "../dto/transactionDTO";
 import { PaymentMapper, PopulatedPayment } from "../mappers/paymentMapper";
+import { UserDTO } from "../dto/userDTO";
+import { UserMapper } from "../mappers/userMapper";
+import { PlanDTO } from "../dto/planDTO";
+import { PlanMapper } from "../mappers/planMapper";
 
 export interface DashboardStats {
   users: number;
@@ -51,7 +53,7 @@ export class AdminService implements IAdminService {
     page: number = 1,
     limit: number = 10
   ): Promise<{
-    data: IUser[];
+    data: UserDTO[];
     totalItems: number;
     totalPages: number;
   }> {
@@ -66,7 +68,7 @@ export class AdminService implements IAdminService {
       if (!result.data || result.data.length === 0) {
         return { data: [], totalItems: 0, totalPages: 0 };
       }
-      return result;
+      return {...result, data: UserMapper.toUserDTOList(result.data)}
     } catch (error) {
       throw error instanceof InternalServerError
         ? error
@@ -74,7 +76,7 @@ export class AdminService implements IAdminService {
     }
   }
 
-  async blockUser(userId: string): Promise<IUser> {
+  async blockUser(userId: string): Promise<UserDTO> {
     const user = await this._userRepository.findById(userId);
     if (!user) throw new NotFoundError("User not found");
     if (user.role === UserRole.ADMIN)
@@ -85,10 +87,10 @@ export class AdminService implements IAdminService {
 
     const updatedUser = await this._userRepository.findById(userId);
     if (!updatedUser) throw new NotFoundError("User not found after update");
-    return updatedUser;
+    return UserMapper.toUserDTO(updatedUser);
   }
 
-  async unblockUser(userId: string): Promise<IUser> {
+  async unblockUser(userId: string): Promise<UserDTO> {
     const user = await this._userRepository.findById(userId);
     if (!user) throw new NotFoundError("User not found");
 
@@ -97,10 +99,10 @@ export class AdminService implements IAdminService {
 
     const updatedUser = await this._userRepository.findById(userId);
     if (!updatedUser) throw new NotFoundError("User not found after update");
-    return updatedUser;
+    return UserMapper.toUserDTO(updatedUser);
   }
 
-  async softDeleteUser(userId: string): Promise<IUser> {
+  async softDeleteUser(userId: string): Promise<UserDTO> {
     const user = await this._userRepository.findById(userId);
     if (!user) throw new NotFoundError("User not found");
 
@@ -109,10 +111,10 @@ export class AdminService implements IAdminService {
 
     const updatedUser = await this._userRepository.findById(userId);
     if (!updatedUser) throw new NotFoundError("User not found after update");
-    return updatedUser;
+    return UserMapper.toUserDTO(updatedUser);
   }
 
-  async restoreUser(userId: string): Promise<IUser> {
+  async restoreUser(userId: string): Promise<UserDTO> {
     const user = await this._userRepository.findById(userId);
     if (!user) throw new NotFoundError("User not found");
 
@@ -124,7 +126,7 @@ export class AdminService implements IAdminService {
 
     const updatedUser = await this._userRepository.findById(userId);
     if (!updatedUser) throw new NotFoundError("User not found after update");
-    return updatedUser;
+    return UserMapper.toUserDTO(updatedUser);
   }
 
   async listSubscriptions({
@@ -138,7 +140,7 @@ export class AdminService implements IAdminService {
     search?: string;
     status?: PlanStatus;
   }): Promise<{
-    data: { userPlan: IUserPlan; plan: IPlan; user: IUser }[];
+    data: { userPlan: IUserPlan; plan: PlanDTO; user: UserDTO }[];
     totalItems: number;
     totalPages: number;
   }> {
@@ -164,7 +166,7 @@ export class AdminService implements IAdminService {
             userPlan.userId.toString()
           );
           if (!plan || !user) throw new NotFoundError("Plan or User not found");
-          return { userPlan, plan, user };
+          return { userPlan, plan: PlanMapper.toPlanDTO(plan), user: UserMapper.toUserDTO(user) };
         })
       );
 

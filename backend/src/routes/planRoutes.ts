@@ -92,7 +92,6 @@ router.post(
   authenticateJWT(UserRole.USER),
   planController.cancelPendingSubscription.bind(planController)
 );
-// router.post("/refund", authenticateJWT(UserRole.USER), planController.cancelActiveSubscription.bind(planController));
 
 // Admin
 router.post(

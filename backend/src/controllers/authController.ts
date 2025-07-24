@@ -159,7 +159,7 @@ export class AuthController {
       );
       const authData = this.getAuthData(
         {
-          _id: user.id,
+          _id: user._id,
           username: user.username,
           email: user.email,
           avatar: user.profile?.avatar ?? "",
@@ -188,7 +188,7 @@ export class AuthController {
       );
       const authData = this.getAdminAuthData(
         {
-          _id: user.id,
+          _id: user._id,
           username: user.username,
           email: user.email,
           avatar: user.profile?.avatar ?? "",
