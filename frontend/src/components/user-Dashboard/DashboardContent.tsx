@@ -32,7 +32,7 @@ const DashboardWithSearchParams: React.FC = () => {
   const { auth } = useAuth();
   const user = auth?.user;
   const searchParams = useSearchParams();
-  const initialSection = searchParams.get("section") || "overview";
+  const initialSection = searchParams.get("rm") ? 'rooms' : searchParams.get("section") || "overview";
   const [selectedSection, setSelectedSection] = useState(initialSection);
   const [prevSection, setPrevSection] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

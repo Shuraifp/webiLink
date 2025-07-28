@@ -3,7 +3,7 @@
 import { UserData } from "@/types/type";
 import { Dispatch, SetStateAction, useState, useEffect, useRef } from "react";
 import { X, Share2, MessageCircle, Send, Mail, Copy } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { fetchRooms, deleteRoom } from "@/lib/api/user/roomApi";
 import { isPremiumUser } from "@/lib/api/user/planApi";
 import axios from "axios";
@@ -32,7 +32,8 @@ export default function DashboardPage({
   setPrevSection,
 }: RoomsProps) {
   const router = useRouter();
-  const [copied, setCopied] = useState<{ [slug: string]: boolean }>({});
+  const searchParams = useSearchParams();
+  const roomSlug = searchParams.get("rm");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [roomId, setRoomId] = useState<string>("");
@@ -46,13 +47,12 @@ export default function DashboardPage({
   const panelRef = useRef<HTMLDivElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement | null>(null);
   const { confirm } = useConfirmationModal();
-  console.log(copied)
+
   useEffect(() => {
     const getRooms = async () => {
       setLoading(true);
       try {
         const res = await fetchRooms();
-        console.log("Fetched rooms:", res);
         setRooms(res);
         const hasInactiveRooms = res.some((room: Room) => !room.isActive);
         setShowWarning(hasInactiveRooms);
@@ -90,16 +90,18 @@ export default function DashboardPage({
     onSectionChange("upgrade");
   };
 
-  const handleCopyLink = (slug: string) => {
-    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${slug}`;
-    navigator.clipboard.writeText(roomUrl);
-    setCopied((prev) => ({ ...prev, [slug]: true }));
-    toast.success("Link copied to clipboard!");
+  useEffect(() => {
+    if (roomSlug) {
+      setIsModalOpen(true);
+      setRoomId(roomSlug);
+    }
+  }, [roomSlug]);
 
-    setTimeout(() => {
-      setCopied((prev) => ({ ...prev, [slug]: false }));
-    }, 2000);
-    setSharePanelSlug(null); // Close panel
+  const handleCopyLink = (slug: string) => {
+    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/host?rm=${slug}`;
+    navigator.clipboard.writeText(roomUrl);
+    toast.success("Link copied to clipboard!");
+    setSharePanelSlug(null);
   };
 
   const handleStartMeeting = (slug: string) => {
@@ -142,23 +144,6 @@ export default function DashboardPage({
     onSectionChange(sec);
     setPrevSection(curSec);
   };
-
-  // useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     console.log("Click event target:", event.target);
-  //     if (
-  //       panelRef.current &&
-  //       !panelRef.current.contains(event.target as Node) &&
-  //       shareButtonRef.current &&
-  //       !shareButtonRef.current.contains(event.target as Node)
-  //     ) {
-  //       console.log("Closing share panel due to outside click");
-  //       setSharePanelSlug(null);
-  //     }
-  //   };
-  //   document.addEventListener("click", handleClickOutside);
-  //   return () => document.removeEventListener("click", handleClickOutside);
-  // }, []);
 
   const activeRoom = rooms.find((room) => room.slug === sharePanelSlug);
   const isSharePanelOpen = sharePanelSlug && activeRoom && activeRoom.isActive;
@@ -275,10 +260,12 @@ export default function DashboardPage({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-                      `Join my video meeting: ${activeRoom.name}\n${roomUrl}`
-                    )}`;
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/host?rm=${activeRoom.slug}`;
+                    const message = `🔔 *You're Invited!*\n\n📅 *Meeting:* ${activeRoom.name}\n🔗 *Join Now:* ${roomUrl}\n\nNo downloads needed. Just click the link and connect instantly.`;
+
+                    const encodedMessage = encodeURIComponent(message);
+                    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+
                     window.open(whatsappUrl, "_blank");
                     setSharePanelSlug(null);
                   }}
@@ -294,11 +281,11 @@ export default function DashboardPage({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/host?rm=${activeRoom.slug}`;
                     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(
                       roomUrl
                     )}&text=${encodeURIComponent(
-                      `Join my video meeting: ${activeRoom.name}`
+                      `You're Invited to Join: ${activeRoom.name}`
                     )}`;
                     window.open(telegramUrl, "_blank");
                     setSharePanelSlug(null);
@@ -315,7 +302,7 @@ export default function DashboardPage({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/room/${activeRoom.slug}`;
+                    const roomUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/host?rm=${activeRoom.slug}`;
                     const emailUrl = `mailto:?subject=${encodeURIComponent(
                       `Join my video meeting: ${activeRoom.name}`
                     )}&body=${encodeURIComponent(
@@ -389,7 +376,6 @@ export default function DashboardPage({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log("Opening share panel for", room.slug);
                   setSharePanelSlug(room.slug);
                 }}
                 className={`px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm flex items-center gap-2 ${
