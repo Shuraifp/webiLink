@@ -50,7 +50,7 @@ export const restorePlan = async (id: string) => {
 
 export const editPlan = async (data: Plan) => {
   try {
-    const res = await adminApiWithAuth.put(`/plans/${data._id}`, data);
+    const res = await adminApiWithAuth.put(`/plans/${data.id}`, data);
     console.log(res.data);
     return res.data.data;
   } catch (err) {
