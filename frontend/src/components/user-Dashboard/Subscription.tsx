@@ -210,7 +210,7 @@ const Subscription = ({
 
   return (
     <>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+      <h2 className="text-xl raleway font-semibold text-gray-600 mb-6">
         My Current Subscription
       </h2>
       {userPlanData ? (
@@ -320,7 +320,7 @@ const Subscription = ({
         </div>
       )}
 
-      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+      <h2 className="text-xl raleway font-semibold text-gray-600 mb-6">
         Subscription History
       </h2>
       {historyLoading ? (

@@ -6,7 +6,7 @@ export enum BillingInterval {
 }
 
 export interface Plan {
-  _id?: string;
+  id?: string;
   name: string;
   description?: string;
   price: number;

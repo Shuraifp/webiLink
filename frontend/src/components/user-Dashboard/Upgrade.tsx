@@ -65,7 +65,7 @@ export default function Upgrade() {
 
     try {
       const response = await subscribeToPlan({
-        planId: plan._id!,
+        planId: plan.id!,
         priceId: plan.stripePriceId || "",
       });
 
@@ -137,7 +137,7 @@ export default function Upgrade() {
               {plans.map(
                 (plan, index) =>
                   plan.price > 0 &&
-                 (userPlan?.length ? userPlan?.every((p) => p.planId !== plan._id) : true) && (
+                 (userPlan?.length ? userPlan?.every((p) => p.planId !== plan.id) : true) && (
                     <div
                       key={index}
                       className={`relative flex flex-col justify-between p-6 rounded-2xl bg-gray-50 shadow-lg`}
@@ -182,11 +182,11 @@ export default function Upgrade() {
         {plans
           .filter((p) =>
             userPlan?.some(
-              (pl) => pl.planId === p._id && pl.status === PlanStatus.ACTIVE
+              (pl) => pl.planId === p.id && pl.status === PlanStatus.ACTIVE
             )
           )
           .map((pl) => (
-            <div key={pl._id} className="min-w-[30%] p-6">
+            <div key={pl.id} className="min-w-[30%] p-6">
               <h2 className="flex items-center text-lg raleway font-semibold mb-2 text-gray-600">
                 <Circle className="w-4 h-4 mr-1 bg-gray-50 rounded-full p-0.5 border border-gray-400 text-gray-400" />
                 Current plan
