@@ -107,7 +107,7 @@ export default function PlanManagementPage() {
         throw new Error("Id was not provided");
       }
       const res = await archivePlan(id);
-      setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+      setPlans(plans.map((plan) => (plan.id === id ? res : plan)));
       toast.success("Plan was archived successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -124,7 +124,7 @@ export default function PlanManagementPage() {
         throw new Error("Id was not provided");
       }
       const res = await restorePlan(id);
-      setPlans(plans.map((plan) => (plan._id === id ? res : plan)));
+      setPlans(plans.map((plan) => (plan.id === id ? res : plan)));
       toast.success("Plan was restored successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -142,7 +142,7 @@ export default function PlanManagementPage() {
         delete newPlan.billingCycle
       }
       const res = await editPlan(newPlan);
-      setPlans(plans.map((plan) => (plan._id === newPlan._id ? res : plan)));
+      setPlans(plans.map((plan) => (plan.id === newPlan.id ? res : plan)));
       setIsEditing(null);
       setIsCreateModalOpen(false);
       setNewPlan({
@@ -431,7 +431,7 @@ export default function PlanManagementPage() {
                 </tr>
               ) : (
                 filtered.map((plan) => (
-                  <tr key={plan._id} className="hover:bg-gray-50">
+                  <tr key={plan.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {plan.name}
                     </td>
@@ -484,8 +484,8 @@ export default function PlanManagementPage() {
                           }
                           onClick={() =>
                             plan.isArchived
-                              ? handleRestorePlan(plan._id)
-                              : handleArchivePlan(plan._id)
+                              ? handleRestorePlan(plan.id)
+                              : handleArchivePlan(plan.id)
                           }
                         >
                           {plan.isArchived ? (
