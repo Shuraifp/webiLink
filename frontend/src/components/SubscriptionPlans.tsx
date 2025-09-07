@@ -29,7 +29,7 @@ const SubscriptionPlans = () => {
 
     try {
       const response = await subscribeToPlan({
-        planId: plan._id!,
+        planId: plan.id!,
         priceId: plan.stripePriceId || "",
       });
 
