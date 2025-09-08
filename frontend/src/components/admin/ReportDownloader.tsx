@@ -7,7 +7,7 @@ import {
   DollarSign,
   Users,
 } from "lucide-react";
-import { Transaction } from "./Revenue";
+import { Transaction } from "@/types/adminDashboard";
 
 type Format = "comprehensive" | "summary"
 
