@@ -10,7 +10,7 @@ import { UserProfile } from "../../types/type";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { fetchRooms } from "@/lib/api/user/roomApi";
-import { Room } from "./Rooms";
+import { Room } from "@/types/userDashboard";
 
 export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
