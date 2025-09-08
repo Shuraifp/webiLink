@@ -1,8 +1,8 @@
 import { PlanDTO } from "../../dto/planDTO";
 import { TransactionDTO } from "../../dto/transactionDTO";
 import { UserDTO } from "../../dto/userDTO";
-import { IUserPlan, PlanStatus } from "../../models/UserPlanModel";
-import { DashboardStats, MeetingStats } from "../../services/adminService";
+import { IUserPlan, PlanStatus } from "../../types/models";
+import { DashboardStats, MeetingStats } from "../../types/type";
 
 export interface IAdminService {
   listUsers(

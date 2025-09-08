@@ -6,14 +6,7 @@ import { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import toast from "react-hot-toast";
 import RevenuePDFExport from "./ReportDownloader";
-
-export interface Transaction {
-  transactionId: string;
-  username: string;
-  planname: string;
-  amount: number;
-  date: string;
-}
+import { Transaction } from "@/types/adminDashboard";
 
 export function Revenue() {
   const [timeframe, setTimeframe] = useState("Yearly");

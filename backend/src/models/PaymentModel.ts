@@ -1,22 +1,5 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
-// import mongooseSequence from "mongoose-sequence";
-
-// const AutoIncrement = (mongooseSequence as any)(mongoose);
-
-export interface IPayment extends Document {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  planId: Types.ObjectId;
-  serialNumber: number; 
-  amount: number;
-  currency: string;
-  status: "succeeded" | "pending" | "failed" | "refunded";
-  stripePaymentIntentId?: string;
-  stripeInvoiceId?: string;
-  refundId?: string;
-  refundedAt?: Date;
-  createdAt: Date;
-}
+import mongoose, { Schema } from "mongoose";
+import { IPayment } from "../types/models";
 
 const PaymentSchema = new Schema(
   {

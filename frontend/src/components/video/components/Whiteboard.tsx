@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Socket } from "socket.io-client";
 // import { getSocket } from "@/lib/socket";
-import { DrawEvent, DrawingState, SocketEvent } from "@/types/chatRoom";
+import { DrawEvent, DrawingState, SocketEvent, WhiteboardProps } from "@/types/chatRoom";
 import { useReducedState } from "@/hooks/useReducedState";
 
-interface WhiteboardProps {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  socketRef: React.RefObject<Socket>;
-}
 
 export default function Whiteboard({
   containerRef,

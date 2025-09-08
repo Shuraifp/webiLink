@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Clock,
   Video,
@@ -11,34 +11,8 @@ import {
   Building,
 } from "lucide-react";
 import { getStats } from "@/lib/api/user/overview";
+import { DashboardProps, DashboardStats, RecentActivity } from "@/types/userDashboard";
 
-interface DashboardProps {
-  onSectionChange: Dispatch<SetStateAction<string>>;
-  selectedSection: string;
-  setPrevSection: Dispatch<SetStateAction<string>>;
-}
-
-interface DashboardStats {
-  totalMeetings: number;
-  hostedMeetings: number;
-  attendedMeetings: number;
-  totalDuration: number;
-  totalParticipants: number;
-  avgMeetingDuration: number;
-  thisWeekMeetings: number;
-  thisMonthMeetings: number;
-}
-
-interface RecentActivity {
-  id: string;
-  roomName: string;
-  duration: number;
-  participants: number;
-  date: string;
-  status: "completed" | "ongoing";
-  type: "hosted" | "attended";
-  hostName?: string;
-}
 
 export default function Dashboard({
   onSectionChange,

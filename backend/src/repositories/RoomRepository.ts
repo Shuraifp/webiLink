@@ -1,5 +1,5 @@
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
-import { IRoom } from "../models/RoomModel";
+import { IRoom } from "../types/models";
 import { BaseRepository } from "./baseRepository";
 import { Model } from "mongoose";
 

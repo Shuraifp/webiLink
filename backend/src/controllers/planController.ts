@@ -3,7 +3,8 @@ import { IPlanService } from "../interfaces/services/IPlanService";
 import { NotFoundError } from "../utils/errors";
 import { HttpStatus, successResponse } from "../types/type";
 import stripe, { Stripe } from "stripe";
-import { IPlan } from "../models/PlanModel";
+import { IPlan } from "../types/models";
+
 
 export class PlanController {
   constructor(private _planService: IPlanService) {}

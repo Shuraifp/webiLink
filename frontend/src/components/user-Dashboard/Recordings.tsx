@@ -1,19 +1,10 @@
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { getRecordings } from "@/lib/api/user/recordings";
 import { isPremiumUser } from "@/lib/api/user/planApi";
+import { Recording, RecordingsProps } from "@/types/userDashboard";
 
-interface Recording {
-  recordingId: string;
-  roomId: string;
-  createdAt: string;
-  url: string;
-}
-
-interface RecordingsProps {
-  onSectionChanges: Dispatch<SetStateAction<string>>;
-}
 
 const Recordings: React.FC<RecordingsProps> = ({ onSectionChanges }) => {
   const [recordings, setRecordings] = useState<Recording[]>([]);

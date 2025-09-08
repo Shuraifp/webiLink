@@ -1,13 +1,17 @@
 import { Types } from "mongoose";
-import { IMeeting } from "../models/MeetingModel";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { IMeetingService } from "../interfaces/services/IMeetingService";
-import { BadRequestError, NotFoundError, InternalServerError } from "../utils/errors";
+import {
+  BadRequestError,
+  NotFoundError,
+  InternalServerError,
+} from "../utils/errors";
 import { Role } from "../types/chatRoom";
 import { MeetingHistoryDTO } from "../dto/meetingDTO";
 import { MeetingMapper } from "../mappers/meetingMapper";
+import { IMeeting } from "../types/models";
 
 export class MeetingService implements IMeetingService {
   constructor(
@@ -65,7 +69,9 @@ export class MeetingService implements IMeetingService {
     } catch (error) {
       throw error instanceof BadRequestError || error instanceof NotFoundError
         ? error
-        : new InternalServerError("An error occurred while creating the meeting");
+        : new InternalServerError(
+            "An error occurred while creating the meeting"
+          );
     }
   }
 
@@ -84,7 +90,7 @@ export class MeetingService implements IMeetingService {
         throw new NotFoundError("User not found");
       }
 
-      const participantExists = meeting.participants.some(
+      const participantExists = (meeting as IMeeting).participants.some(
         (p) => p.userId.toString() === userData.userId
       );
       if (participantExists) {
@@ -99,7 +105,10 @@ export class MeetingService implements IMeetingService {
         joinTime: new Date(),
       });
 
-      const updatedMeeting = await this._meetingRepository.update(meetingId, meeting);
+      const updatedMeeting = await this._meetingRepository.update(
+        meetingId,
+        meeting
+      );
       if (!updatedMeeting) {
         throw new InternalServerError("Failed to add participant");
       }
@@ -125,7 +134,10 @@ export class MeetingService implements IMeetingService {
       const end = new Date(meeting.endTime);
       meeting.duration = Math.round((end.getTime() - start.getTime()) / 60000);
 
-      const updatedMeeting = await this._meetingRepository.update(meetingId, meeting);
+      const updatedMeeting = await this._meetingRepository.update(
+        meetingId,
+        meeting
+      );
       if (!updatedMeeting) {
         throw new InternalServerError("Failed to end meeting");
       }
@@ -138,14 +150,22 @@ export class MeetingService implements IMeetingService {
     }
   }
 
-  async getUserMeetings(userId: string,page:number,limit:number): Promise<{meetings: MeetingHistoryDTO[],totalPages:number}> {
+  async getUserMeetings(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{ meetings: MeetingHistoryDTO[]; totalPages: number }> {
     try {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestError("Invalid user ID");
       }
 
-      const {meetings, totalPages} = await this._meetingRepository.listByUserId(userId,page,limit);
-      return {meetings: MeetingMapper.toMeetingHistoryDTOList(meetings, userId), totalPages};
+      const { meetings, totalPages } =
+        await this._meetingRepository.listByUserId(userId, page, limit);
+      return {
+        meetings: MeetingMapper.toMeetingHistoryDTOList(meetings, userId),
+        totalPages,
+      };
     } catch (error) {
       throw error instanceof BadRequestError
         ? error

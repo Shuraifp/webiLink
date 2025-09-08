@@ -12,23 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { getMeetings } from "@/lib/api/user/meetings";
+import { FilterType, MeetingHistory, StatusFilter } from "@/types/userDashboard";
 
-interface MeetingHistory {
-  id: string;
-  roomName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  participants: number;
-  type: "hosted" | "attended";
-  status: "completed" | "ongoing";
-  hostName?: string;
-  participantsList?: string[];
-}
-
-type FilterType = "all" | "hosted" | "attended";
-type StatusFilter = "all" | "completed" | "ongoing";
 
 export default function History() {
   const [loading, setLoading] = useState<boolean>(true);

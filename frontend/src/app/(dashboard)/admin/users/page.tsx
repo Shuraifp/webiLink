@@ -12,14 +12,8 @@ import {
 } from "@/lib/api/admin/adminApi";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import { User } from "@/types/adminDashboard";
 
-export type User = {
-  _id: string;
-  username: string;
-  email: string;
-  isArchived: boolean;
-  isBlocked: boolean;
-};
 
 export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");

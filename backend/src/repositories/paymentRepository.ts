@@ -1,10 +1,10 @@
 import { Model, PipelineStage, Types } from "mongoose";
 import { BaseRepository } from "./baseRepository";
-import { IPayment } from "../models/PaymentModel";
 import { InternalServerError } from "../utils/errors";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
 import logger from "../utils/logger";
 import { PopulatedPayment } from "../mappers/paymentMapper";
+import { IPayment } from "../types/models";
 
 export class PaymentRepository
   extends BaseRepository<IPayment>

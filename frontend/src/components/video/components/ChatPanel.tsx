@@ -3,27 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useReducedState } from "@/hooks/useReducedState";
-import { ChatMessage } from "@/types/chatRoom";
+import { ChatMessage, EmojiStyle, Theme } from "@/types/chatRoom";
 import { CornerDownRight, CornerDownLeft, X, Search, Smile } from "lucide-react";
 import { MeetingActionType } from "@/context/MeetingContext";
 import Picker from "emoji-picker-react";
 
 interface Props {
   socketRef: Socket | null;
-}
-
-enum Theme {
-  LIGHT = 'light',
-  DARK = 'dark',
-  AUTO = 'auto',
-}
-
-enum EmojiStyle {
-  APPLE = 'apple',
-  GOOGLE = 'google',
-  TWITTER = 'twitter',
-  FACEBOOK = 'facebook',
-  NATIVE = 'native',
 }
 
 export default function ChatPanel({ socketRef }: Props) {

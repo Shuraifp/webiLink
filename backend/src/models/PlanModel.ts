@@ -1,30 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import { IPlan } from "../types/models";
 
-export interface IPlan extends PlanInput, Document {
-  stripePriceId?: string;
-  stripeProductId?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export enum BillingInterval {
-  DAY = "day",
-  WEEK = "week",
-  MONTH = "month",
-  YEAR = "year",
-}
-
-export interface PlanInput {
-  name: string;
-  description?: string;
-  price: number;
-  billingCycle?: {
-    interval: BillingInterval;
-    frequency: number;
-  };
-  features: string[];
-  isArchived: boolean;
-}
 
 const planSchema = new Schema<IPlan>(
   {

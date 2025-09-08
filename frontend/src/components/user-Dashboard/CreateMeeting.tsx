@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, Dispatch, SetStateAction, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createRoom, fetchRooms } from "@/lib/api/user/roomApi";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { isPremiumUser } from "@/lib/api/user/planApi";
+import { CreateMeetingProps } from "@/types/userDashboard";
 
-interface CreateMeetingProps {
-  onSectionChange: Dispatch<SetStateAction<string>>;
-  prevSection: string;
-}
 
 export default function CreateMeeting({
   onSectionChange,

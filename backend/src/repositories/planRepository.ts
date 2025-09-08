@@ -1,5 +1,5 @@
 import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
-import { IPlan } from "../models/PlanModel";
+import { IPlan } from "../types/models";
 import { BaseRepository } from "./baseRepository";
 import { Model, Types } from "mongoose";
 

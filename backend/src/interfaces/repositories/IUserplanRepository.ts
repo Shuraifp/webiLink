@@ -1,4 +1,4 @@
-import { IUserPlan } from "../../models/UserPlanModel";
+import { IUserPlan } from "../../types/models";
 import { IBaseRepository } from "./IBaseRepository";
 
 export interface IUserPlanRepository extends IBaseRepository<IUserPlan> {

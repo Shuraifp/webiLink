@@ -1,7 +1,7 @@
 import { Model } from "mongoose";
-import { IRecording } from "../models/RecordingModel";
 import { IRecordingRepository } from "../interfaces/repositories/IRecordingRepository";
 import logger from "../utils/logger";
+import { IRecording } from "../types/models";
 
 export class RecordingRepository implements IRecordingRepository {
   constructor(private _recordingModel: Model<IRecording>) {}

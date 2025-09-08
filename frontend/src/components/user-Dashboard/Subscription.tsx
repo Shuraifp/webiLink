@@ -8,29 +8,12 @@ import {
   getPendingPlan,
   retryPayment,
 } from "@/lib/api/user/planApi";
-import { Plan, IUserPlan, BillingInterval, PlanStatus } from "@/types/plan";
+import { Plan, IUserPlan, PlanStatus } from "@/types/plan";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useConfirmationModal } from "./ConfirmationModal";
+import { SubscriptionHistory, UserPlanData } from "@/types/userDashboard";
 
-interface UserPlanData {
-  userPlan: IUserPlan;
-  plan: Plan;
-}
-
-interface SubscriptionHistory {
-  _id: string;
-  planId: {
-    name: string;
-    price: number;
-    billingCycle: { interval: BillingInterval; frequency: number };
-  };
-  status: string;
-  currentPeriodStart: string;
-  currentPeriodEnd?: string | null;
-  createdAt: string;
-  cancelAtPeriodEnd?: boolean;
-}
 
 const Subscription = ({
   onSectionChange,

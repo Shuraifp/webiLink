@@ -65,6 +65,7 @@ const oswald = Oswald({
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-oswald",
 });
+
 export default function RootLayout({
   children,
 }: Readonly<{

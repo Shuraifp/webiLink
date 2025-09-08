@@ -1,5 +1,5 @@
 import { MeetingHistoryDTO } from "../../dto/meetingDTO";
-import { IMeeting } from "../../models/MeetingModel";
+import { IMeeting } from "../../types/models";
 
 export interface IMeetingService {
   createMeeting(

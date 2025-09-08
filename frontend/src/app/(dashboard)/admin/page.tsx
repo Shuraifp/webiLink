@@ -24,6 +24,7 @@ import Overview from "@/components/admin/Overview";
 import { Revenue } from "@/components/admin/Revenue";
 import { Meetings } from "@/components/admin/Meetings";
 import { Storage } from "@/components/admin/Storage";
+import { DashboardStats, RecentMeeting } from "@/types/adminDashboard";
 
 ChartJS.register(
   CategoryScale,
@@ -34,27 +35,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-export interface DashboardStats {
-  users: number;
-  subscriptions: { planId: string; planName: string; count: number }[];
-  totalRevenue: number;
-  planTrends: { planId: string; planName: string; count: number }[];
-  totalMeetings: number;
-  activeMeetings: number;
-  totalRecordings: number;
-  recentMeetings: RecentMeeting[];
-}
-
-export interface RecentMeeting {
-  id: string;
-  roomName: string;
-  hostName: string;
-  participants: number;
-  duration: number;
-  startTime: string;
-  endTime: string;
-}
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);

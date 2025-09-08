@@ -1,7 +1,6 @@
 "use client";
 
-import { UserData } from "@/types/type";
-import { Dispatch, SetStateAction, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Share2, MessageCircle, Send, Mail, Copy } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchRooms, deleteRoom } from "@/lib/api/user/roomApi";
@@ -10,20 +9,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useConfirmationModal } from "./ConfirmationModal";
 import { createPortal } from "react-dom";
-
-interface RoomsProps {
-  user: UserData | null;
-  onSectionChange: Dispatch<SetStateAction<string>>;
-  selectedSection: string;
-  setPrevSection: Dispatch<SetStateAction<string>>;
-}
-
-export interface Room {
-  _id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-}
+import { Room, RoomsProps } from "@/types/userDashboard";
 
 export default function DashboardPage({
   user,

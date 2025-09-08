@@ -2,29 +2,11 @@
 
 import { useRef, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Socket } from "socket.io-client";
 import { userApiWithAuth } from "@/lib/api/axios";
 import { AxiosError } from "axios";
+import { UseRecordingProps } from "@/types/chatRoom";
 
-// interface RecordingEventPayload {
-//   roomId: string;
-//   userId: string;
-//   username: string;
-//   recordingId: string;
-//   timestamp: string;
-//   duration?: number;
-//   shareableLink?: string;
-// }
-interface UseRecordingProps {
-  socketRef: React.RefObject<Socket>;
-  roomId: string;
-  currentUserId: string;
-  currentUsername: string;
-}
-// interface RecordingError {
-//   message: string;
-//   code?: string;
-// }
+
 export const useRecording = ({
   roomId,
   currentUserId,

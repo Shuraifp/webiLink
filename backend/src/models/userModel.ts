@@ -1,54 +1,6 @@
-import mongoose, { Schema, Types, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 import { UserRole } from "../types/type";
-
-export interface IUser extends Document {
-  username: string;
-  email: string;
-  password?: string;
-  role?: UserRole;
-  googleId?: string;
-  profile?: {
-    firstName?: string;
-    lastName?: string;
-    avatar?: string;
-    backgroundImage?: string;
-    bio?: string;
-    jobTitle?: string;
-    company?: string;
-  };
-  otp?: string;
-  otpExpires?: Date;
-  isBlocked: boolean;
-  isArchived: boolean;
-  isPremium: boolean;
-  planId?: Types.ObjectId | null;
-  stripeCustomerId: string;
-  isVerified: boolean;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiry?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-  _id: Types.ObjectId;
-}
-export interface UserInput {
-  username: string;
-  email: string;
-  password?: string;
-  profile?: {
-    firstName?: string;
-    lastName?: string;
-    avatar?: string;
-    bio?: string;
-    jobTitle?: string;
-    company?: string;
-  };
-  role?: UserRole;
-  googleId?: string;
-  otp?: string;
-  otpExpires?: Date;
-  isBlocked: boolean;
-  isVerified: boolean;
-}
+import { IUser } from "../types/models";
 
 const userSchema = new Schema<IUser>(
   {

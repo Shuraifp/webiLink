@@ -1,4 +1,4 @@
-import { BillingInterval } from "../models/PlanModel";
+import { BillingInterval } from "../types/models";
 
 export interface PlanDTO {
   id: string;

@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
-import { IPlan } from "../../models/PlanModel";
 import { IBaseRepository } from "./IBaseRepository";
+import { IPlan } from "../../types/models";
 
 export interface IPlanRepository extends IBaseRepository<IPlan> {
   create(data: Partial<IPlan>): Promise<IPlan>;

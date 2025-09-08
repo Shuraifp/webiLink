@@ -1,17 +1,12 @@
 "use client";
 
-import { RecentMeeting } from "@/app/(dashboard)/admin/page";
 import { fetchMeetingStats } from "@/lib/api/admin/adminApi";
+import { MeetingStats, RecentMeeting } from "@/types/adminDashboard";
 import axios from "axios";
 import { Calendar, Clock, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-interface MeetingStats {
-  totalMeetings: number;
-  totalDuration: number;
-  totalParticipants: number;
-}
 
 export function Meetings({
   recentMeetings,

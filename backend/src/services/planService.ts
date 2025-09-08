@@ -1,7 +1,6 @@
 import { IPlanService } from "../interfaces/services/IPlanService";
 import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
-import { IPlan } from "../models/PlanModel";
 import {
   NotFoundError,
   InternalServerError,
@@ -9,16 +8,15 @@ import {
 } from "../utils/errors";
 import stripe from "../config/stripe";
 import { Stripe } from "stripe";
-import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { Types } from "mongoose";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
-import { IPayment } from "../models/PaymentModel";
 import logger from "../utils/logger";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
 import { INotificationService } from "../interfaces/services/INotificationService";
 import { PlanMapper } from "../mappers/planMapper";
 import { PlanDTO } from "../dto/planDTO";
+import { IPayment, IPlan, IUserPlan, PlanStatus } from "../types/models";
 
 export class PlanService implements IPlanService {
   constructor(

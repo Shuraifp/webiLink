@@ -1,7 +1,6 @@
 import { Types } from "mongoose";
 import slugify from "slugify";
 import { IRoomRepository } from "../interfaces/repositories/IRoomRepository";
-import { IRoom } from "../models/RoomModel";
 import { IRoomService } from "../interfaces/services/IRoomService";
 import {
   BadRequestError,
@@ -11,6 +10,7 @@ import {
 } from "../utils/errors";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import logger from "../utils/logger";
+import { IRoom } from "../types/models";
 
 export class RoomService implements IRoomService {
   constructor(

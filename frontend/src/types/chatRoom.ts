@@ -1,3 +1,5 @@
+import { Socket } from "socket.io-client";
+
 export enum Status {
   CONNECTING = "connecting",
   WAITING = "waiting",
@@ -54,7 +56,7 @@ export interface DrawEvent {
   type: DrawingState;
   color?: string;
   lineWidth?: number;
-  username?:string;
+  username?: string;
 }
 export interface Caption {
   username: string;
@@ -87,7 +89,7 @@ export interface Poll {
   anonymous: boolean;
   showResults: boolean;
   duration: number;
-  status: PollStatus
+  status: PollStatus;
   responses: { [userId: string]: string[] };
   image?: string;
 }
@@ -102,12 +104,12 @@ export interface Question {
   username: string;
   timestamp: number;
   status: QuestionStatus;
-  isAnonymous: boolean; 
-  upvotes: string[]; 
-  isVisible: boolean; 
-  isAnswered: boolean; 
-  answer?: string; 
-  answeredBy?: string; 
+  isAnonymous: boolean;
+  upvotes: string[];
+  isVisible: boolean;
+  isAnswered: boolean;
+  answer?: string;
+  answeredBy?: string;
 }
 
 export interface RoomState {
@@ -120,4 +122,81 @@ export interface TimerState {
   isRunning: boolean;
   duration: number;
   timeLeft: number;
+}
+
+export enum Theme {
+  LIGHT = "light",
+  DARK = "dark",
+  AUTO = "auto",
+}
+
+export enum EmojiStyle {
+  APPLE = "apple",
+  GOOGLE = "google",
+  TWITTER = "twitter",
+  FACEBOOK = "facebook",
+  NATIVE = "native",
+}
+
+export interface MeetingHistory {
+  id: string;
+  roomName: string;
+  date: string;
+  hostName?: string;
+}
+
+export interface WhiteboardProps {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  socketRef: React.RefObject<Socket>;
+}
+
+export interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+}
+
+export interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+export interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+export interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+  length: number;
+}
+
+export interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+export interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+export interface ShowCaption {
+  id: number;
+  text: string;
+  username: string;
+  expiresAt: number;
+}
+
+export interface UseRecordingProps {
+  socketRef: React.RefObject<Socket>;
+  roomId: string;
+  currentUserId: string;
+  currentUsername: string;
 }

@@ -7,13 +7,8 @@ import { getMeetings } from "@/lib/api/user/meetings";
 import toast from "react-hot-toast";
 import { MeetingActionType } from "@/context/MeetingContext";
 import jsPDF from "jspdf";
+import { MeetingHistory } from "@/types/chatRoom";
 
-interface MeetingHistory {
-  id: string;
-  roomName: string;
-  date: string;
-  hostName?: string;
-}
 
 export default function NotesPanel({ roomId }: { roomId: string }) {
   const { state, dispatch } = useReducedState();

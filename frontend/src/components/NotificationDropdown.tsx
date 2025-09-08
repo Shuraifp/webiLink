@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, SetStateAction, Dispatch } from "react";
+import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
@@ -8,11 +8,8 @@ import { userApiWithAuth } from "@/lib/api/axios";
 import toast from "react-hot-toast";
 import { INotification } from "@/types/notification";
 import { useRouter } from "next/navigation";
+import { NotificationDropdownProps } from "@/types/type";
 
-interface NotificationDropdownProps {
-  className?: string;
-  onSectionChange?: Dispatch<SetStateAction<string>>;
-}
 
 export default function NotificationDropdown({
   className,

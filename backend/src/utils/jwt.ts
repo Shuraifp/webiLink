@@ -1,7 +1,7 @@
 import  Jwt from "jsonwebtoken";
 import { TokenExpiredError, JsonWebTokenError } from "jsonwebtoken";
-import { IUser } from "../models/userModel";
 import { JWTPayload } from "../types/type";
+import { IUser } from "../types/models";
 
 
 export interface IJwtService {

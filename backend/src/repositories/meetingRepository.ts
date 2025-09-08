@@ -1,7 +1,7 @@
 import { Model } from "mongoose";
-import { IMeeting } from "../models/MeetingModel";
 import { BaseRepository } from "./baseRepository";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
+import { IMeeting } from "../types/models";
 
 export class MeetingRepository
   extends BaseRepository<IMeeting>

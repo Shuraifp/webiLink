@@ -6,17 +6,9 @@ import LogoutButton from "@/components/admin/LogoutButton";
 import { fetchSubscriptions } from "@/lib/api/admin/subscriptionApi";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
-import { PlanStatus, IUserPlan } from "@/types/plan";
-import { Plan } from "@/types/plan";
+import { PlanStatus } from "@/types/plan";
+import { Subscription } from "@/types/adminDashboard";
 
-interface Subscription {
-  userPlan: IUserPlan;
-  plan: Plan;
-  user: {
-    username: string;
-    email: string;
-  };
-}
 
 export default function SubscriptionManagementPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");

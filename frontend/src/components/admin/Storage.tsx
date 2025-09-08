@@ -1,18 +1,9 @@
 "use client";
 
 import { fetchDashboardStats } from "@/lib/api/admin/recording";
+import { StorageStats } from "@/types/adminDashboard";
 import { HardDrive } from "lucide-react";
 import { useEffect, useState } from "react";
-
-interface StorageStats {
-  totalRecordings: number;
-  totalStorageUsed: number;
-  recordingsPerUser: Array<{
-    userId: string;
-    username: string;
-    count: number;
-  }>;
-}
 
 export function Storage() {
   const [storageStats, setStorageStats] = useState<StorageStats | null>({

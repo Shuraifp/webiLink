@@ -2,10 +2,10 @@ import { IUserService } from "../interfaces/services/IUserService";
 import { ResponseUser } from "../types/responses";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { NotFoundError, InternalServerError } from "../utils/errors";
-import { IUser } from "../models/userModel";
 import { DashboardStatsDTO } from "../dto/userDTO";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
 import { MeetingMapper } from "../mappers/meetingMapper";
+import { IUser } from "../types/models";
 
 export class UserService implements IUserService {
   constructor(

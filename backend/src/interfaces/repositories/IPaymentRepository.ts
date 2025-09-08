@@ -1,5 +1,5 @@
 import { PopulatedPayment } from "../../mappers/paymentMapper";
-import { IPayment } from "../../models/PaymentModel";
+import { IPayment } from "../../types/models";
 import { IBaseRepository } from "./IBaseRepository";
 
 export interface IPaymentRepository extends IBaseRepository<IPayment> {

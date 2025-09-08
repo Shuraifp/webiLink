@@ -1,18 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import { IRoom } from "../types/models";
 
-export interface IRoom extends Document {
-  userId: mongoose.Types.ObjectId;
-  name: string;
-  slug: string;
-  isPremiumUser: boolean;
-  isActive: boolean;
-  settings?: {
-    background?: string;
-    logo?: string;
-    theme?: string;
-  };
-  createdAt: Date;
-}
 
 const roomSchema = new Schema<IRoom>(
   {

@@ -1,7 +1,8 @@
-import NotificationModel, { INotification } from "../models/notificationModel";
+import NotificationModel from "../models/notificationModel";
 import { INotificationRepository } from "../interfaces/repositories/INotificationRepository";
 import { NotFoundError } from "../utils/errors";
 import { BaseRepository } from "./baseRepository";
+import { INotification } from "../types/models";
 
 export class NotificationRepository extends BaseRepository<INotification> implements INotificationRepository {
   async create(data: Partial<INotification>): Promise<INotification> {

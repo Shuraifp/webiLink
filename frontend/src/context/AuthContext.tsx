@@ -4,22 +4,11 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { refreshAdminToken } from "@/lib/api/admin/authApi";
 import { refreshUserToken } from "@/lib/api/user/authApi";
-import { AuthStatus, USER_ROLE, UserData } from "@/types/type";
+import { AdminState, AuthState, AuthStatus, USER_ROLE, UserData } from "@/types/type";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import { Socket } from "socket.io-client";
 import toast from "react-hot-toast";
 
-interface AuthState {
-  user: UserData | null;
-  authStatus: AuthStatus | null;
-  isLoading: boolean;
-}
-
-interface AdminState {
-  admin: UserData | null;
-  adminStatus: AuthStatus | null;
-  isLoading: boolean;
-}
 
 const AuthContext = createContext<{
   auth: AuthState;

@@ -1,18 +1,16 @@
 import { IAdminService } from "../interfaces/services/IAdminService";
 import { IUserRepository } from "../interfaces/repositories/IUserRepository";
-import { UserRole } from "../types/type";
+import { DashboardStats, MeetingStats, UserRole } from "../types/type";
 import {
   InternalServerError,
   ForbiddenError,
   NotFoundError,
 } from "../utils/errors";
 import { IPlanRepository } from "../interfaces/repositories/IPlanRepository";
-import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { IPaymentRepository } from "../interfaces/repositories/IPaymentRepository";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
 import { IRecordingRepository } from "../interfaces/repositories/IRecordingRepository";
-import { AdminDashboardRecentMeetingDTO } from "../dto/meetingDTO";
 import { MeetingMapper } from "../mappers/meetingMapper";
 import logger from "../utils/logger";
 import { TransactionDTO } from "../dto/transactionDTO";
@@ -21,23 +19,8 @@ import { UserDTO } from "../dto/userDTO";
 import { UserMapper } from "../mappers/userMapper";
 import { PlanDTO } from "../dto/planDTO";
 import { PlanMapper } from "../mappers/planMapper";
+import { IUserPlan, PlanStatus } from "../types/models";
 
-export interface DashboardStats {
-  users: number;
-  subscriptions: { planId: string; planName: string; count: number }[];
-  totalRevenue: number;
-  planTrends: { planId: string; planName: string; count: number }[];
-  totalMeetings: number;
-  activeMeetings: number;
-  totalRecordings: number;
-  recentMeetings: AdminDashboardRecentMeetingDTO[];
-}
-
-export interface MeetingStats {
-  totalMeetings: number;
-  totalDuration: number;
-  totalParticipants: number;
-}
 
 export class AdminService implements IAdminService {
   constructor(

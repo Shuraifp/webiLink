@@ -9,43 +9,8 @@ import { createPortal } from "react-dom";
 import { Socket } from "socket.io-client";
 import useRecording from "@/hooks/useRecording";
 import toast from "react-hot-toast";
+import { ShowCaption, SpeechRecognition, SpeechRecognitionEvent } from "@/types/chatRoom";
 
-interface SpeechRecognition extends EventTarget {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-}
-
-interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-interface SpeechRecognitionResultList {
-  [index: number]: SpeechRecognitionResult;
-  length: number;
-}
-
-interface SpeechRecognitionResult {
-  [index: number]: SpeechRecognitionAlternative;
-  isFinal: boolean;
-  length: number;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
 
 declare global {
   interface Window {
@@ -54,12 +19,6 @@ declare global {
   }
 }
 
-interface ShowCaption {
-  id: number;
-  text: string;
-  username: string;
-  expiresAt: number;
-}
 
 export default function MeetingComponent({
   navbarHeight,

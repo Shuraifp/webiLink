@@ -1,5 +1,5 @@
-import { DashboardRecordingStats } from "../../services/recordingService";
 import { ResponseRecording } from "../../types/responses";
+import { DashboardRecordingStats } from "../../types/type";
 
 export interface IRecordingService {
   uploadRecording(

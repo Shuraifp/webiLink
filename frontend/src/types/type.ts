@@ -1,3 +1,5 @@
+import { Dispatch, SetStateAction } from "react";
+
 export interface AuthInput {
     username: string,
     password: string,
@@ -72,3 +74,27 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
+export interface BannerProps {
+  user: UserData | null;
+}
+
+export interface NavbarProps {
+  user: UserData | null;
+}
+
+export interface NotificationDropdownProps {
+  className?: string;
+  onSectionChange?: Dispatch<SetStateAction<string>>;
+}
+
+export interface AuthState {
+  user: UserData | null;
+  authStatus: AuthStatus | null;
+  isLoading: boolean;
+}
+
+export interface AdminState {
+  admin: UserData | null;
+  adminStatus: AuthStatus | null;
+  isLoading: boolean;
+}

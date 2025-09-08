@@ -1,4 +1,4 @@
-import { IRoom } from "../../models/RoomModel"; 
+import { IRoom } from "../../types/models";
 import { IBaseRepository } from "./IBaseRepository";
 
 export interface IRoomRepository extends IBaseRepository<IRoom> {

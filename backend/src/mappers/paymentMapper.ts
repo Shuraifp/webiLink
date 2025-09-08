@@ -1,5 +1,5 @@
 import { TransactionDTO } from "../dto/transactionDTO";
-import { IPayment } from "../models/PaymentModel";
+import { IPayment } from "../types/models";
 
 export interface PopulatedPayment extends Omit<IPayment, "userId" | "planId"> {
   userId: { username: string };

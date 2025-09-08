@@ -1,4 +1,5 @@
-import { IRecording } from "../../models/RecordingModel";
+import { IRecording } from "../../types/models";
+
 
 export interface IRecordingRepository {
   create(recording: Partial<IRecording>): Promise<IRecording>;

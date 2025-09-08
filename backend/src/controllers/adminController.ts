@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { successResponse } from "../types/type";
 import { IAdminService } from "../interfaces/services/IAdminService";
 import { HttpStatus } from "../types/type";
-import { PlanStatus } from "../models/UserPlanModel";
+import { PlanStatus } from "../types/models";
 
 export class AdminController {
   constructor(private _adminService: IAdminService) {}

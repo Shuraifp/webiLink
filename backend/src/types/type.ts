@@ -1,4 +1,5 @@
-import { IUser } from "../models/userModel";
+import { AdminDashboardRecentMeetingDTO } from "../dto/meetingDTO";
+import { IUser } from "./models";
 
 
 export enum HttpStatus {
@@ -63,3 +64,29 @@ export interface UserDataForCookies {
     role: string | null;
 }
 
+export interface DashboardStats {
+  users: number;
+  subscriptions: { planId: string; planName: string; count: number }[];
+  totalRevenue: number;
+  planTrends: { planId: string; planName: string; count: number }[];
+  totalMeetings: number;
+  activeMeetings: number;
+  totalRecordings: number;
+  recentMeetings: AdminDashboardRecentMeetingDTO[];
+}
+
+export interface MeetingStats {
+  totalMeetings: number;
+  totalDuration: number;
+  totalParticipants: number;
+}
+
+export interface DashboardRecordingStats {
+  totalRecordings: number;
+  totalStorageUsed: number;
+  recordingsPerUser: Array<{
+    userId: string;
+    username: string;
+    count: number;
+  }>;
+}

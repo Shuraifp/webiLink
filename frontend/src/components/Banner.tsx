@@ -2,11 +2,8 @@ import Image from "next/image";
 import React from "react";
 import bannerIMG from "../../public/images/bannerIMG.jpg";
 import Link from "next/link";
-import { UserData } from "@/types/type";
+import { BannerProps } from "@/types/type";
 
-interface BannerProps {
-  user: UserData | null;
-}
 
 const Banner: React.FC<BannerProps> = ({ user }) => {
   return (

@@ -1,5 +1,5 @@
-import { IPlan } from "../models/PlanModel";
 import { PlanDTO } from "../dto/planDTO";
+import { IPlan } from "../types/models";
 
 export class PlanMapper {
   static toPlanDTO(plan: IPlan): PlanDTO {

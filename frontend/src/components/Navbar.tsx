@@ -2,15 +2,11 @@
 
 import { useState } from "react";
 import { logoutUser } from "@/lib/api/user/authApi";
-import { UserData } from "@/types/type";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Menu, X } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
-
-interface NavbarProps {
-  user: UserData | null;
-}
+import { NavbarProps } from "@/types/type";
 
 export default function Navbar({ user }: NavbarProps) {
   const { logout } = useAuth();

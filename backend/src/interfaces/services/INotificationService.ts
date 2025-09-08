@@ -1,4 +1,4 @@
-import { INotification } from "../../models/notificationModel";
+import { INotification } from "../../types/models";
 
 export interface INotificationService {
   createNotification(

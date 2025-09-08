@@ -1,4 +1,4 @@
-import { IMeeting } from "../../models/MeetingModel";
+import { IMeeting } from "../../types/models";
 
 export interface IMeetingRepository {
   create(data: Partial<IMeeting>): Promise<IMeeting>;

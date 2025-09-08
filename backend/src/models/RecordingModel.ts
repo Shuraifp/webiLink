@@ -1,12 +1,6 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model } from "mongoose";
+import { IRecording } from "../types/models";
 
-export interface IRecording extends Document {
-  recordingId: string;
-  userId: string;
-  roomId: string;
-  s3Key: string;
-  createdAt: Date;
-}
 
 const recordingSchema = new Schema<IRecording>({
   recordingId: { type: String, required: true },

@@ -1,16 +1,6 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model } from "mongoose";
+import { INotification } from "../types/models";
 
-export interface INotification extends Document {
-  userId: string;
-  type: "recording_upload" | "subscription_expiring" | "subscription_welcome";
-  message: string;
-  data?: {
-    recordingId?: string;
-    planId?: string;
-  };
-  isRead: boolean;
-  createdAt: Date;
-}
 
 const notificationSchema = new Schema<INotification>({
   userId: { type: String, ref: "User", required: true },

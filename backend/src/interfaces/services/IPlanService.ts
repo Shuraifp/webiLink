@@ -1,7 +1,6 @@
-import { IPlan } from "../../models/PlanModel";
 import { Stripe } from "stripe";
-import { IUserPlan } from "../../models/UserPlanModel";
 import { PlanDTO } from "../../dto/planDTO";
+import { IPlan, IUserPlan } from "../../types/models";
 
 export interface IPlanService {
   createPlan(data: Partial<IPlan>): Promise<PlanDTO>;

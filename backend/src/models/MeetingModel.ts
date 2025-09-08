@@ -1,27 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
-import { Types } from "mongoose";
-import { Role } from "../types/chatRoom";
+import mongoose, { Schema } from "mongoose";
+import { IMeeting } from "../types/models";
 
-export interface IMeeting extends Document {
-  roomId: Types.ObjectId;
-  hostId: Types.ObjectId;
-  roomName: string;
-  slug: string;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-  participants: {
-    userId: Types.ObjectId;
-    username: string;
-    avatar?: string;
-    joinTime: Date;
-    leaveTime?: Date;
-    role: Role;
-  }[];
-  status: "ongoing" | "completed";
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 const meetingSchema = new Schema<IMeeting>(
   {
@@ -30,7 +10,7 @@ const meetingSchema = new Schema<IMeeting>(
       ref: "Room",
       required: true,
     },
-    hostId: {
+    hostId: {  
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,

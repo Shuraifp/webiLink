@@ -1,8 +1,8 @@
 import { Model, Types } from "mongoose";
 import { BaseRepository } from "./baseRepository";
-import { IUserPlan, PlanStatus } from "../models/UserPlanModel";
 import { IUserPlanRepository } from "../interfaces/repositories/IUserplanRepository";
 import { InternalServerError } from "../utils/errors";
+import { IUserPlan, PlanStatus } from "../types/models";
 
 export class UserPlanRepository
   extends BaseRepository<IUserPlan>

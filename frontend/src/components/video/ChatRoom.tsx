@@ -29,14 +29,13 @@ function randomID(len: number) {
 
 export default function MeetingRoom({ user }: { user: UserData }) {
   const router = useRouter();
-  const { state, dispatch } = useReducedState();
+  const { dispatch } = useReducedState();
   const { roomId } = useParams() as { roomId: string };
   const socket = useRef<Socket>(getSocket());
   const meetingContainerRef = useRef<HTMLDivElement | null>(null);
   const zpRef = useRef<InstanceType<typeof ZegoUIKitPrebuilt> | null>(null);
   const hasJoinedRef = useRef(false);
 
-  console.log(state);
   useEffect(() => {
     dispatch({ type: MeetingActionType.SET_ROOM_ID, payload: roomId });
   }, [roomId, dispatch]);

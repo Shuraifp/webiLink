@@ -36,13 +36,11 @@ export class UserController {
     try {
       const userId = req.user?._id as string;
       const isPremiumUser = await this._userService.isPremiumUser(userId);
-      res
-        .status(HttpStatus.OK)
-        .json(
-          successResponse("checked for user subscription status", {
-            isPremiumUser,
-          })
-        );
+      res.status(HttpStatus.OK).json(
+        successResponse("checked for user subscription status", {
+          isPremiumUser,
+        })
+      );
     } catch (error) {
       next(error);
     }

@@ -1,5 +1,5 @@
-import { IUser } from "../models/userModel";
 import { UserDTO } from "../dto/userDTO";
+import { IUser } from "../types/models";
 import { UserRole } from "../types/type";
 
 export class UserMapper {

@@ -11,16 +11,8 @@ import { IRecordingService } from "../interfaces/services/IRecordingService";
 import { ResponseRecording } from "../types/responses";
 import logger from "../utils/logger";
 import { INotificationService } from "../interfaces/services/INotificationService";
+import { DashboardRecordingStats } from "../types/type";
 
-export interface DashboardRecordingStats {
-  totalRecordings: number;
-  totalStorageUsed: number;
-  recordingsPerUser: Array<{
-    userId: string;
-    username: string;
-    count: number;
-  }>;
-}
 
 export class RecordingService implements IRecordingService {
   private s3: S3Client;

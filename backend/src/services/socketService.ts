@@ -18,6 +18,7 @@ import {
 import logger from "../utils/logger";
 import { IMeetingService } from "../interfaces/services/IMeetingService";
 import { IMeetingRepository } from "../interfaces/repositories/IMeetingRepository";
+import { IMeeting } from "../types/models";
 
 export class SocketService {
   private users: Map<string, UserData> = new Map();
@@ -48,7 +49,9 @@ export class SocketService {
 
       socket.on("register-user", ({ userId }: { userId: string }) => {
         socket.join(`notification-${userId}`);
-        logger.info(`User ${userId} joined notification room: notification-${userId}`);
+        logger.info(
+          `User ${userId} joined notification room: notification-${userId}`
+        );
       });
 
       socket.onAny((event, args) => {
@@ -179,9 +182,14 @@ export class SocketService {
     });
   }
 
-  public sendNotification(userId: string, notification: { type: string; message: string; data?: any }) {
+  public sendNotification(
+    userId: string,
+    notification: { type: string; message: string; data?: any }
+  ) {
     this.io.to(`notification-${userId}`).emit("notification", notification);
-    logger.info(`Notification sent to user ${userId}: ${JSON.stringify(notification)}`);
+    logger.info(
+      `Notification sent to user ${userId}: ${JSON.stringify(notification)}`
+    );
   }
 
   private async fetchRoomState(socket: Socket, roomId: string) {
@@ -303,7 +311,7 @@ export class SocketService {
       logger.warn(`No user or username found for socket: ${socket.id}`);
       return;
     }
-     let roomState = this.roomState.get(roomId);
+    let roomState = this.roomState.get(roomId);
     if (!roomState) {
       roomState = { isQAEnabled: false, isDrawing: false, captions: [caption] };
       this.roomState.set(roomId, roomState);
@@ -478,7 +486,7 @@ export class SocketService {
     if (meetingId) {
       const meeting = await this.meetingService.getMeetingById(meetingId);
       if (meeting) {
-        const participant = meeting.participants.find(
+        const participant = (meeting as IMeeting).participants.find(
           (p) => p.userId.toString() === userId
         );
         if (participant) {
@@ -531,7 +539,7 @@ export class SocketService {
       if (meetingId) {
         const meeting = await this.meetingService.getMeetingById(meetingId);
         if (meeting) {
-          const participant = meeting.participants.find(
+          const participant = (meeting as IMeeting).participants.find(
             (p) => p.userId.toString() === user.userId
           );
           if (participant) {

@@ -1,7 +1,7 @@
 import { getSocketService } from "..";
 import { INotificationRepository } from "../interfaces/repositories/INotificationRepository";
 import { INotificationService } from "../interfaces/services/INotificationService";
-import { INotification } from "../models/notificationModel";
+import { INotification } from "../types/models";
 import { UnauthorizedError } from "../utils/errors";
 import { SocketService } from "./socketService";
 

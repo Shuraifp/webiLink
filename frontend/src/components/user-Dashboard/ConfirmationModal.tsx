@@ -1,13 +1,8 @@
 "use client";
 
+import { ConfirmationModalContextType } from "@/types/userDashboard";
 import { X } from "lucide-react";
 import { createContext, useContext, useState } from "react";
-
-interface ConfirmationModalContextType {
-  confirm: (message: string, onConfirm: () => void) => void;
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
-}
 
 const ConfirmationModalContext = createContext<
   ConfirmationModalContextType | undefined

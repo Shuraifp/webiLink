@@ -1,6 +1,6 @@
-import { IMeeting } from "../models/MeetingModel";
 import { AdminDashboardRecentMeetingDTO, MeetingHistoryDTO } from "../dto/meetingDTO";
 import { Role } from "../types/chatRoom";
+import { IMeeting } from "../types/models";
 
 export class MeetingMapper {
 

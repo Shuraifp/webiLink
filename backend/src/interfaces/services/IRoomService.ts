@@ -1,4 +1,4 @@
-import { IRoom } from "../../models/RoomModel"; 
+import { IRoom } from "../../types/models";
 
 export interface IRoomService {
   getAllRooms(userId: string): Promise<IRoom[]>;

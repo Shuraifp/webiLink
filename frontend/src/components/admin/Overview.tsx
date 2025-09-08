@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardStats, RecentMeeting } from "@/app/(dashboard)/admin/page";
+import { DashboardStats, RecentMeeting } from "@/types/adminDashboard";
 import {
   Calendar,
   HardDrive,
