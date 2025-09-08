@@ -54,7 +54,11 @@ const adminController = new AdminController(adminService);
 
 const router = Router();
 
-router.get("/", planController.fetchActivePlans.bind(planController));
+router.get("/", planController.fetchActivePlans.bind(planController)).post(
+  "/",
+  authenticateJWT(UserRole.ADMIN), // Admin
+  planController.createPlan.bind(planController)
+);
 router.get(
   "/user-plan",
   authenticateJWT(UserRole.USER),
@@ -94,11 +98,6 @@ router.post(
 );
 
 // Admin
-router.post(
-  "/",
-  authenticateJWT(UserRole.ADMIN),
-  planController.createPlan.bind(planController)
-);
 router.get(
   "/active-plans",
   authenticateJWT(UserRole.ADMIN),
